@@ -12,6 +12,9 @@ imports/exports and is not a marginal (MOER) signal.
 
 from __future__ import annotations
 
+import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Mapping
 
 # Lifecycle factors, IPCC AR5 medians (gCO2eq/kWh). Oil has no AR5 median;
@@ -131,6 +134,170 @@ def add_carbon_intensity(df, fuel_columns=None, basis: str = "lifecycle", column
     out[column] = [
         carbon_intensity(row, basis) for row in df[fuel_columns].to_dict("records")
     ]
+    return out
+
+
+# ---------------------------------------------------------------------------
+# EIA-930 data access
+#
+# Fetches hourly data from the EIA API v2 (free key: https://www.eia.gov/opendata/)
+# and caches it per calendar month under data/eia930/, so a backtest re-run
+# makes no API calls. Months older than REVISION_WINDOW are cached for good;
+# newer ones are re-fetched because BAs revise recent hours.
+# ---------------------------------------------------------------------------
+
+EIA_API = "https://api.eia.gov/v2/electricity/rto"
+CACHE_DIR = Path(__file__).resolve().parent / "data" / "eia930"
+REVISION_WINDOW = timedelta(days=7)
+PAGE_SIZE = 5000  # EIA API maximum rows per request
+
+# region-data type codes -> column names (avoids clashing with the NG fuel code)
+REGION_COLUMNS = {
+    "D": "demand",
+    "DF": "demand_forecast",
+    "NG": "net_generation",
+    "TI": "interchange",
+}
+
+
+def _api_key(api_key: str | None) -> str:
+    key = api_key or os.environ.get("EIA_API_KEY") or _dotenv().get("EIA_API_KEY")
+    if not key:
+        raise RuntimeError("Set EIA_API_KEY in .env or the environment (free at https://www.eia.gov/opendata/)")
+    return key
+
+
+def _dotenv() -> dict[str, str]:
+    """KEY=value pairs from the repo's .env, if present."""
+    path = Path(__file__).resolve().parent / ".env"
+    if not path.exists():
+        return {}
+    out = {}
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.removeprefix("export ").split("=", 1)
+            out[k.strip()] = v.strip().strip("'\"")
+    return out
+
+
+def _fetch_route(route: str, start: datetime, end: datetime, respondent: str, api_key: str) -> list[dict]:
+    """All rows of an EIA-930 route for [start, end), following pagination."""
+    import requests
+
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        params = [
+            ("api_key", api_key),
+            ("frequency", "hourly"),
+            ("data[0]", "value"),
+            ("facets[respondent][]", respondent),
+            ("start", start.strftime("%Y-%m-%dT%H")),
+            ("end", (end - timedelta(hours=1)).strftime("%Y-%m-%dT%H")),
+            ("sort[0][column]", "period"),
+            ("sort[0][direction]", "asc"),
+            ("offset", offset),
+            ("length", PAGE_SIZE),
+        ]
+        resp = requests.get(f"{EIA_API}/{route}/data/", params=params, timeout=60)
+        resp.raise_for_status()
+        page = resp.json()["response"]["data"]
+        rows.extend(page)
+        if len(page) < PAGE_SIZE:
+            return rows
+        offset += PAGE_SIZE
+
+
+def _rows_to_wide(rows: list[dict], key_field: str, rename: Mapping[str, str] | None = None):
+    """Long EIA rows -> wide DataFrame indexed by UTC hour, one column per key."""
+    import pandas as pd
+
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    df["period"] = pd.to_datetime(df["period"], format="%Y-%m-%dT%H", utc=True)
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    wide = df.pivot_table(index="period", columns=key_field, values="value", aggfunc="sum")
+    wide.columns.name = None
+    if rename:
+        wide = wide.rename(columns=rename)
+    return wide.sort_index()
+
+
+def _month_starts(start: datetime, end: datetime):
+    m = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    while m < end:
+        nxt = (m.replace(day=28) + timedelta(days=4)).replace(day=1)
+        yield m, nxt
+        m = nxt
+
+
+def _fetch_cached(route, key_field, rename, start, end, respondent, api_key, refresh):
+    import pandas as pd
+
+    now = datetime.now(timezone.utc)
+    frames = []
+    for m_start, m_end in _month_starts(start, end):
+        path = CACHE_DIR / respondent / f"{route}_{m_start:%Y-%m}.pkl"
+        final = m_end < now - REVISION_WINDOW
+        if path.exists() and final and not refresh:
+            frames.append(pd.read_pickle(path))
+            continue
+        # Future hours only matter for demand_forecast; cap the request there.
+        wide = _rows_to_wide(
+            _fetch_route(route, m_start, min(m_end, now + timedelta(days=2)), respondent, _api_key(api_key)),
+            key_field,
+            rename,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        wide.to_pickle(path)
+        frames.append(wide)
+    out = pd.concat([f for f in frames if not f.empty]) if frames else pd.DataFrame()
+    return out[(out.index >= start) & (out.index < end)] if not out.empty else out
+
+
+def fetch_fuel_mix(start: datetime, end: datetime, respondent: str = "MISO", api_key: str | None = None, refresh: bool = False):
+    """Hourly net generation by fuel (MWh), one column per EIA-930 fuel code."""
+    return _fetch_cached("fuel-type-data", "fueltype", None, start, end, respondent, api_key, refresh)
+
+
+def fetch_region_data(start: datetime, end: datetime, respondent: str = "MISO", api_key: str | None = None, refresh: bool = False):
+    """Hourly demand, day-ahead demand forecast, net generation and interchange (MWh)."""
+    return _fetch_cached("region-data", "type", REGION_COLUMNS, start, end, respondent, api_key, refresh)
+
+
+def load_history(
+    start: datetime,
+    end: datetime,
+    respondent: str = "MISO",
+    basis: str = "lifecycle",
+    api_key: str | None = None,
+    refresh: bool = False,
+):
+    """One hourly, gap-filled (NaN) UTC frame with everything the model needs.
+
+    Columns: one per EIA-930 fuel code (MWh), demand, demand_forecast,
+    net_generation, interchange, and carbon_intensity (gCO2/kWh, NaN where
+    the fuel mix is missing, e.g. future hours that only have a demand forecast).
+    """
+    import pandas as pd
+
+    start = start.astimezone(timezone.utc)
+    end = end.astimezone(timezone.utc)
+    fuels = fetch_fuel_mix(start, end, respondent, api_key, refresh)
+    region = fetch_region_data(start, end, respondent, api_key, refresh)
+    index = pd.date_range(pd.Timestamp(start).ceil("h"), pd.Timestamp(end), freq="h", inclusive="left")
+    hist = fuels.join(region, how="outer").reindex(index)
+    return with_carbon_intensity(hist, basis)
+
+
+def with_carbon_intensity(hist, basis: str = "lifecycle"):
+    """Add carbon_intensity from the fuel-code columns of an hourly frame."""
+    fuel_cols = [c for c in hist.columns if str(c).strip().lower() in ALIASES and c not in REGION_COLUMNS.values()]
+    out = add_carbon_intensity(hist, fuel_cols, basis)
+    no_mix = hist[fuel_cols].isna().all(axis=1)
+    out.loc[no_mix, "carbon_intensity"] = float("nan")
     return out
 
 

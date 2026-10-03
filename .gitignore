@@ -1,3 +1,7 @@
 .DS_Store
 .workflow/
 .impeccable/
+__pycache__/
+data/
+models/
+.env
