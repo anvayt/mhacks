@@ -9,6 +9,7 @@ This file is the single source of truth for the team and for any AI agent helpin
 ## 0. Read this first
 
 - **We are building Hidden Rent** in the **Sustainability** main track. The decision is made; don't re-open it.
+- **`HANDOFF.md` is superseded.** It summarizes the earlier "Clean Hours" plan (dryer scheduling, Fern, FREE-WILi, Relay) from ~6 PM Saturday. Its event facts are still useful, but **follow this file for what we're building.**
 - **The quality bar:** [Watt's Up](https://devpost.com/software/watt-s-up), which won Best Overall at HackPrinceton Fall 2025. Its formula: **anyone types an address and gets a personal answer in seconds, from a model the team built, with money and carbon in one view, scaling from one home to a city map, in a polished visual demo.** We copy the *shape*, not the idea.
 - **Rules for everyone (humans and agents):**
   1. Never commit secrets. API keys live in a local `.env` that is git-ignored.
@@ -255,6 +256,11 @@ run(A, y, 'bill | public-record'); run(B, y, 'bill | + 6 answers')
 | Neon (optional) | Use Neon Postgres + PostGIS for the city layer and leaderboards | ~free if chosen early | P2 |
 | SpaceX (stretch only) | Only if the satellite snow-melt test works by ~3 AM, and only if we've been coding in Cursor | | P2 |
 | Skip | Fetch.ai, Capital One Nessie, SpacetimeDB, FREE-WILi, FinchNode, Relay (Photon instead) | | |
+
+**Cheap MLH prizes (listed in `HANDOFF.md`; separate from the sponsor tracks, so check MLH's rules on Devpost):**
+- **.Tech domain:** register a domain like `hiddenrent.tech` and point it at the web app. About 15 minutes.
+- **Gemini API:** if we use Gemini as the vision model that reads bill photos, it's a natural entry.
+- **ElevenLabs (MLH):** only if we add the optional voice call.
 
 ---
 
