@@ -1,0 +1,1 @@
+CarbonCast (UMass Amherst, BuildSys 2022) is essentially our ML pipeline. It forecasts grid carbon intensity up to 96h ahead from EIA-930 data plus weather forecasts. That supports our data choices, and their paper and repo are worth reading for features and baselines.
