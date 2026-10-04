@@ -1,7 +1,7 @@
 # MHacks 2026: Hidden Rent
 
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
-in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), `/web` (P3, landing screen so far).
+in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
 
 ## Run the demo
 
@@ -26,7 +26,7 @@ make demo-check                 # isolated API/model with outbound Python networ
 `make demo` starts or reuses the healthy model on `:8001`, then API `:8000`, web `:3000`, onboarding `:8787`, and
 finally the agent. Open [the website](http://localhost:3000). Without both Photon credentials the agent always
 uses terminal chat; with both credentials, plain `make demo` uses Photon. Set `AGENT_TERMINAL=1` to force terminal
-chat. The terminal provider may download its `tuichat` binary from GitHub on first use, so launch it once online.
+chat. Terminal mode uses the agent's plain-text prompt and does not initialize Photon or send messages.
 
 Environment variables already set in the shell take precedence over literal assignments in root `.env`, then
 `agent/.env`. Files are parsed without executing shell code; `$VARIABLE` interpolation is not supported. No
@@ -56,11 +56,11 @@ cannot restrict the already-running model on `:8001`, which is why the check use
 leaves the demo/shared server untouched. Override `DEMO_CHECK_API_PORT` / `DEMO_CHECK_MODEL_PORT` if needed.
 
 This is a Python-process offline simulation, not an OS firewall or certification of every endpoint. A forecast
-404 is a skip, not a successful offline forecast. The forecast implementation on `p2/forecast` requests live
-Open-Meteo daily forecasts on each call; warming its disk history alone does not remove that dependency. Cache
+404 is a skip, not a successful offline forecast. Forecast requests try live Open-Meteo first, then use a saved
+last-good response with `stale_as_of` when at least three future days remain. Warming history alone is insufficient. Cache
 misses may still require Census geocoding/Census Reporter, city GIS, or the model's weather/EIA sources. The check
 reports attempts even if an existing cached fallback succeeds. Photon/iMessage, tunnels, browser assets, dependency
-installation, and first-use tuichat downloads still need separate network checks. No real messages are sent by
+installation still need separate network checks. No real messages are sent by
 warm/check; validate the launcher with `AGENT_TERMINAL=1`.
 Run `bash scripts/test-demo.sh` for the bounded cleanup, dotenv, and forecast-cell regression checks; these use no real model calls or messages.
 
@@ -189,9 +189,12 @@ make -C model test                       # needs make -C model build and make -C
 (cd web && npm run build)                # type-checks /web; it has no tests yet
 ```
 
-`POST /estimate` today returns real `building` fields and heating + cooling `bill` p50s (annual, per season, per month,
-from P1's model; `heating_cooling` has P1's full answer). Not yet filled (null/empty): `session_id`, `bill` p10/p90,
-`co2_t`, score/grade/percentiles/hidden rent, badges, questions. Errors are 422
+`POST /estimate` returns a saved `session_id`, building fields, heating + cooling bill ranges, CO₂, predicted
+score/grade/percentiles/hidden rent, badges and answerable questions (`heating_cooling` contains P1's full answer).
+`POST /answer` updates that session; `GET /session/{id}` resumes it. The web, map, comparison, monthly bill and
+saved-home flows use the real API. Unmodeled commitment effects and pending look-alikes stay empty rather than
+inventing numbers. See `api/README.md` for the endpoint contract and `notes/integration.md` on `main` for final
+verification and remaining limits. Errors are 422
 `{"detail": {"code", "message"}}` with codes `missing_input`, `needs_address` (+ `hint`), `not_found` (outside Ann
 Arbor), `not_a_home`, `bad_unit_sqft` (outside 100–10,000); 503 when the model or the address lookup is down or errors.
 
