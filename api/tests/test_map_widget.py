@@ -39,11 +39,14 @@ def index():
 
 
 @pytest.fixture(autouse=True)
-def caches():
+def caches(monkeypatch):
+    monkeypatch.setattr(mw.model_capabilities, "capabilities", lambda: {})
+    mw._model_cloud.cache_clear()
     mw._model_step.cache_clear()
     mw._block_group.cache_clear()
     mw._city_data.cache_clear()
     yield
+    mw._model_cloud.cache_clear()
     mw._model_step.cache_clear()
 
 
@@ -186,3 +189,54 @@ def test_similar_repeatable_and_excludes_selected_or_outside_size(env):
     large = {**rows[1], "id": 100, "footprint_sqft": rows[0]["footprint_sqft"] * 2}
     assert mw._similar([*rows, large], rows[0]) == mw._similar([*rows, large], rows[0])
     assert [b["id"] for b in mw._similar([*rows, large], rows[0])["items"]] == [6]
+
+
+def test_capability_populates_ordered_clouds_and_reuses_cache(env, monkeypatch):
+    s, _, _ = env
+    s["answers"] = {"heating_fuel": "gas", "window_panes": "2", "floor_level": None, "cooling_code": "0"}
+    monkeypatch.setattr(mw.model_capabilities, "capabilities", lambda: {"endpoints": ["lookalikes"]})
+    calls = []
+    def get(url, *, params, timeout):
+        assert url.endswith("/hc/lookalikes")
+        calls.append(params)
+        count = 4 - sum(k in params for k in ("heating_fuel", "window_panes", "cooling_code"))
+        return httpx.Response(200, json={"count": count, "usd_yr": [500] * count,
+                "p10": 500, "p50": 500, "p90": 500, "pool_size": 20, "rule": "real simulated source pool"},
+                request=httpx.Request("GET", url))
+    monkeypatch.setattr(mw.httpx, "get", get)
+    x = client.get("/map/mary").json()
+    assert [step["lookalikes"]["count"] for step in x["steps"]] == [4, 3, 2, 2, 1]
+    assert x["lookalikes"] == {"pool_size": 20, "rule": "real simulated source pool"}
+    assert len(calls) == 4 and all(c["year_built"] == 1965 for c in calls)
+    assert "heating_fuel" not in calls[0] and calls[1]["heating_fuel"] == "gas"
+    assert calls[2]["window_panes"] == 2 and calls[-1]["cooling_code"] == 0
+    assert all("floor_level" not in c for c in calls)
+    assert client.get("/map/mary").json() == x and len(calls) == 4
+
+
+@pytest.mark.parametrize("failure", ["connection", "http", "malformed"])
+def test_optional_cloud_failure_keeps_map_and_is_not_cached(env, monkeypatch, failure):
+    monkeypatch.setattr(mw.model_capabilities, "capabilities", lambda: {"endpoints": ["lookalikes"]})
+    calls = []
+    def get(url, **kwargs):
+        calls.append(url)
+        if failure == "connection":
+            raise httpx.ConnectError("test model down")
+        return httpx.Response(503 if failure == "http" else 200, json={"bad": "cloud"}, request=httpx.Request("GET", url))
+    monkeypatch.setattr(mw.httpx, "get", get)
+    for _ in range(2):
+        response = client.get("/map/mary")
+        assert response.status_code == 200
+        assert response.json()["lookalikes"]["pool_size"] == 0
+        assert response.json()["steps"][0]["lookalikes"]["p50"] is None
+    assert len(calls) == 2 and mw._model_cloud.cache_info().currsize == 0
+
+
+def test_empty_supported_cloud_keeps_source_rule(env, monkeypatch):
+    monkeypatch.setattr(mw.model_capabilities, "capabilities", lambda: {"endpoints": ["lookalikes"]})
+    monkeypatch.setattr(mw.httpx, "get", lambda url, **kwargs: httpx.Response(200, json={
+        "count": 0, "usd_yr": [], "p10": None, "p50": None, "p90": None,
+        "pool_size": 20, "rule": "No simulated homes match this vintage and size."}, request=httpx.Request("GET", url)))
+    x = client.get("/map/mary").json()
+    assert x["lookalikes"]["pool_size"] == 20 and "No simulated" in x["lookalikes"]["rule"]
+    assert x["steps"][0]["lookalikes"]["count"] == 0

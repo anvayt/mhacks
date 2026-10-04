@@ -109,7 +109,8 @@ def _hc_ac(params: dict) -> dict:
         a["cooling_usd"] = 0
         for x in [*hc["seasons"], *hc.get("months", [])]:
             x["total_usd"] -= x["cooling"]["usd"]
-            x["cooling"] = {**x["cooling"], "usd": 0, "electric_kwh": 0}
+            x["cooling"] = {**x["cooling"], "usd": 0, "electric_kwh": 0,
+                            **({"usd_exact": 0.0} if "usd_exact" in x["cooling"] else {})}
     return hc
 
 

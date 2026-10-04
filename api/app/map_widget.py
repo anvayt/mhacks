@@ -1,7 +1,7 @@
 """GET /map/{session_id}: P3 MapWidgetData, from P2's cached city GIS and P1's HTTP API.
 
 Shape/sample: p3/map-widget web/scripts/build_map_fixture.py and web/HOUSE_SCHEMA.md.
-No model imports: look-alike simulation/pricing stays pending P1's HTTP endpoint.
+No model imports: optional look-alike simulation/pricing is negotiated over P1's HTTP API.
 """
 
 import json
@@ -14,7 +14,7 @@ import shapely
 from fastapi import APIRouter, HTTPException
 from shapely.geometry import mapping, shape
 
-from app import estimate, sessions
+from app import estimate, model_capabilities, sessions
 from app.geo import DATA_DIR
 from app.geo.footprints import _index, _project, mailing_assignment, mailing_labels
 
@@ -115,6 +115,45 @@ def _model_step(params_json: str) -> dict:
         raise _unavailable(estimate.MODEL_DOWN) from e
 
 
+@lru_cache(maxsize=1024)
+def _model_cloud(params_json: str, model_url: str) -> dict:
+    """Successes share the ordered-step cache; failures are retried on the next request."""
+    with estimate.MODEL_SLOTS:
+        response = httpx.get(f"{model_url.rstrip('/')}/hc/lookalikes", params=json.loads(params_json), timeout=180)
+    response.raise_for_status()
+    cloud = response.json()
+    # Treat malformed optional data as unavailable, never draw invented/NaN points.
+    count, pool_size = cloud["count"], cloud["pool_size"]
+    values, quantiles = cloud["usd_yr"], [cloud[k] for k in ("p10", "p50", "p90")]
+    if (not isinstance(count, int) or count < 0 or not isinstance(pool_size, int) or pool_size < count
+            or not isinstance(values, list) or len(values) > min(400, count)
+            or values != sorted(values) or not all(np.isfinite(v) and v >= 0 for v in values)
+            or not isinstance(cloud["rule"], str)):
+        raise ValueError("invalid look-alike cloud")
+    if count:
+        if not values or not all(v is not None and np.isfinite(v) and v >= 0 for v in quantiles) or quantiles != sorted(quantiles):
+            raise ValueError("invalid look-alike quantiles")
+    elif values or any(v is not None for v in quantiles):
+        raise ValueError("empty look-alike cloud must have null quantiles")
+    return cloud
+
+
+def _cloud(params_json: str, year_built, supported: bool) -> dict:
+    empty = {"count": 0, "usd_yr": [], "p10": None, "p50": None, "p90": None,
+             "pool_size": 0, "rule": PENDING}
+    if not supported:
+        return empty
+    params = {k: v for k, v in json.loads(params_json).items()
+              if k in {"lat", "lon", "unit_sqft", "building_type", "block_group", *estimate.QUESTIONS}}
+    if year_built is not None:
+        params["year_built"] = year_built
+    try:
+        return _model_cloud(json.dumps(params, sort_keys=True), estimate.MODEL_BASE_URL)
+    except (httpx.HTTPError, KeyError, TypeError, ValueError):
+        # The map's real estimate/history remain available if the optional cloud is down.
+        return empty
+
+
 def _summary(hc: dict) -> dict:
     return {"annual_usd": round(hc["annual"]["total_usd"]),
             "seasons": {s["season"]: round(s["total_usd"]) for s in hc["seasons"]},
@@ -122,14 +161,14 @@ def _summary(hc: dict) -> dict:
             "typical_error": hc["accuracy"]["seasonal_gas_median_abs_error"]["all"], "method": hc["method"]}
 
 
-def _step(question_id: str, answer, hc: dict) -> dict:
+def _step(question_id: str, answer, hc: dict, cloud: dict) -> dict:
     q = estimate.QUESTIONS.get(question_id)
     label = None if question_id == "public_record" else "Skipped" if answer is None else str(answer)
     if q and answer is not None:
         label = next((label for value, label, _ in q[1] if value == str(answer)), label)
     return {"id": question_id, "question": q[0] if q else None, "answer_label": label,
             "estimate": _summary(hc),
-            "lookalikes": {"count": 0, "usd_yr": [], "p10": None, "p50": None, "p90": None}}
+            "lookalikes": {k: cloud[k] for k in ("count", "usd_yr", "p10", "p50", "p90")}}
 
 
 @router.get("/map/{session_id}")
@@ -137,11 +176,16 @@ def get_map(session_id: str) -> dict:
     s = sessions.get(session_id)
     if s is None:
         raise HTTPException(404, {"code": "not_found", "message": estimate.EXPIRED})
-    public = _model_step(_step_params(s["model_params"], ()))
+    public_params = _step_params(s["model_params"], ())
+    public = _model_step(public_params)
+    supported = "lookalikes" in model_capabilities.capabilities().get("endpoints", [])
+    year_built = public["building"].get("year_built")
+    public_cloud = _cloud(public_params, year_built, supported)
     answers = tuple(s.get("answers", {}).items())
-    steps = [_step("public_record", None, public)]
+    steps = [_step("public_record", None, public, public_cloud)]
     for n, (q, value) in enumerate(answers, 1):
-        steps.append(_step(q, value, _model_step(_step_params(s["model_params"], answers[:n]))))
+        params = _step_params(s["model_params"], answers[:n])
+        steps.append(_step(q, value, _model_step(params), _cloud(params, year_built, supported)))
 
     ix, rows, bounds = _city_data()
     i = _selected(ix, s["building"]["footprint_geojson"])
@@ -180,7 +224,7 @@ def get_map(session_id: str) -> dict:
                         "median_year_built_source": year_source,
                         "gas_heat_share": shares.get("gas_share"), "electric_heat_share": shares.get("electric_share"),
                         "heating_fuel_source": b.get("heating_fuel_source", "unavailable")},
-        "lookalikes": {"pool_size": 0, "rule": PENDING}, "steps": steps,
+        "lookalikes": {"pool_size": public_cloud["pool_size"], "rule": public_cloud["rule"]}, "steps": steps,
         "accuracy_basis": public["accuracy"]["basis"],
         "sources": [{"label": HEIGHT_SOURCE, "url": FOOTPRINTS_URL},
                     {"label": "City of Ann Arbor mailing addresses; P3 inside/nearest footprint within 1.1e-4 degrees for map labels",

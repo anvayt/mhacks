@@ -1,0 +1,76 @@
+PASS demo 2322 Arrowwood Trl, Ann Arbor, MI /hc/estimate old=200 new=200 diffs=0
+PASS demo 2322 Arrowwood Trl, Ann Arbor, MI /hc/bill_check old=200 new=200 diffs=0
+PASS demo 2322 Arrowwood Trl, Ann Arbor, MI /hc/weather old=200 new=200 diffs=0
+PASS demo 624 Church St, Ann Arbor, MI /hc/estimate old=200 new=200 diffs=0
+PASS demo 624 Church St, Ann Arbor, MI /hc/bill_check old=200 new=200 diffs=0
+PASS demo 624 Church St, Ann Arbor, MI /hc/weather old=200 new=200 diffs=0
+PASS demo 1022 S Forest Ave, Ann Arbor, MI /hc/estimate old=200 new=200 diffs=0
+PASS demo 1022 S Forest Ave, Ann Arbor, MI /hc/bill_check old=200 new=200 diffs=0
+PASS demo 1022 S Forest Ave, Ann Arbor, MI /hc/weather old=200 new=200 diffs=0
+PASS demo 615 S Main St, Ann Arbor, MI /hc/estimate old=200 new=200 diffs=0
+PASS demo 615 S Main St, Ann Arbor, MI /hc/bill_check old=200 new=200 diffs=0
+PASS demo 615 S Main St, Ann Arbor, MI /hc/weather old=200 new=200 diffs=0
+PASS demo 1514 Morton Ave, Ann Arbor, MI /hc/estimate old=200 new=200 diffs=0
+PASS demo 1514 Morton Ave, Ann Arbor, MI /hc/bill_check old=200 new=200 diffs=0
+PASS demo 1514 Morton Ave, Ann Arbor, MI /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 7400 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 7400 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 7400 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 2063 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 2063 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 2063 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 35157 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 35157 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 35157 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 13754 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 13754 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 13754 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 18059 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 18059 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 18059 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 11778 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 11778 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 11778 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 23499 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 23499 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 23499 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 8105 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 8105 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 8105 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 33418 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 33418 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 33418 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 32067 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 32067 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 32067 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 30907 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 30907 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 30907 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 5753 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 5753 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 5753 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 21873 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 21873 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 21873 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 6364 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 6364 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 6364 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 18086 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 18086 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 18086 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 27387 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 27387 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 27387 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 15808 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 15808 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 15808 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 9476 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 9476 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 9476 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 9677 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 9677 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 9677 /hc/weather old=200 new=200 diffs=0
+PASS city_footprint 3575 /hc/estimate old=200 new=200 diffs=0
+PASS city_footprint 3575 /hc/bill_check old=200 new=200 diffs=0
+PASS city_footprint 3575 /hc/weather old=200 new=200 diffs=0
+PASS: 75/75 endpoint checks; report /Users/anvaytodkar/Code/mhacks-p1/model/results/finish/compatibility.json

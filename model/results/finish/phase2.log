@@ -1,0 +1,19 @@
+Phase 2 check: disposable account; typed bill values are HYPOTHETICAL; no texts/events sent.
+STATUS | STEP                         | RESULT
+PASS | web login start              | login challenge created; code and phone withheld
+PASS | web login confirm (agent)    | agent confirmed the test login
+PASS | web login token              | web bearer token received; token withheld
+PASS | phone login idempotency      | two calls returned the same user
+PASS | save Morton property         | 1514 Morton: grade C, annual $2,117
+PASS | web account /me              | web authorization works; 1 property record(s)
+PASS | suggested commitments        | 7 suggestions; window_upgrade present
+PASS | accept window_upgrade        | window_upgrade accepted
+PASS | projection honesty           | current C unchanged; projected_if_completed; 0 not modeled
+PASS | leaderboard ghost marker     | current C, rank 10489/21173; labelled projected ghost
+PASS | bill and new snapshot        | HYPOTHETICAL bill: -67.6%; bill_regrade; verified=false
+PASS | property history             | 2 snapshots, 1 bills, 0 verified impacts
+PASS | manual check-in              | still_at_address for the current property; no message sent
+PASS | demo reminder                | check-in reminder returned; /sent not called; no message sent
+PASS | Calendar connect             | authorization URL returned; mock=true; URL not opened
+PASS | move and preserve history    | 912 Mary active; Morton archived; all old history retained; no impact carried across
+RESULT: 16 passed, 0 failed. Missing Phase 2 routes fail until merged.

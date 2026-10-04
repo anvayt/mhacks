@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from app import accounts, commitments, sessions
 from app.co2 import co2_kg
 from app.main import app
+from app.model_capabilities import capabilities as discover_capabilities
 from app.score import grade_of
 
 client = TestClient(app)
@@ -40,6 +41,7 @@ def fake_score(annual, sqft, btype):
 def env(monkeypatch, tmp_path):
     monkeypatch.setattr("app.db.DB_PATH", tmp_path / "app.sqlite")
     monkeypatch.setattr("app.commitments.score_for", fake_score)
+    monkeypatch.setattr("app.model_capabilities.capabilities", lambda: {})
 
 
 @pytest.fixture
@@ -308,3 +310,153 @@ def test_joined_with_real_accounts():  # merge wave 5a: accounts' property, pref
     assert r.json()["reminder_channel"] == accounts.DEFAULT_PREFS["channel"]  # from the user's reminder_prefs
     hist = client.get(f"/properties/{pid}/history").json()
     assert [c["catalog_id"] for c in hist["commitments"]] == ["air_sealing"]
+
+
+# New P1 counterfactual inputs only go to a server that advertises them.
+@pytest.fixture
+def new_effects(monkeypatch):
+    names = ["air_sealing", "attic_r", "wall_insulated", "heat_pump", "setpoint_delta_f"]
+    caps = {"estimate_params": names, "details": {"estimate_params": {
+        p: {"supported": True, "paths": ["resstock", "meter_model+resstock"], "fuels": ["gas"]} for p in names}}}
+    monkeypatch.setattr("app.model_capabilities.capabilities", lambda: caps)
+    calls = []
+    def run(params):
+        calls.append(params.copy())
+        applied = [p for p in caps["estimate_params"] if params.get(p)]
+        # Non-additive fake: combined effects save less than the sum of single effects.
+        saving = 35 if len(applied) > 1 else 20 if applied else 0
+        result = hc(520 - saving, 900, 820 - saving)
+        result["effects"] = {"applied": [{"param": p, "method": "fixture counterfactual", "sources": ["fixture"]}
+                                         for p in applied], "not_modeled": [], "label": commitments.LABEL}
+        return result
+    monkeypatch.setattr("app.estimate._hc_ac", run)
+    return caps, calls
+
+
+def test_new_advertised_gas_actions_have_only_the_advertised_inputs(new_effects):
+    _, calls = new_effects
+    by, _ = suggested(home(window_panes=2))
+    for cid, change in commitments.OPTIONAL_CHANGES.items():
+        item = by[cid]
+        assert not item["pending_model"] and item["projected"]["usd_saved_yr"] == 20
+        assert any(all(call.get(k) == v for k, v in change.items()) for call in calls)
+        assert item["model_effects"]["applied"][0]["method"] == "fixture counterfactual"
+        assert item["model_effects"]["applied"][0]["sources"] == ["fixture"]
+    hp = next(c for c in calls if c.get("heat_pump"))
+    assert "heating_fuel" not in hp and "cooling_code" not in hp  # never fake gas → resistance heat
+    assert "64°F" in by["thermostat_setback"]["note"]
+    assert by["thermostat_setback"]["grh_points"] == 0
+    assert by["thermostat_setback"]["rebate_usd"] is None
+    assert "Professional whole-home" in by["air_sealing"]["title"]
+    assert next(c for c in calls if "setpoint_delta_f" in c)["setpoint_delta_f"] == -2
+
+
+def test_only_advertised_effects_are_sent_and_details_are_honored(new_effects):
+    caps, calls = new_effects
+    caps["estimate_params"] = ["air_sealing", "attic_r", "wall_insulated"]
+    caps["details"]["estimate_params"]["attic_r"]["paths"] = ["metered"]
+    caps["details"]["estimate_params"]["wall_insulated"]["supported"] = False
+    by, _ = suggested(home(window_panes=2))
+    assert len(calls) == 1 and calls[0]["air_sealing"] is True
+    assert not by["air_sealing"]["pending_model"]
+    assert all(by[c]["pending_model"] for c in ("attic_insulation", "wall_insulation", "heat_pump", "thermostat_setback"))
+
+
+def test_metered_capability_still_leaves_actions_as_tips(new_effects):
+    caps, calls = new_effects
+    for detail in caps["details"]["estimate_params"].values():
+        detail["paths"].append("metered")
+    by, _ = suggested(home(method="metered", window_panes=2))
+    assert calls == [] and all(item["pending_model"] for item in by.values())
+
+
+def test_advertised_gas_effects_do_not_change_old_electric_requests(calls, monkeypatch):
+    monkeypatch.setattr("app.model_capabilities.capabilities", lambda: {"estimate_params": ["air_sealing", "heat_pump"]})
+    suggested(home(kind="elec", window_panes=1, cooling_code=2))
+    assert len(calls) == 2
+    assert all("air_sealing" not in c and "heat_pump" not in c for c in calls)
+    assert any(c.get("heating_fuel") == "electric" and c.get("cooling_code") == 3 for c in calls)
+
+
+def test_new_effects_compose_once_and_removal_reverses(new_effects):
+    _, calls = new_effects
+    pid = home(window_panes=2)
+    before = sessions.get(f"s-{pid}")
+    both = project(pid, ["air_sealing", "attic_insulation"])
+    assert len(calls) == 3  # two screens plus one composed model run
+    assert len([c for c in calls if c.get("air_sealing") and c.get("attic_r") == 50]) == 1
+    assert both["delta"]["usd_saved_yr"] == 35 < 20 + 20
+    assert {e["param"] for e in both["model_effects"]["applied"]} == {"air_sealing", "attic_r"}
+    only = project(pid, ["air_sealing"])
+    assert only["delta"]["usd_saved_yr"] == 20
+    assert project(pid, ["air_sealing"])["projected"] == only["projected"]
+    empty = project(pid, [])
+    assert empty["delta"]["usd_saved_yr"] == 0 and empty["modeled"] == []
+    assert sessions.get(f"s-{pid}") == before
+
+
+def test_new_effect_without_carbon_benefit_stays_unpriced(new_effects, monkeypatch):
+    monkeypatch.setattr("app.estimate._hc_ac", lambda params: hc(600, 900, 900))
+    by, _ = suggested(home(window_panes=2))
+    assert all(item["pending_model"] for item in by.values())
+    assert by["heat_pump"]["method"] == commitments.NO_CUT
+    p = project("p1", ["air_sealing", "heat_pump"])
+    assert p["modeled"] == [] and p["delta"]["co2_kg_saved_yr"] == 0
+
+
+def test_old_capability_endpoint_retains_legacy_request(monkeypatch):
+    from app import model_capabilities
+    monkeypatch.setattr(model_capabilities, "capabilities", discover_capabilities)
+    calls = []
+    def get(url, params=None, **kwargs):
+        if url.endswith("/hc/capabilities"):
+            return httpx.Response(404)
+        calls.append(params)
+        return httpx.Response(200, json=MODEL[("gas", True, False)])
+    monkeypatch.setattr(model_capabilities.httpx, "get", get)
+    model_capabilities.reset_cache()
+    try:
+        by, _ = suggested(home(window_panes=1))
+        assert len(calls) == 1 and calls[0] == {"lat": 42.27, "lon": -83.74, "unit_sqft": 850.0,
+            "building_type": "Multi-Family with 2 - 4 Units", "block_group": "gas", "window_panes": 2}
+        assert by["window_upgrade"]["projected"]["usd_saved_yr"] == 80
+        assert all(by[cid]["pending_model"] for cid in commitments.OPTIONAL_CHANGES)
+    finally:
+        model_capabilities.reset_cache()
+
+
+@pytest.mark.parametrize("detail", [None, [], {"supported": "yes"}, {"paths": None}, {"fuels": "gas"}])
+def test_bad_capability_details_cannot_enable_an_effect(new_effects, detail):
+    caps, calls = new_effects
+    caps["estimate_params"] = ["air_sealing"]
+    caps["details"]["estimate_params"]["air_sealing"] = detail
+    by, _ = suggested(home(window_panes=2))
+    assert by["air_sealing"]["pending_model"] and calls == []
+
+
+def test_included_heat_keeps_renter_savings_separate(new_effects):
+    home(window_panes=2, heating_fuel="included")
+    p = project("p1", ["air_sealing"])
+    assert p["delta"]["usd_saved_yr"] == 0  # no cooling benefit in this fixture
+    assert p["delta"]["co2_kg_saved_yr"] > 0
+    assert p["projected"]["building_annual_usd"] < p["current"]["building_annual_usd"]
+
+
+def test_gas_heat_pump_can_cost_more_when_it_cuts_carbon(new_effects, monkeypatch):
+    caps, _ = new_effects
+    caps["estimate_params"] = ["heat_pump"]
+    monkeypatch.setattr("app.estimate._hc_ac", lambda params: hc(0, 3000, 1000, fuel="electric"))
+    by, _ = suggested(home(window_panes=2))
+    hp = by["heat_pump"]
+    assert not hp["pending_model"] and hp["projected"]["usd_saved_yr"] == -180
+    assert hp["projected"]["co2_kg_saved_yr"] > 0
+    p = project("p1", ["heat_pump"])
+    assert p["delta"]["usd_saved_yr"] == -180 and p["projected"]["bill_annual"]["p50"] == 1000
+
+
+def test_advertised_building_type_restriction_stays_placeholder(new_effects):
+    caps, calls = new_effects
+    caps['details']['estimate_params']['attic_r']['building_types'] = ['Mobile Home']
+    by, _ = suggested(home(window_panes=2))
+    assert by['attic_insulation']['pending_model']
+    assert not any('attic_r' in c for c in calls)
