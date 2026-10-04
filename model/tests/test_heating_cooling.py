@@ -49,3 +49,16 @@ def test_bill_check_detects_high_bill():
     exp = ok["expected_gas_ccf"]
     hi = bill_check(2023, 1, exp * 1.6, 850, lat=AA[0], lon=AA[1])
     assert hi["pct_vs_expected_for_weather"] > 0.5 and hi["meaningful"]
+
+
+@pytest.mark.parametrize("mode", ["normal", "forecast", 2023])
+def test_months_sum_to_seasons_and_annual(mode):
+    e = estimate_hc(lat=AA[0], lon=AA[1], unit_sqft=850, mode=mode)
+    assert len(e["months"]) == 12
+    for s in e["seasons"]:
+        ms = [m for m in e["months"] if m["month"] in s["months"]]
+        assert abs(sum(m["heating"]["gas_ccf"] for m in ms) - s["heating"]["gas_ccf"]) < 1.0
+        assert abs(sum(m["cooling"]["electric_kwh"] for m in ms) - s["cooling"]["electric_kwh"]) < 3
+    assert abs(sum(m["total_usd"] for m in e["months"]) - e["annual"]["total_usd"]) <= 12  # per-month rounding
+    jan = next(m for m in e["months"] if m["month"] == 1)
+    assert jan["weather"]["hdd65"] > 0 and jan["accuracy"]["gas_median_abs_error"] is not None
