@@ -9,6 +9,9 @@ import styles from "./hidden-rent-map.module.css";
 import type { CityBuildingProps, Focus, MapWidgetData } from "./types";
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+// Satellite/aerial basemap for the "Satellite" view; our grade layers draw on top of it.
+const SATELLITE_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const SATELLITE_ATTRIBUTION = 'Imagery <a href="https://www.esri.com">Esri</a>, Maxar, Earthstar Geographics, USDA, USGS';
 const FT_TO_M = 0.3048;
 const BLUE = "#173bfa";
 const INK = "#11121a";
@@ -100,6 +103,28 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
         }
         const sel = data.building.id;
         const simIds = data.similar.items.map((s) => s.id);
+
+        // Added first so it sits above the street basemap but under every Hidden Rent layer.
+        map.addSource("satellite", { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_ATTRIBUTION });
+        map.addLayer({ id: "satellite", type: "raster", source: "satellite", layout: { visibility: "none" } });
+        const views = document.createElement("div");
+        views.className = "maplibregl-ctrl maplibregl-ctrl-group";
+        for (const [view, label] of [["map", "Map"], ["satellite", "Satellite"]] as const) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          Object.assign(button.style, { width: "auto", padding: "0 10px", fontWeight: view === "map" ? "700" : "400" });
+          button.setAttribute("aria-pressed", String(view === "map"));
+          button.onclick = () => {
+            map?.setLayoutProperty("satellite", "visibility", view === "satellite" ? "visible" : "none");
+            for (const b of views.querySelectorAll("button")) {
+              b.setAttribute("aria-pressed", String(b === button));
+              b.style.fontWeight = b === button ? "700" : "400";
+            }
+          };
+          views.appendChild(button);
+        }
+        map.addControl({ onAdd: () => views, onRemove: () => views.remove() }, "top-left");
 
         map.addSource("block-group", {
           type: "geojson",
