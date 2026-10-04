@@ -78,9 +78,11 @@ def parse_listing_url(url: str) -> dict:
     holds no address; then needs_address is True and hint is a best-effort place string to confirm
     (e.g. "The Courtyards, Ann Arbor, MI"), or None. Also accepts a URL inside a sentence.
 
-    Map links (Google/Apple) add "lat", "lon" and "coords_only" when they carry coordinates. A map
-    link with coordinates but no readable address gives address None, needs_address False,
-    coords_only True (look the building up by point). Without coordinates these keys are absent.
+    Map links (Google/Apple) add "lat", "lon" and "coords_only" when they carry coordinates; without
+    coordinates these keys are absent. coords_only is True when there are coordinates but no address.
+    Then needs_address is False only for an unnamed explicit point (dropped pin, 'q=lat,lon', Apple
+    ll=/coordinate= with no name, iMessage location): look the building up by point. A named pin
+    (hint set, e.g. a city) or a bare map view still has needs_address True: confirm with the user.
     """
     url = find_url(url)
     if not url:
@@ -127,7 +129,9 @@ def find_url(text: str) -> str | None:
     m = URL_IN_TEXT.search(text) if isinstance(text, str) else None
     if not m:
         return None
-    raw = m.group(0).replace("\\", "")  # iMessage CL.loc.vcf vCards escape ',' as '\,'
+    # Drop sentence punctuation after the link ('...goo.gl/Ab1.', '(...goo.gl/Ab1)'); iMessage
+    # CL.loc.vcf vCards escape ',' as '\,'.
+    raw = m.group(0).rstrip(".,;:!?)]}'\"").replace("\\", "")
     return raw if re.match(r"https?://", raw, re.I) else "https://" + raw
 
 
@@ -252,12 +256,16 @@ def _apple(parts) -> dict:
 def _map_result(source: str, texts: list, pins: list, views: list = ()) -> dict:
     """First text that reads as a US address wins; coordinates: pin, then coordinate text, then view."""
     texts = [" ".join(t.replace("+", " ").split()) for t in texts if t and t.strip()]
-    ll = next((c for c in map(_latlon, [*pins, *texts, *views]) if c), None)
+    point = next((c for c in map(_latlon, [*pins, *texts]) if c), None)
+    ll = point or next((c for c in map(_latlon, views) if c), None)
     r = next((a for t in texts if (a := _address_text(source, t))), None)
     if r is None:
         names = (t for t in texts if not _latlon(t) and "°" not in t and t.lower() not in PIN_LABELS)
         r = _needs(source, next(names, None))
-        r["needs_address"] = ll is None
+        # Only an unnamed explicit point (dropped pin, coordinate query, shared location) is safe to
+        # score unasked. A named pin may be a city or a business, and a viewport is just where the map
+        # was looking, so those keep lat/lon for a one-tap "use this pin" but still need confirming.
+        r["needs_address"] = point is None or r["hint"] is not None
     if ll:
         r.update(lat=ll[0], lon=ll[1], coords_only=r["address"] is None)
     return r

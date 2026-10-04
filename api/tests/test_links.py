@@ -64,11 +64,18 @@ def test_apple_short_link_in_imessage_text(net):
 
 
 def test_coords_only_after_expansion(net):
+    # a named pin keeps its coordinates but still asks the user to confirm
     target = "https://www.google.com/maps/place/Arbor+Club+Apartments/@42.30,-83.79,15z/data=!4m6!3m5!8m2!3d42.2992!4d-83.7989"
     net.routes = {"https://maps.app.goo.gl/Pin123": (302, target)}
     r = links.resolve_link("https://maps.app.goo.gl/Pin123")
     assert (r["needs_address"], r["coords_only"], r["lat"], r["lon"], r["hint"]) == (
-        False, True, 42.2992, -83.7989, "Arbor Club Apartments")
+        True, True, 42.2992, -83.7989, "Arbor Club Apartments")
+
+
+def test_short_link_followed_by_punctuation(net):
+    net.routes = {"https://maps.app.goo.gl/AbCdEf123": (302, GOOGLE_PLACE)}
+    r = links.resolve_link("is it this one? https://maps.app.goo.gl/AbCdEf123.")
+    assert (r["address"], r["resolved_url"]) == ("520 N Main St, Ann Arbor, MI 48104", GOOGLE_PLACE)
 
 
 def test_multi_hop_and_consent_wall(net):
@@ -133,3 +140,5 @@ def test_live(monkeypatch, tmp_path):
     assert apple["address"] == "1 Apple Park Way, Cupertino, CA 95014" and apple["lat"] == pytest.approx(37.33, abs=0.01)
     google = links.resolve_link("https://maps.app.goo.gl/RvL7iSNSsNaVBRru8")  # a public short link on GitHub
     assert google["coords_only"] and google["lat"] == pytest.approx(33.56, abs=0.01)
+    city = links.resolve_link("is it this one? https://maps.app.goo.gl/N7Qqbomd6kmiEfst6.")  # Ann Arbor, the city
+    assert city["needs_address"] and city["hint"] and city["lat"] == pytest.approx(42.28, abs=0.01)
