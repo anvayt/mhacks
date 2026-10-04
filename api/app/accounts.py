@@ -259,6 +259,13 @@ def current_property(user_id: str) -> dict | None:
     return _property(row) if row else None
 
 
+def property_for_session(session_id: str) -> dict | None:
+    """The active home whose current estimate is this /estimate session (so /answer can snapshot it), else None."""
+    with closing(_con()) as con:
+        row = con.execute("SELECT * FROM properties WHERE session_id = ? AND active = 1", (session_id,)).fetchone()
+    return _property(row) if row else None
+
+
 def update_reminder_prefs(user_id: str, prefs: dict) -> dict:
     """Merge and validate (NEW_CHANGES.md §9.6: never at night); returns the stored prefs."""
     new = {**_need_user(user_id)["reminder_prefs"], **prefs}
