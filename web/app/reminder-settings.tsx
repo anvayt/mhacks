@@ -116,10 +116,15 @@ export function ReminderSettings() {
     setBusy(true);
     setError(null);
     try {
-      const me = await saveMe(userId, draft);
-      setPrefs(me.reminder_prefs);
-      setDraft(me.reminder_prefs);
-      setStatus(me.reminder_prefs.cadence === "off" ? "Text reminders are off." : "Saved. We'll text within these settings.");
+      let saved = (await saveMe(userId, draft)).reminder_prefs;
+      // Turning texts back on after Pause/Stop: the API's stop is cleared only by /resume, not by paused=false.
+      const turningOn = draft.cadence !== "off" && draft.channel !== "none" && !draft.paused;
+      if (turningOn && prefs?.paused) {
+        saved = (await apiFetch<{ reminder_prefs: ReminderPrefs }>(`/reminders/${encodeURIComponent(userId)}/resume`, { method: "POST", body: {} })).reminder_prefs;
+      }
+      setPrefs(saved);
+      setDraft(saved);
+      setStatus(saved.cadence === "off" ? "Text reminders are off." : "Saved. We'll text within these settings.");
     } catch (err) {
       setError(message(err));
     } finally {
@@ -163,7 +168,7 @@ export function ReminderSettings() {
           </p>
           <div className="choice-row" role="group" aria-label="Text me reminders">
             <button type="button" className="control choice" aria-pressed={on} disabled={busy}
-              onClick={() => set({ cadence: draft.cadence === "off" ? "monthly" : draft.cadence, channel: draft.channel === "none" ? "imessage" : draft.channel })}>
+              onClick={() => set({ cadence: draft.cadence === "off" ? "monthly" : draft.cadence, channel: draft.channel === "none" ? "imessage" : draft.channel, paused: false })}>
               On
             </button>
             <button type="button" className="control choice" aria-pressed={!on} disabled={busy} onClick={() => set({ cadence: "off", channel: "none" })}>

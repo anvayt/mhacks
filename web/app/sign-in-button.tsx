@@ -7,6 +7,21 @@ import { adoptSession, errorText, loginStatus, startLogin, type WebLogin } from 
 import { ApiError, load, save } from "./lib/api";
 import { ReminderOptIn } from "./reminder-settings";
 
+/** Shown on the phone and code steps; the opt-in step after verification has its own heading. */
+function SignUpHeader() {
+  return (
+    <>
+      <p className="eyebrow">Sign in or sign up</p>
+      <h1 className="board-title">Save your home and progress</h1>
+      <ul className="board-note" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+        <li>Keep your grade and answers when you come back</li>
+        <li>Save commitments and track your habit streak</li>
+        <li>Optional monthly check-ins by text: you choose on the next step</li>
+      </ul>
+    </>
+  );
+}
+
 /** Only same-site paths, so ?next= can't send anyone elsewhere. */
 const safeNext = (next: string | null, fallback: string) => (next && /^\/(?!\/)/.test(next) ? next : fallback);
 
@@ -108,6 +123,7 @@ export function PhoneSignIn() {
   if (login) {
     return (
       <>
+        <SignUpHeader />
         <p className="eyebrow">Text this to Hidden Rent</p>
         <p className="board-title" style={{ textTransform: "none" }}>{login.text_body}</p>
         <p className="board-note">
@@ -130,6 +146,8 @@ export function PhoneSignIn() {
   }
 
   return (
+    <>
+    <SignUpHeader />
     <form className="field" onSubmit={onSubmit}>
       <label className="eyebrow" htmlFor="phone">
         Your phone number is your account
@@ -159,5 +177,6 @@ export function PhoneSignIn() {
           "No password. New here? Texting the code creates your account; returning works the same way. We only text you if you say yes on the next step. Skip and your grade still works."}
       </p>
     </form>
+    </>
   );
 }
