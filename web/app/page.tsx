@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { IntroStats, type Stat } from "./intro-stats";
 import styles from "./start-screen.module.css";
 
 // Every number here is sourced (see SOURCES below); keep them in sync with the Devpost and pitch.
-const STATS = [
-  { value: "$1,914", label: "a year apart: what two similar Ann Arbor apartments cost to heat and cool" },
+const STATS: Stat[] = [
+  { value: "$1,914", label: "a year apart: what two similar Ann Arbor apartments cost to heat and cool", lead: true },
   { value: "68%", label: "of Ann Arbor's emissions come from buildings" },
   { value: "54.5%", label: "of Ann Arbor households rent, and sign without seeing the bill" },
   { value: "25,704", label: "Ann Arbor buildings already scored" },
@@ -23,31 +24,31 @@ export default function StartScreen() {
             you don&apos;t see.
           </h1>
           <p className={styles.mission}>
-            Helping renters see and cut their energy use, for the planet and their wallet, through friendly competition.
+            Helping renters <mark className={styles.hl}>see</mark> and <mark className={styles.hl}>cut</mark> their energy use, for{" "}
+            <mark className={`${styles.hl} ${styles.blue}`}>the planet</mark> and <mark className={styles.hl}>their wallet</mark>, through{" "}
+            <mark className={`${styles.hl} ${styles.blue}`}>friendly competition</mark>.
           </p>
-          <ul className={styles.stats}>
-            {STATS.map((s) => (
-              <li key={s.value}>
-                <span className={styles.value}>{s.value}</span>
-                <span className={styles.label}>{s.label}</span>
-              </li>
-            ))}
-          </ul>
+          <IntroStats stats={STATS} />
           <div className={styles.actions}>
             <Link className={styles.start} href="/loading?next=/address">
               Find my hidden rent
-              <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
+              <img src="/hero/arrow-up-right.svg" alt="" width={18} height={18} />
             </Link>
-            <Link className={styles.secondary} href="/about">
-              How it works
-            </Link>
+            <div className={styles.secondaryWrap}>
+              <Link className={styles.secondary} href="/about">
+                See how it works →
+              </Link>
+              <span className={styles.secondaryNote}>How Hidden Rent scores a home in 3 steps</span>
+            </div>
           </div>
           <p className={styles.sources}>{SOURCES}</p>
         </section>
-        <Link className={`start-photo ${styles.photo}`} href="/loading?next=/address" aria-label="Start: find my hidden rent">
-          <img src="/hero/house.png" alt="" />
-          <span className="start-photo-label">Start</span>
-        </Link>
+        {/* Purely visual: the one start action is the button. It leans toward the button when that button is hovered. */}
+        <div className={styles.photo} aria-hidden="true">
+          <img className={styles.ghostRed} src="/hero/house.png" alt="" />
+          <img className={styles.ghostBlue} src="/hero/house.png" alt="" />
+          <img className={styles.house} src="/hero/house.png" alt="" />
+        </div>
       </div>
     </main>
   );
