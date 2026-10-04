@@ -1,0 +1,13 @@
+/* Sign-in code step: make "who do I text, and how" obvious on a phone and on a computer. */
+.code { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.codeText { margin: 0; font-family: var(--font-display); font-size: clamp(36px, 7vw, 56px); line-height: 1; letter-spacing: .02em; }
+.copy { cursor: pointer; flex: none; width: auto; padding: 10px 18px; }
+.em { font-weight: 700; color: #11121a; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.step { border: 1px solid #dedee5; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.stepTitle { margin: 0; font-weight: 600; font-size: 15px; }
+.stepNote { margin: 0; font-size: 14px; line-height: 1.5; color: #43434f; }
+.qrRow { display: flex; gap: 16px; align-items: center; }
+.qr { width: 132px; height: 132px; flex: none; background: #fff; }
+.computerOnly { display: flex; }
+@media (max-width: 640px) { .computerOnly { display: none; } }
