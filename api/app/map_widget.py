@@ -112,7 +112,7 @@ def _model_step(params_json: str) -> dict:
     try:
         return estimate._hc_ac(json.loads(params_json))
     except (HTTPException, httpx.HTTPError) as e:
-        raise _unavailable("The heating/cooling model is unavailable for this map. Try again.") from e
+        raise _unavailable(estimate.MODEL_DOWN) from e
 
 
 def _summary(hc: dict) -> dict:

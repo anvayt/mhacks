@@ -20,7 +20,7 @@ import httpx
 from fastapi import APIRouter
 
 from app import sessions
-from app.estimate import MODEL_BASE_URL, _fail, _hc_ac, renter_usd_key, session_params
+from app.estimate import MODEL_BASE_URL, MODEL_DOWN, _fail, _hc_ac, renter_usd_key, session_params
 from app.geo import DATA_DIR
 
 router = APIRouter()
@@ -31,7 +31,6 @@ YEARS = range(1991, 2021)  # P1's normal period (model/climate.py NORMAL_YEARS)
 # P1's pooled balance points, deg F (model/heating_cooling/building_model.py TAU_H_GAS, TAU_H_ELEC, TAU_C)
 TAU_H = {"gas": 60, "electric": 55}
 TAU_C = 65
-MODEL_DOWN = "Our heating and cooling model isn't reachable right now. Try again in a few minutes."
 FORECAST_DOWN = "The weather forecast isn't reachable right now. Try again in a few minutes."
 METHOD = (
     "Days: Open-Meteo's daily forecast at P1's 0.1 deg grid cell, shifted by P1's PRISM 800 m offset for the month "
