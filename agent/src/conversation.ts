@@ -8,6 +8,7 @@ import {
   NEED_LISTING_FOR_BILL,
   calibrationText,
   fixesText,
+  parseTypedBill,
   type Inbound,
   LINK,
   UNIT_SIZE_QUESTION,
@@ -32,6 +33,9 @@ interface ChatState {
 const fresh = (): ChatState => ({ request: null, sessionId: null, last: null, answered: new Set(), pending: null });
 
 export const DEMO_LABEL = "[demo data, not a real estimate]";
+
+// Same words /api treats as skip (app/estimate.py SKIP), plus "skip …".
+const SKIP = /^(skip\b.*|not sure|unsure|idk|dont know|don't know|i don't know)$/i;
 
 export class Conversations {
   private chats = new Map<string, ChatState>();
@@ -59,6 +63,8 @@ export class Conversations {
   private async handle(s: ChatState, text: string): Promise<string> {
     const ref = refInText(text);
     if (ref) return this.resume(s, ref);
+    const typed = parseTypedBill(text);
+    if (typed) return (await this.typedBill(s, typed)).join("\n\n");
     const link = text.match(LINK)?.[0];
     if (link) return this.estimate(s, { url: link });
     if (ADDRESS.test(text)) return this.estimate(s, { address: text });
@@ -144,26 +150,43 @@ export class Conversations {
   }
 
   private async answer(s: ChatState, q: Question, text: string): Promise<string> {
-    if (/^skip\b/i.test(text)) {
-      s.answered.add(q.id); // not sent to the API; just ask the next one
-      s.pending = null;
-      return this.withNextQuestion(s, "Skipped.");
-    }
-    const option = matchOption(q, text);
-    if (!option) return `Sorry, I didn't catch that.\n${questionText(q)}`;
     if (!s.sessionId) return WELCOME;
-    const r = await this.api.answer({ session_id: s.sessionId, question_id: q.id, answer: optionValue(option) });
+    const skip = SKIP.test(text);
+    const option = skip ? null : matchOption(q, text);
+    // A typed number is OUR option number; option values aren't always 1..n (floor_level is 0/1/2), so never send it raw.
+    if (!skip && !option && /^\d+[).]?$/.test(text)) return `Sorry, I didn't catch that.\n${questionText(q)}`;
+    // Unclear text goes to the API, whose parser knows more words ("central air", "first floor").
+    const answer = skip ? "skip" : option ? optionValue(option) : text;
+    const r = await this.api.answer({ session_id: s.sessionId, question_id: q.id, answer });
     if (!r.ok) {
+      if (r.code === "bad_answer") return r.message; // keep the question open; the API's text lists the options
+      if (r.code === "not_served") {
+        s.pending = null;
+        if (skip) {
+          s.answered.add(q.id); // no /answer yet: skip locally so the interview can go on
+          return this.withNextQuestion(s, "Skipped.");
+        }
+        return "Thanks! Answers can't refine the estimate yet; that part is still being built.";
+      }
       s.pending = null;
-      return r.code === "not_served"
-        ? "Thanks! Answers can't refine the estimate yet; that part is still being built."
-        : r.message;
+      return r.message;
     }
     s.answered.add(q.id);
     const previous = s.last ?? undefined;
     s.last = r.data;
     s.pending = null;
-    return this.withNextQuestion(s, updateText(r.data, previous));
+    const update = updateText(r.data, previous);
+    return this.withNextQuestion(s, skip ? `Skipped.${update ? `\n${update}` : ""}` : update);
+  }
+
+  /** A typed bill (when the photo reader is down, the API asks for one): POST /calibrate with therms + dates. */
+  private async typedBill(s: ChatState, typed: NonNullable<ReturnType<typeof parseTypedBill>>): Promise<string[]> {
+    if ("error" in typed) return [typed.error];
+    if (!s.sessionId) return [NEED_LISTING_FOR_BILL];
+    const c = await this.api.calibrate({ session_id: s.sessionId, ...typed });
+    if (!c.ok) return [c.code === "not_served" ? "Thanks! Bill checks aren't live yet; that part is still being built." : c.message];
+    if (c.data.estimate) s.last = c.data.estimate;
+    return [calibrationText(c.data), ...(await this.fixes(s))];
   }
 
   /** Append the API's next unanswered question, unless the grade is locked or the API sent none. */

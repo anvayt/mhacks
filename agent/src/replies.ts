@@ -1,5 +1,5 @@
 // What the agent texts back. PLAN.md §0 rule 4: every figure here is copied from an /api response, never computed.
-import type { Band, Calibration, Estimate, Fixes, Option, Question } from "./api.ts";
+import type { Band, Calibration, Estimate, Fix, Fixes, Option, Question } from "./api.ts";
 
 export const WELCOME =
   "Hi, I'm Hidden Rent 🏠 I show the energy bill a rental listing doesn't.\n\n" +
@@ -108,37 +108,81 @@ export function matchOption(q: Question, text: string): Option | null {
 }
 
 export const NEED_LISTING_FOR_BILL =
-  "Send your listing link or address first so I know which home this bill is for, then text the bill photo again.";
+  "Send your listing link or address first so I know which home this bill is for, then send the bill again.";
 
-/** After a bill photo: how this bill compares with what the weather predicts, plus streak and badges (all from /calibrate). */
+/** After a bill: how it compares with what the weather predicts, plus streak and badges (all from /calibrate).
+ *  P1 only judges winter months, and a difference inside its typical error isn't a real difference. */
 export function calibrationText(c: Calibration): string {
   const p = Math.round(c.pct_vs_expected_for_weather);
-  const lines = [
-    p === 0
+  const dir = p < 0 ? "below" : "above";
+  let first: string;
+  if (c.meaningful === false) {
+    const noise = c.noise_floor != null ? `, inside our typical ±${Math.round(c.noise_floor)}% error` : "";
+    first = `📄 Your bill is within the normal range for this weather (${p > 0 ? "+" : ""}${p}% vs expected${noise}).`;
+  } else if (c.meaningful === null) {
+    first = `📄 Your bill is ${Math.abs(p)}% ${dir} what this month's weather predicts. Outside Dec–Feb that's a rough read, since heating doesn't dominate.`;
+  } else {
+    first = p === 0
       ? "📄 Your bill is right at normal for this weather."
-      : `📄 Your bill is ${Math.abs(p)}% ${p < 0 ? "below" : "above"} normal for this weather${p < 0 ? " 🎉" : "."}`,
-  ];
+      : `📄 Your bill is ${Math.abs(p)}% ${dir} normal for this weather${p < 0 ? " 🎉" : "."}`;
+  }
+  const lines = [first];
   if (c.streak_months > 0) lines.push(`🔥 ${c.streak_months}-month streak below normal`);
   if (c.badges?.length) lines.push(`🏅 ${c.badges.map((x) => x.replace(/-/g, " ")).join(", ")}`);
   return lines.join("\n");
 }
 
-// Ann Arbor Green Rental Housing: units need 70 checklist points through Jul 5, 2028 (PLAN.md §4, a2gov.org).
+// Ann Arbor Green Rental Housing: 70 checklist points through Jul 5, 2028 (PLAN.md §4). Used only if the API omits it.
 const GRH_REQUIRED = 70;
+
+/** One fix line: only the numbers the API priced; missing ones are left out, never shown as $0. */
+function fixLine(x: Fix, i: number): string {
+  const parts: string[] = [];
+  if (x.usd_saved_yr != null) {
+    parts.push(x.usd_saved_yr >= 0 ? `saves ${usd(x.usd_saved_yr)}/yr` : `costs ${usd(-x.usd_saved_yr)}/yr more to run`);
+  }
+  if (x.co2_kg_saved != null) parts.push(`${x.co2_kg_saved.toLocaleString("en-US")} kg CO₂/yr less`);
+  if (x.cost_usd != null) parts.push(`costs ${usd(x.cost_usd)}${x.rebate_usd ? ` (${usd(x.rebate_usd)} rebate)` : ""}`);
+  else if (x.rebate_usd) parts.push(`${usd(x.rebate_usd)} rebate`);
+  parts.push(`+${x.grh_points} GRH pts`);
+  return `${i + 1}) ${x.item}: ${parts.join(", ")}${x.new_grade ? ` → grade ${x.new_grade}` : ""}`;
+}
 
 /** Top fixes from /fixes, short enough for a text. The landlord email goes out as its own message. */
 export function fixesText(f: Fixes): string {
   if (!f.fixes.length) return "No fixes to suggest for this place right now.";
-  const lines = ["🔧 Top fixes:"];
-  f.fixes.slice(0, 3).forEach((x, i) => {
-    const net = x.rebate_usd > 0 ? ` (${usd(x.rebate_usd)} rebate)` : "";
-    lines.push(`${i + 1}) ${x.item}: saves ${usd(x.usd_saved_yr)}/yr, costs ${usd(x.cost_usd)}${net} → grade ${x.new_grade}, +${x.grh_points} GRH pts`);
-  });
+  const lines = ["🔧 Top fixes:", ...f.fixes.slice(0, 3).map(fixLine)];
   if (f.grh_points_now != null && f.grh_points_after != null) {
-    lines.push(`Green Rental Housing points: ${f.grh_points_now} → ${f.grh_points_after} (Ann Arbor requires ${GRH_REQUIRED})`);
+    lines.push(`Green Rental Housing points: ${f.grh_points_now} → ${f.grh_points_after} (Ann Arbor requires ${f.grh_points_required ?? GRH_REQUIRED})`);
   }
   if (f.landlord_email) lines.push("I drafted an email to your landlord ↓");
   return lines.join("\n");
+}
+
+/** A typed bill ("52 therms 9/3 to 10/2", or CCF), for when the photo reader is down. null if it isn't one. */
+export function parseTypedBill(
+  text: string,
+  today = new Date(),
+): { therms: number; kwh?: number; start: string; end: string } | { error: string } | null {
+  const gas = text.match(/(\d+(?:\.\d+)?)\s*(therms?|ccf)\b/i);
+  if (!gas) return null;
+  // 1 CCF = 1.037 therms (EIA FAQ "What are Ccf, Mcf, Btu, and therms?"; the same factor /api uses)
+  const therms = /ccf/i.test(gas[2]) ? Math.round(Number(gas[1]) * 1.037 * 10) / 10 : Number(gas[1]);
+  const kwh = text.match(/(\d+(?:\.\d+)?)\s*kwh\b/i);
+  const dates = [...text.matchAll(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)].map((m) => {
+    if (m[1]) return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+    const y = m[6] ? (m[6].length === 2 ? 2000 + Number(m[6]) : Number(m[6])) : undefined;
+    return { y, m: Number(m[4]), d: Number(m[5]) };
+  });
+  if (dates.length < 2) return { error: "Send the billing dates too, like: 52 therms 9/3 to 10/2" };
+  const iso = (x: { y: number; m: number; d: number }) => `${x.y}-${String(x.m).padStart(2, "0")}-${String(x.d).padStart(2, "0")}`;
+  const [a, b] = dates.slice(0, 2);
+  let endY = b.y ?? today.getFullYear();
+  if (b.y == null && new Date(endY, b.m - 1, b.d) > today) endY -= 1; // a bill can't end in the future
+  const startY = a.y ?? (a.m > b.m ? endY - 1 : endY); // Dec → Jan spans a new year
+  const valid = (y: number, m: number, d: number) => m >= 1 && m <= 12 && d >= 1 && d <= 31 && y > 2000;
+  if (!valid(startY, a.m, a.d) || !valid(endY, b.m, b.d)) return { error: "I couldn't read those dates. Try: 52 therms 9/3 to 10/2" };
+  return { therms, ...(kwh ? { kwh: Number(kwh[1]) } : {}), start: iso({ y: startY, m: a.m, d: a.d }), end: iso({ y: endY, m: b.m, d: b.d }) };
 }
 
 export type Inbound =
