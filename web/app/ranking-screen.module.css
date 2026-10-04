@@ -1,4 +1,19 @@
 /* Real data on P3's ranking screen: longer labels, and a phone-width layout (globals.css has none for it). */
+/* The toolbar actions are links now (they navigate); match P3's buttons, which don't take the toolbar's caps. */
+.screen :global(.ranking-actions) a {
+  text-transform: none;
+  letter-spacing: normal;
+  text-decoration: none;
+}
+
+.screen :global(.ranking-score-labels) {
+  gap: 12px;
+}
+
+.screen :global(.ranking-score-labels) p:first-child {
+  white-space: nowrap;
+}
+
 .screen :global(.ranking-score-labels) p:last-child {
   text-align: right;
 }

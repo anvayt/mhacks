@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { currentEstimate, gradeStatus, usd, usdRange, type Estimate } from "./flow-api";
+import { billCovers, currentEstimate, gradeStatus, usd, usdRange, type Estimate } from "./flow-api";
 import { ApiError } from "./lib/api";
 import styles from "./ranking-screen.module.css";
 
@@ -72,7 +72,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
               {error} <Link href="/address">Enter an address</Link>
             </>
           ) : e ? (
-            "Predicted from city records and your answers · heating + cooling only · not a measured bill"
+            `Predicted from city records and your answers · ${billCovers(e)} only · not a measured bill`
           ) : (
             "Loading your grade…"
           )}
@@ -88,20 +88,24 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
               ) : null}
               {e.percentile_peers != null ? (
                 <p className="ranking-detail">
-                  More efficient than {pct(e.percentile_peers)}% of same-type homes ({b?.type ?? "same building type"}).
+                  More efficient than {Math.min(99, pct(e.percentile_peers))}% of same-type homes ({b?.type ?? "same building type"}).
                 </p>
               ) : null}
               {range ? (
                 <p className="ranking-detail">
-                  Heating + cooling: {range} a year
+                  {e.bill.building_annual ? "You pay for cooling" : "Heating + cooling"}: {range} a year
                   {e.bill.annual.p10 != null && e.bill.annual.p50 != null ? `, most likely ${usd(e.bill.annual.p50)}` : ""}.
+                </p>
+              ) : null}
+              {usdRange(e.bill.building_annual) ? (
+                <p className="ranking-detail">
+                  The building&apos;s heating + cooling, which the grade rates: {usdRange(e.bill.building_annual)} a year.
                 </p>
               ) : null}
               {hidden != null ? (
                 <p className="ranking-detail">
-                  {hidden >= 0
-                    ? `+${usd(hidden)}/mo hidden rent vs a typical same-size unit.`
-                    : `${usd(-hidden)}/mo less than a typical same-size unit.`}
+                  {hidden >= 0 ? `+${usd(hidden)}/mo hidden rent vs` : `${usd(-hidden)}/mo less than`} a typical same-size
+                  unit{e.bill.building_annual ? " (cooling only)" : ""}.
                 </p>
               ) : null}
               {e.bill.note ? <p className="ranking-detail">{e.bill.note}</p> : null}

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { answer, currentEstimate, gradeStatus, usdRange, type Estimate, type Option, type Question } from "./flow-api";
+import { answer, billCovers, currentEstimate, gradeStatus, usdRange, type Estimate, type Option, type Question } from "./flow-api";
 import { ApiError } from "./lib/api";
+import styles from "./survey-fields.module.css";
 
 // P3's option for renters whose heat is in the rent (team decision 4); the API serves it from wave 6.
 const HEAT_INCLUDED: Option = { value: "included", label: "Heat is included in my rent" };
@@ -29,7 +30,7 @@ function SurveyChoices({
   return (
     <fieldset className="field" id={id}>
       <legend className="eyebrow">{text}</legend>
-      <div className="choice-row">
+      <div className={`choice-row ${styles.row}`}>
         {options.map((option) => (
           <button
             key={option.value}
@@ -136,7 +137,7 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
     ? "Updating your estimate…"
     : message ??
       (estimate
-        ? `Predicted grade ${gradeStatus(estimate)}${range ? ` · heating + cooling ${range} a year` : ""}`
+        ? `Predicted grade ${estimate.grade ?? "—"}, ${gradeStatus(estimate)}${range ? ` · ${billCovers(estimate)} ${range} a year` : ""}`
         : "Loading your questions…");
 
   return (
