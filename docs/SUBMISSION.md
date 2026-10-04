@@ -12,10 +12,10 @@ Rule for every track: claim only what we can demo. Don't tick prizes we didn't i
 3. **Agents in iMessage using Photon** ($700 / $300): iMessage agent on Photon Spectrum, live on Fly, plus texted sign-in codes.
 4. **Make it Legendary** (SpaceXAI, keyboards + Cursor bottle raffle): "Watch your report" is live, with Grok Voice narration + Grok Imagine clips. Built with Cursor.
 5. **Judged by an LLM** (side quest): free entry.
+6. **Trust the Process / Notability** (Notability Pro + merch): put **2+ Notability Pro screenshots** in the gallery, add **Notability** to Built With, and add the short note (section 2).
+7. **Best Design / Figma** (LEGO set / merch): put the **Figma file link** (view access: anyone with the link) in *Try it out*, plus 2–3 frame screenshots.
 
 **Eligible only if someone does the step first:**
-6. **Trust the Process / Notability** (Notability Pro + merch): someone uses Notability Pro now, takes 2+ screenshots, and adds the note. Steps in section 2.
-7. **Best Design / Figma** (LEGO set / merch): only if P3 links a real Figma file.
 8. **MLH Best .Tech Domain** (mic + domain): only if we register e.g. `hiddenrent.tech` and point it at Vercel before submitting.
 9. **FinTech** or **Actually Intelligent** (main tracks): only if Devpost allows more than one main track. Otherwise Sustainability only.
 
@@ -51,8 +51,8 @@ Rule for every track: claim only what we can demo. Don't tick prizes we didn't i
 | Actually Intelligent | Only if multiple main tracks are allowed (and after FinTech) | Real ML model plus two agents, but it isn't the main story. |
 | **ASI:One Agent Challenge** (Fetch.ai) | **YES** | Registered agent with Chat Protocol and a full workflow in ASI:One. Needs the extra Submission Agent step. |
 | **Agents in iMessage using Photon** | **YES** | Built on Photon Spectrum (`spectrum-ts`) and iMessage, with persistent context. |
-| **Notability** | **YES, but only after someone actually uses Notability Pro** | Easy to qualify: real use plus 2 screenshots plus a note. Steps below. |
-| Best Design (Figma) | Only if P3 has a real Figma file | Needs a link to the actual frames. |
+| **Notability** | **YES** | Needs the 2+ Notability Pro screenshots plus the note in Devpost. Steps below. |
+| **Best Design (Figma)** | **YES** | Needs the Figma file link plus frame screenshots in Devpost. |
 | Judged by an LLM | Yes | Free entry. The write-up must be plain and honest, no hidden instructions to the judge. |
 | MLH .Tech domain | Optional | Only if we register e.g. `hiddenrent.tech` *and* point it at Vercel before submitting (~15 min). |
 | ElevenLabs (sponsor + MLH) | **No** | Voice was cut. Nothing in the shipped app uses it. |
@@ -115,7 +115,7 @@ Rules: build with **Notability Pro at some point during the hackathon**, tag "No
 - [ ] Add a note to Devpost, edited to match what you actually did:
   > **How we used Notability Pro:** we used Notability Pro to plan our pitch and demo flow and to sketch the report-card layout before building it (screenshots in the gallery).
 
-### Best Design (Figma), only if P3 confirms
+### Best Design (Figma)
 
 - [ ] P3 pastes the Figma file link (view access: *anyone with the link*) into Devpost *Try it out*.
 - [ ] Add 2–3 frame screenshots (grade card, range bar, compare view, map) next to the matching live-site screenshots.
