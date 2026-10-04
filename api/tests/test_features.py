@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.geo import FOOTPRINTS_PATH
-from app.geo.features import MF5, MF24, SFD, building_type, get_features, vintage
+from app.geo.features import MF5, MF24, SFA, SFD, building_type, get_features, snap_stories, townhouse_row, vintage
 from app.geo.footprints import street_key
 from app.main import app
 
@@ -32,6 +32,22 @@ def test_building_type_mapping():
     assert building_type("Residential", 5) == MF5
     assert building_type("Commercial", 12) == MF5  # apartments above shops
     assert building_type("Public", 0) is None
+
+
+def test_stories_snap_to_resstock_categories():
+    raw = (1, 3, 15, 16, 17, 18, 20, 21, 26, 28, 29, 40)
+    assert [snap_stories(n) for n in raw] == [1, 3, 15, 15, 15, 20, 20, 21, 21, 21, 35, 35]  # 28: tie 21/35 -> 21
+
+
+def test_townhouse_rule():
+    row = ["2841 HARDWICK RD", "2843 HARDWICK RD"]
+    assert townhouse_row("Residential", row, 0, 3)
+    assert not townhouse_row("Residential", row, 0, 4)  # too tall for a townhouse
+    assert not townhouse_row("Commercial", row, 0, 2)  # shopfronts with apartments above
+    assert not townhouse_row("Residential", row, 2, 2)  # street line has UNIT rows
+    assert not townhouse_row("Residential", ["912 MARY ST", "912 1/2 MARY ST"], 0, 2)  # shared house number
+    assert not townhouse_row("Residential", ["912 MARY ST UNIT 1", "912 MARY ST UNIT 2"], 0, 3)
+    assert not townhouse_row("Residential", ["1514 MORTON AVE"], 0, 2)
 
 
 def test_street_key():
@@ -113,3 +129,29 @@ def test_api_endpoints():
     r = c.get("/debug/features", params={"address": "912 Mary St, Ann Arbor, MI"})
     assert r.status_code == 200 and r.json()["est_units"] == 4
     assert c.get("/debug/features", params={"address": "123 Fake Street, Nowhere, MI"}).status_code == 404
+
+
+@needs_data
+@pytest.mark.parametrize("street", ["2843 Hardwick Rd", "2877 Rayfield Ave",  # North Oaks townhomes
+                                    "3422 Burbank Dr", "2685 Arrowwood Trl"])  # Chapel Hill condos, Arrowwood co-op
+def test_townhouses_are_single_family_attached(street):
+    f = get_features(f"{street}, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] == SFA and f["est_units"] >= 4
+    assert f["sources"]["in.geometry_building_type_recs"].startswith("townhouse rule")
+    assert 800 < f["in.sqft"] < 4000 and f["sqft_estimated"]
+
+
+@needs_data
+@pytest.mark.parametrize("street,btype", [("912 Mary St", MF24), ("2901 Northbrook Pl", MF5),  # apartments
+                                          ("1514 Morton Ave", SFD), ("2121 Vinewood Blvd", SFD)])  # detached
+def test_townhouse_rule_leaves_apartments_and_houses_alone(street, btype):
+    f = get_features(f"{street}, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] == btype
+    assert f["sources"]["in.geometry_building_type_recs"].startswith("unit-count rule")
+
+
+@needs_data
+def test_tall_tower_stories_snapped():
+    f = get_features("555 E William St, Ann Arbor, MI")  # Tower Plaza, 26 stories
+    assert f["stories_raw"] == 26 and f["in.geometry_stories"] == "21"
+    assert "snapped" in f["sources"]["in.geometry_stories"] and f["sources"]["stories_raw"]
