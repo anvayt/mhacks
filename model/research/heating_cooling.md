@@ -44,23 +44,21 @@ The urban station matches within 2.5% in every season. The airport is a cold ope
 1. **metered**: the address is inside a benchmarked property with a good fit. That building's own PRISM change-point model from real monthly meters is used.
    - Gas fits: median R² **0.961**, CV(RMSE) 0.13, n=108.
    - Out-of-year test (fit 2 years, predict the 3rd): annual gas median error **4.2%** (p90 15%). Seasonal gas median error **7.4%** (winter 6.5%, summer 15%).
-2. **meter_model+resstock**: unmetered apartment building ≥ 10,000 ft². This is the geometric mean of (a) a regression trained on 101 metered buildings and (b) meter-calibrated ResStock. Held-out seasonal gas median error on real buildings never seen in training:
+2. **meter_model+resstock**: unmetered apartment building ≥ 10,000 ft². This is a weighted geometric mean of (a) a model trained on the metered buildings and (b) meter-calibrated ResStock. The weight is fitted on out-of-fold predictions: gas 0.3 on the meter model, electricity 0.5 (`results/blend_weights.json`). Held-out seasonal gas error on real buildings never seen in training, with every parameter (ResStock calibration, base load, null, blend weight) estimated inside each fold from training buildings only:
 
    | path | median abs error | winter | p90 winter | median signed |
    |---|---|---|---|---|
-   | blend (served) | **28.3%** | 27.8% | 94% | −2.3% |
-   | ResStock (calibrated) | 29.6% | 30.0% | 117% | +2.1% |
-   | meter-trained regression | 31.2% | 30.0% | 86% | −6.7% |
-   | null (median slope) | 35.4% | 35.1% | 142% | +0.3% |
+   | blend (served) | **28.7%** | 27.8% | 105% | −1.9% |
+   | meter-trained model (random forest) | 28.4% | 28.5% | 103% | −4.1% |
+   | ResStock (calibrated) | 29.9% | 30.2% | 118% | +3.9% |
+   | null (median intensity) | 36.2% | 36.6% | 145% | +2.2% |
 
-   Electricity, same test (results/validation_real.json): metered 4.5%; every unmetered path ≈ 30% (blend 29.9%, null 29.6%).
-   Change-point fitter searches all term subsets (heating only / cooling only / both); before that fix, buildings where one term
-   came out negative fell back to baseload only (electric median R² 0.54 → 0.82 after the fix).
+   The three model paths are statistically tied; all beat the null. Electricity, same test: metered 4.5%; every unmetered path ≈ 30–31% (null 30.8%), so for cooling the features add nothing.
+   The change-point fitter searches all term subsets (heating only / cooling only / both). Before that fix, buildings where one term came out negative fell back to baseload only (electric median R² 0.54 → 0.82 after the fix).
 
-   Model choice (building level, repeated 5-fold CV, `results/building_model_validation.json`):
-   - **Heating intensity:** multiple regression (ridge) 0.34 median APE, random forest 0.34, XGBoost 0.34, null 0.42.
-   - **Cooling intensity (n=96):** no model beats the no-skill median (0.35), so the served meter-trained cooling intensity *is* the median.
-   - The monthly-panel versions (`results/hc_validation.json`) were worse at building level (heating MAPE 0.33–0.42) and are kept only for comparison.
+   Model choice (`results/building_model_validation.json`): 10 families (baseline median, median regression on year built, median regression + lasso, OLS, lasso, ridge, elastic net, Huber, random forest, XGBoost). Hyperparameters are tuned by an inner 5-fold search on the product metric (median abs % error); performance comes from an outer 5-fold × 5-repeat loop (nested CV); the family is picked by the one-standard-error rule.
+   - **Heating (n=101):** tuned random forest 31.0% ± 1.6 (min 20 buildings per leaf, absolute-error splits); linear models 32.6–33.6%; median regression on year built alone 33.4%; baseline 41.4%.
+   - **Cooling (n=96):** baseline median 34.7% ± 1.1 beats every tuned model (best: XGBoost 37.8%, median-lasso 38.1%), so the served meter-trained cooling intensity *is* the median. The target is strongly left-skewed in log space (a tail of buildings with almost no cooling response).
 3. **resstock**: smaller buildings (houses, 2–4 units), where Ann Arbor has no meters. A per-degree-day XGBoost on ResStock with optional renter answers.
    - **Accuracy with answers:** heating median APE improves from 0.248 (public record only) to 0.211 with all 5 answers; cooling from 0.380 to 0.319.
    - **Inputs:** only answers a renter can know before signing (window panes, floor level, foundation, cooling type, occupants). Air leakage and insulation R-values are *not* inputs, because a renter can't know them.
@@ -87,7 +85,7 @@ The urban station matches within 2.5% in every season. The airport is a cold ope
 
 **Recommendation:** say "uses X% more heat than similar buildings for the weather". Do **not** claim "this unit is leaky" except as a clearly labelled simulation-based guess.
 
-**Bill check (`bill_check`):** the noise floor is the p90 winter error *of the path used*. That's 16% for metered buildings. For unmetered ones it is 94%: a single bill only marks a building unusual at about 2× the expectation. For unmetered buildings, a renter's real bill is the most valuable thing we can get, which argues for using it to recalibrate (`/calibrate`).
+**Bill check (`bill_check`):** the noise floor is the p90 winter error *of the path used*. That's 16% for metered buildings. For unmetered ones it is about 105%: a single bill only marks a building unusual at about 2× the expectation. For unmetered buildings, a renter's real bill is the most valuable thing we can get, which argues for using it to recalibrate (`/calibrate`).
 
 ## 7. Sanity numbers (typical year, 854 ft² apartment, `data/processed/buildings_hc.csv`, 591 Ann Arbor apartment buildings/complexes)
 

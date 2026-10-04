@@ -8,8 +8,8 @@
    - metered:      the building's own change-point fit from its *other* years (out-of-year)
    - meter_model:  building-level regression, 5-fold CV by building (the building never seen)
    - resstock:     ResStock 5+ unit multifamily model, calibrated to meters (no building-specific info)
-   - blend:        geometric mean of meter_model and resstock intensities
-   - null:         the median metered heating slope for every building
+   - blend:        weighted geometric mean of meter_model and resstock, weight chosen on training buildings
+   - null:         the median metered intensity (training buildings) for every building
    The three non-metered paths add the median metered non-heating gas (hot water, cooking) per ft²·day.
 
 Run: python -m model.heating_cooling.validate → results/validation_real.json
@@ -26,7 +26,7 @@ from model import climate
 from model.data_sources.http import get_json
 from model.heating_cooling import changepoint
 from model.data_sources.eia import price_table
-from model.heating_cooling.building_model import TAU_C, TAU_H_GAS, zoo
+from model.heating_cooling.building_model import TAU_C, TAU_H_GAS
 from model.heating_cooling.features import BUILDING, building_features
 from model.heating_cooling.service import DEFAULT_UNIT_SQFT_MF, _intensity_resstock
 from model.paths import PROCESSED, RESULTS
@@ -56,6 +56,8 @@ def weather_check() -> dict:
 
 
 PATHS = ("metered", "meter_model", "resstock", "blend", "null")
+FOLD_LOG: dict = {}   # per-fold calibration / blend weight / null, for the report
+SERVE: dict = {}      # blend weights + calibration the service uses
 FUEL = {
     # fuel: (meter column, ok flag, outlier flag, CP heating?, CP cooling?, driver column, building-model target,
     #        building target column, base column, ResStock intensity key, unit)
@@ -88,18 +90,46 @@ def heldout_rows(fuel: str) -> pd.DataFrame:
     g = m[m[ok] & ~m[outl] & m.building_id.isin(t.index)].copy()
     base_pd = float((t[bcol] / t.gfa_ft2 * 1000 / 365).median())   # per 1,000 ft² per day
 
-    chosen = json.loads((RESULTS / "building_model_validation.json").read_text())["targets"][bm_name]["chosen"]
-    X = building_features(t.reset_index())[BUILDING]
-    y = np.log(t[tcol].to_numpy())
-    mm = np.zeros(len(t))
-    for tr, te in KFold(5, shuffle=True, random_state=0).split(X):
-        mdl = zoo()[chosen].fit(X.iloc[tr], y[tr])
-        mm[te] = np.exp(mdl.predict(X.iloc[te]))
-    mm_int = pd.Series(mm / ref.to_numpy(), index=t.index)
-    null_int = float((t[tcol] / ref).median())
-    rs_int = {bid: _intensity_resstock({"unit_sqft": DEFAULT_UNIT_SQFT_MF, "year_built": b.year_built,
-                                        "stories_max": b.stories_max}, "Multi-Family with 5+ Units", {})[rs_key]
-              for bid, b in t.iterrows()}
+    # Everything an unmetered prediction depends on is computed from TRAINING buildings only (no leakage):
+    #  - meter_model: out-of-fold predictions from the nested CV in building_model.py (tuned in inner folds,
+    #    averaged over the 5 outer repeats; each building is always predicted by models that never saw it)
+    #  - ResStock calibration factor, the null (median) intensity, the base-load median and the blend weight are
+    #    re-estimated inside each outer fold below from the training buildings.
+    bmv = json.loads((RESULTS / "building_model_validation.json").read_text())["targets"][bm_name]
+    oof = pd.read_parquet(RESULTS / f"oof_{bm_name}.parquet").set_index("building_id")
+    chosen = bmv["chosen"]
+    real_int = (t[tcol] / ref)                                   # per 1,000 ft² per degree-day, from the meters
+    mm_all = np.exp(oof.loc[t.index, f"oof_{chosen}"]) / ref     # same units
+    rsv = json.loads((RESULTS / "resstock_hc_validation.json").read_text())
+    rs_cal_all = rsv["calibration_to_meters"]["heat_gas" if fuel == "gas" else "cool"]
+    sim_med = rsv["calibration_to_meters"]["evidence"]["resstock_mf5_median_heat" if fuel == "gas" else "resstock_mf5_median_cool"]
+    rs_raw = pd.Series({bid: _intensity_resstock({"unit_sqft": DEFAULT_UNIT_SQFT_MF, "year_built": b.year_built,
+                                                  "stories_max": b.stories_max}, "Multi-Family with 5+ Units", {})[rs_key] / rs_cal_all
+                        for bid, b in t.iterrows()})
+    base_all = t[bcol] / t.gfa_ft2 * 1000 / 365
+    W = np.linspace(0, 1, 11)                                     # weight on the meter model in log space
+    mm_int, rs_int, null_int, blend_int, base_pd, folds = {}, {}, {}, {}, {}, []
+    ids = np.array(t.index)
+    for k_, (tr, te) in enumerate(KFold(5, shuffle=True, random_state=0).split(ids)):
+        trn, tst = ids[tr], ids[te]
+        cal = float(real_int[trn].median() / sim_med)
+        rs_tr = rs_raw[trn] * cal
+        errs = [np.median(np.abs(np.exp(w * np.log(mm_all[trn]) + (1 - w) * np.log(rs_tr)) / real_int[trn] - 1)) for w in W]
+        w = float(W[int(np.argmin(errs))])
+        nul = float(real_int[trn].median())
+        bpd = float(base_all[trn].median())
+        folds.append({"fold": k_, "n_train": int(len(trn)), "n_test": int(len(tst)), "resstock_calibration": round(cal, 3),
+                      "blend_weight_meter_model": w, "null_intensity": nul, "base_per_1000ft2_day": bpd})
+        for bid in tst:
+            mm_int[bid] = float(mm_all[bid]); rs_int[bid] = float(rs_raw[bid] * cal); null_int[bid] = nul; base_pd[bid] = bpd
+            blend_int[bid] = float(np.exp(w * np.log(mm_all[bid]) + (1 - w) * np.log(rs_raw[bid] * cal)))
+    FOLD_LOG[fuel] = folds
+    # serving weights: same rule on all buildings (uses the out-of-fold meter-model predictions)
+    cal_full = float(real_int.median() / sim_med)
+    errs = [np.median(np.abs(np.exp(w * np.log(mm_all) + (1 - w) * np.log(rs_raw * cal_full)) / real_int - 1)) for w in W]
+    SERVE[fuel] = {"blend_weight_meter_model": float(W[int(np.argmin(errs))]), "resstock_calibration": cal_full,
+                   "meter_model_family": chosen,
+                   "rule": "weight w on log(meter model) and 1−w on log(calibrated ResStock), chosen on out-of-fold predictions to minimize median abs % error"}
     prices = price_table()
     price = {m_: (prices["gas_usd_per_ccf"]["marginal"] if fuel == "gas" else prices["elec_usd_per_kwh"]["average"])[str(m_)]
              for m_ in range(1, 13)}
@@ -112,11 +142,11 @@ def heldout_rows(fuel: str) -> pd.DataFrame:
             other = gb[gb.year != yr]
             f = changepoint.fit(other, col, heating=cp_h, cooling=cp_c) if len(other) >= 9 else None
             pm = gy[["month", "days", drv, col]].copy()
-            base = base_pd * pm.days * k
+            base = base_pd[bid] * pm.days * k
             pm["meter_model"] = mm_int[bid] * pm[drv] * k + base
             pm["resstock"] = rs_int[bid] * pm[drv] * k + base
-            pm["null"] = null_int * pm[drv] * k + base
-            pm["blend"] = np.sqrt(mm_int[bid] * rs_int[bid]) * pm[drv] * k + base
+            pm["null"] = null_int[bid] * pm[drv] * k + base
+            pm["blend"] = blend_int[bid] * pm[drv] * k + base
             pm["metered"] = f.predict(gy)["total"].to_numpy() if (f is not None and f.r2 >= thr) else np.nan
             pm["price"] = pm.month.map(price)
             pm["season"] = pm.month.map(climate.MONTH_TO_SEASON)
@@ -156,7 +186,11 @@ def seasonal_check() -> tuple[dict, dict]:
 def main():
     gas, elec = seasonal_check()
     out = {"weather_vs_noaa_normals": weather_check(), "seasonal_gas_vs_real_meters": gas,
-           "seasonal_elec_vs_real_meters": elec}
+           "seasonal_elec_vs_real_meters": elec, "in_fold_parameters": FOLD_LOG, "serving_blend": SERVE,
+           "scheme": "Unmetered paths: 5-fold split over buildings; ResStock calibration, null intensity, base load and "
+                     "blend weight are estimated on the training buildings of each fold; meter-model predictions are the "
+                     "nested-CV out-of-fold predictions. Metered path: the building's own change-point fit on its other years."}
+    (RESULTS / "blend_weights.json").write_text(json.dumps(SERVE, indent=2))
     (RESULTS / "validation_real.json").write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
 

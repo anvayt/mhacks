@@ -280,7 +280,10 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
             # geometric mean of the meter-trained model and calibrated ResStock: the best no-meter path on
             # held-out real meters (results/validation_real.json)
             im = _intensity_meter_model(feat)
-            it = {k: float(np.sqrt(im[k] * it_rs[k])) for k in ("heat_ccf_per_hdd", "cool_kwh_per_cdd")}
+            # weighted geometric mean; weights fitted on out-of-fold predictions (results/blend_weights.json)
+            bw = json.loads((RESULTS / "blend_weights.json").read_text())
+            wt = {"heat_ccf_per_hdd": bw["gas"]["blend_weight_meter_model"], "cool_kwh_per_cdd": bw["elec"]["blend_weight_meter_model"]}
+            it = {k: float(np.exp(wt[k] * np.log(im[k]) + (1 - wt[k]) * np.log(it_rs[k]))) for k in wt}
             it["heat_kwh_per_hdd"] = im["heat_kwh_per_hdd"]
             parts = {"meter_model": im, "resstock": it_rs, "blend": it}
             method = "meter_model+resstock"
@@ -354,10 +357,10 @@ def _model_detail(method, bid, parts, fuel, area, unit_sqft, w, answers) -> dict
         d["elec_fit"] = {**e, "unit": "kWh", "cool_kwh_per_1000ft2_per_cdd": rnd((e["beta_c"] or 0) / gfa * 1000)}
         return d
     names = {"meter_model": "meter-trained model (" + {"mlr": "ridge regression", "random_forest": "random forest", "xgboost": "XGBoost",
-                                                         "null_median": "median of metered buildings"}.get(r["bldg_heat"].get("name"), r["bldg_heat"].get("name")) + " heating / "
-                            + {"mlr": "ridge regression", "random_forest": "random forest", "xgboost": "XGBoost", "null_median": "median of metered buildings"}.get(r["bldg_cool"].get("name"), r["bldg_cool"].get("name")) + " cooling)",
+                                                         "null_median": "median of metered buildings", "baseline_median": "median of metered buildings"}.get(r["bldg_heat"].get("name"), r["bldg_heat"].get("name")) + " heating / "
+                            + {"mlr": "ridge regression", "random_forest": "random forest", "xgboost": "XGBoost", "null_median": "median of metered buildings", "baseline_median": "median of metered buildings"}.get(r["bldg_cool"].get("name"), r["bldg_cool"].get("name")) + " cooling)",
              "resstock": "ResStock XGBoost" + (" (calibrated to meters)" if parts["resstock"].get("calibrated_to_meters") else ""),
-             "blend": "blend = √(meter model × ResStock)"}
+             "blend": "blend = weighted geometric mean (weights in results/blend_weights.json)"}
     d["equation"] = (f"season energy = intensity × season degree-days × {round(area):,} ft² / 1,000 × unit share "
                      f"{unit_sqft / area:.5f}; heating uses HDD{TAU_H_GAS if fuel == 'gas' else TAU_H_ELEC}, cooling uses CDD{TAU_C}")
     d["intensities"] = [{"model": names[k], "heat_ccf_per_1000ft2_per_hdd": rnd(v.get("heat_ccf_per_hdd")),
