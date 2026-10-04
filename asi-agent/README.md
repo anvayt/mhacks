@@ -26,6 +26,8 @@ Identity lives in `asi-agent/.runtime/agent.seed` (directory mode 700, file mode
 
 The service publishes `AgentChatProtocol` using `include(protocol, publish_manifest=True)`. Startup registers the agent with `mailbox=True`, profile description, keyword/tag metadata, and the public `PROFILE.md`. Registration uses the same challenge/signature helper as the uAgents inspector, with the existing account's Agentverse API key. The default requested handle is `hidden-rent-mhacks` (`ASI_AGENT_HANDLE` overrides it if unavailable).
 
+Registered profile: **Hidden Rent** (`hidden-rent-mhacks`), address `agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum`. The address belongs to the lead's private runtime seed; a fresh clone without that seed creates a different agent.
+
 Look for both the mailbox registration success and protocol-manifest publication in the logs. A printed address alone does **not** prove registration or discovery. Evidence and exact verification status are in [VERIFICATION.md](VERIFICATION.md).
 
 For the lead after registration:
@@ -51,6 +53,9 @@ No new user account is created. The developer's existing account/API keys are re
 
 ```bash
 make asi-agent-test
+# Check mailbox readiness and real ASI intent parsing, without printing credentials:
+uv run --project asi-agent --env-file /Users/anvaytodkar/Code/mhacks/.env \
+  python asi-agent/verify_access.py
 # After starting the mailbox agent:
 uv run --project asi-agent --env-file /Users/anvaytodkar/Code/mhacks/.env \
   python asi-agent/chat_client.py --asi-intent --output asi-agent/evidence/mailbox-chat.json
