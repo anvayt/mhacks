@@ -154,6 +154,11 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
                   {e.bill.annual.p10 != null && e.bill.annual.p50 != null ? `, most likely ${usd(e.bill.annual.p50)}` : ""}.
                 </p>
               ) : null}
+              {co2 ? (
+                <p className="ranking-detail">
+                  🌍 Heating and cooling this home puts about {co2.p50!.toFixed(1)} t of CO₂ into the air each year.
+                </p>
+              ) : null}
               {usdRange(e.bill.building_annual) ? (
                 <p className="ranking-detail">
                   The building&apos;s heating + cooling, which the grade rates: {usdRange(e.bill.building_annual)} a year.

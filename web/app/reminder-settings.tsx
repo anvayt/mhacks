@@ -70,7 +70,7 @@ export function ReminderOptIn({ onDone }: { onDone: () => void }) {
       <p className="board-title" style={{ textTransform: "none" }}>Want a monthly check-in by text?</p>
       <p className="board-note">
         Once a month Hidden Rent asks if you still live here and checks your bill against the weather, so you can see
-        whether your energy use actually dropped. {RULES}
+        whether your energy use (and the carbon behind it) actually dropped. {RULES}
       </p>
       <div className="action-row" style={{ flexWrap: "wrap" }}>
         <button type="button" className="back-action" onClick={() => choose("off")} disabled={busy}>
