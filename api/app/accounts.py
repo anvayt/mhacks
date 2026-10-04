@@ -488,21 +488,32 @@ class PropertyRequest(BaseModel):
     address: str | None = None
     url: str | None = None
     unit_sqft: float | None = None
+    session_id: str | None = None  # adopt this /estimate session (answers kept, no re-estimate)
 
 
 @router.post("/properties")
 def post_property(req: PropertyRequest, request: Request) -> dict:
-    """New home: a fresh estimate (and session), the previous active home archived (I2), any check-in resolved."""
+    """New home: a fresh estimate (and session), or the session the renter already answered on the web; the previous
+    active home archived (I2), any check-in resolved."""
     authorize(request, req.user_id)
     _need_user(req.user_id)
-    body = estimate(req.url, req.address, req.unit_sqft)
+    if req.session_id:
+        body = sessions.get(req.session_id)
+        if body is None:
+            raise _fail(404, "not_found", "That report expired. Send the address again.")
+        cur = current_property(req.user_id)
+        if cur and cur["session_id"] == req.session_id:  # a double tap: already this home
+            return {"property_id": cur["id"], "building_id": cur["building_id"], "estimate": body, "active": True}
+    else:
+        body = estimate(req.url, req.address, req.unit_sqft)
     bid = _building_id(body)
     with closing(_con()) as con, con:  # one transaction: the archive's write lock serializes concurrent moves
         con.execute("UPDATE properties SET active = 0, move_out_date = ? WHERE user_id = ? AND active = 1",
                     (date.today().isoformat(), req.user_id))
         pid = _insert_property(con, req.user_id, body, bid, req.unit_sqft)
         con.execute("UPDATE users SET pending_checkin = NULL WHERE id = ?", (req.user_id,))
-    bills.record_snapshot(pid, "initial_estimate", body)
+    # as the /auth/phone handoff: an answered session snapshots as questionnaire
+    bills.record_snapshot(pid, "questionnaire" if any((body.get("answers") or {}).values()) else "initial_estimate", body)
     return {"property_id": pid, "building_id": bid, "estimate": body, "active": True}
 
 

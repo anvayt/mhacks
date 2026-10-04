@@ -197,6 +197,22 @@ def test_use_mocks_skips_photon(photon, monkeypatch):
     assert s["redirect_url"].startswith("sms:&body=login%20") and photon["made"] == []
 
 
+def test_property_adopts_an_answered_session(monkeypatch):  # wave 6: no re-estimate, answers kept
+    uid = user()
+    s = {**fake_estimate(address="912 Mary St"), "answers": {"window_panes": "2"}}
+    sessions.save(s)
+    monkeypatch.setattr(accounts, "estimate", lambda *a, **k: pytest.fail("adopting must not re-estimate"))
+    adopt = lambda sid: client.post("/properties", json={"user_id": uid, "session_id": sid}, headers=AGENT)
+    r = adopt(s["session_id"])
+    assert r.status_code == 200 and r.json()["estimate"]["answers"] == {"window_panes": "2"}
+    pid = r.json()["property_id"]
+    assert accounts.get_property(pid)["session_id"] == s["session_id"]
+    assert adopt(s["session_id"]).json()["property_id"] == pid  # a double tap is the same home
+    hist = client.get(f"/properties/{pid}/history", headers=AGENT).json()
+    assert [x["source"] for x in hist["snapshots"]] == ["questionnaire"]
+    assert adopt("gone").status_code == 404
+
+
 def test_moving_archives_the_old_home_and_one_active():
     uid = user()
     a = client.post("/properties", json={"user_id": uid, "address": "912 Mary St, Ann Arbor, MI"}, headers=AGENT).json()
