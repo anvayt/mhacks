@@ -4,7 +4,8 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from app import accounts, bills, boards, calibrate, city, commitments, db, sessions
+import numpy as np
+from app import accounts, bills, boards, calibrate, city, commitments, db, score, sessions
 from app.main import app
 from scripts import seed_demo_board
 
@@ -29,6 +30,7 @@ def records(monkeypatch,tmp_path):
     monkeypatch.setattr(commitments,'list_commitments',lambda property_id=None,user_id=None:d['tasks'].get(property_id,[]))
     monkeypatch.setattr(commitments,'latest_projection',d['projections'].get)
     monkeypatch.setattr(city,'city_costs',lambda kind:[1,2,3,4,5])
+    monkeypatch.setattr(score,'peer_costs',lambda kind:np.array([1,2,3,4,5]))  # all-city percentile_city
     d['authorize_calls']=[]
     def authorize(request,uid):
         d['authorize_calls'].append(uid)
@@ -137,7 +139,7 @@ def test_position_projection_read_only_and_no_pii(records):
     before=copy.deepcopy(records['estimates'][sid])
     r=TestClient(app).get('/leaderboard/position/'+pid,headers={'Authorization':'Bearer '+uid});b=r.json();assert r.status_code==200
     assert b['current']=={'score':50,'grade':'C','percentile_city':.5,'rank':3,'of':5}
-    assert b['projected']=={'rank':1,'percentile':.9,'score':90,'label':'projected_if_completed'}
+    assert b['projected']=={'rank':1,'percentile_city':.9,'score':90,'label':'projected_if_completed'}
     assert all(set(bar)=={'rank','score','cost_per_sqft'} for bar in b['neighbors'])
     assert records['estimates'][sid]==before and records['authorize_calls']==[uid]
     assert 'Private Street' not in r.text and 'secret-user' not in r.text and 'secret-property' not in r.text
