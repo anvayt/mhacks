@@ -98,9 +98,47 @@ test("with a session and questions: answer goes to POST /answer; a 404 (not serv
   const chat = fakeApi([[200, estimate({ session_id: "s1", questions: [q] })], [404, { detail: "Not Found" }]], seen);
   const a = await chat.reply("c", "912 Mary St, Ann Arbor, MI");
   assert.match(a, /Single or double pane\?\n1\) single-pane {2}2\) double-pane/);
-  assert.match(await chat.reply("c", "maybe"), /didn't catch that/);
+  assert.match(await chat.reply("c", "7"), /didn't catch that/); // out-of-range number: re-asked locally, no API call
+  assert.equal(seen.length, 1);
   assert.match(await chat.reply("c", "2"), /can't refine the estimate yet/);
   assert.deepEqual(seen[1], ["/answer", { session_id: "s1", question_id: "windows", answer: "double-pane" }]);
+});
+
+// P2's real shapes (api/app/estimate.py): {value,label} options with values that aren't 1..n, 422 bad_answer.
+const FLOOR = { id: "floor_level", text: "Is the unit on the ground floor, a middle floor or the top floor?",
+  options: [{ value: "0", label: "Ground floor" }, { value: "1", label: "Middle floor" }, { value: "2", label: "Top floor" }] };
+
+test("real API: our option number maps to the option's VALUE (2 → middle = '1'), never sent raw", async () => {
+  const seen: [string, any][] = [];
+  const chat = fakeApi([[200, estimate({ session_id: "s1", questions: [FLOOR] })], [200, estimate({ session_id: "s1", questions: [] })]], seen);
+  await chat.reply("c", "912 Mary St, Ann Arbor, MI");
+  await chat.reply("c", "2");
+  assert.deepEqual(seen[1], ["/answer", { session_id: "s1", question_id: "floor_level", answer: "1" }]);
+});
+
+test("real API: unclear text goes to /answer; a 422 bad_answer keeps the question open", async () => {
+  const seen: [string, any][] = [];
+  const bad = { detail: { code: "bad_answer", message: "Sorry, I didn't catch that. Is the unit on the ground floor, a middle floor or the top floor? Reply Ground floor, Middle floor or Top floor, or say skip." } };
+  const chat = fakeApi([
+    [200, estimate({ session_id: "s1", questions: [FLOOR] })],
+    [422, bad],
+    [200, estimate({ session_id: "s1", questions: [], grade: "B", grade_span: ["B"], locked: true })],
+  ], seen);
+  await chat.reply("c", "912 Mary St, Ann Arbor, MI");
+  assert.equal(await chat.reply("c", "the attic"), bad.detail.message);
+  assert.deepEqual(seen[1], ["/answer", { session_id: "s1", question_id: "floor_level", answer: "the attic" }]);
+  const locked = await chat.reply("c", "Top");      // still the same question → answered
+  assert.deepEqual(seen[2], ["/answer", { session_id: "s1", question_id: "floor_level", answer: "2" }]);
+  assert.match(locked, /Grade B 🔒/);
+});
+
+test("real API: 'skip' is sent as 'skip' so the API can lock the grade", async () => {
+  const seen: [string, any][] = [];
+  const chat = fakeApi([[200, estimate({ session_id: "s1", questions: [FLOOR] })], [200, estimate({ session_id: "s1", questions: [], locked: true, grade: "C", grade_span: ["C"] })]], seen);
+  await chat.reply("c", "912 Mary St, Ann Arbor, MI");
+  const r = await chat.reply("c", "not sure");
+  assert.deepEqual(seen[1], ["/answer", { session_id: "s1", question_id: "floor_level", answer: "skip" }]);
+  assert.match(r, /^Skipped\.\nGrade C 🔒/);
 });
 
 test("matchOption: numbers, exact, unique partial; ambiguous or junk is null", () => {
@@ -119,13 +157,15 @@ test("mock interview (USE_MOCK_API): link → grade span + question → answers 
   assert.match(first, /Grade B–D: answer a few questions/);
   assert.ok(first.endsWith(UNIT_SIZE_QUESTION));
   const afterUnit = await chat.reply("judge", "850");
-  assert.match(afterUnit, /single-pane or double-pane/);
+  assert.match(afterUnit, /Is the heat gas or electric\?/);
   assert.doesNotMatch(afterUnit, /\(was/); // same size → same range → no "was"
-  const update = await chat.reply("judge", "double");
+  const update = await chat.reply("judge", "gas");
   assert.match(update, /Heating \+ cooling a year: \$980–\$1,740.*\(was \$760–\$1,960\)/);
+  assert.match(update, /single-, double- or triple-pane/);
   assert.doesNotMatch(update, /Winter|🏠/); // answers get a short update, not the whole card
-  assert.match(await chat.reply("judge", "top"), /\$1,120–\$1,600/);
-  const last = await chat.reply("judge", "yes");
+  assert.match(await chat.reply("judge", "double"), /\$1,120–\$1,600/);
+  assert.match(await chat.reply("judge", "attic"), /didn't catch that[\s\S]*Ground floor, Middle floor or Top floor/); // bad_answer keeps the question
+  const last = await chat.reply("judge", "3"); // our option 3 = Top floor (value "2")
   assert.match(last, /Grade B 🔒/);
   assert.match(last, /double pane club/);
   assert.match(last, /Grade locked in/);
@@ -173,4 +213,20 @@ test("website handoff: unknown or unserved session → friendly restart, no numb
   const text = await new Conversations(httpApi("http://api", fetchFn)).reply("c", "Hi! (ref nope99)");
   assert.match(text, /couldn't find your report/);
   assert.doesNotMatch(text, /\$\d/);
+});
+
+test("two phones at once: interleaved, concurrent messages never mix sessions, questions or addresses", async () => {
+  const chat = new Conversations(mockApi());
+  const [a1, b1] = await Promise.all([chat.reply("phoneA", "912 Mary St, Ann Arbor, MI"), chat.reply("phoneB", "715 Arbor St, Ann Arbor, MI")]);
+  assert.match(a1, /912 Mary St/);
+  assert.match(b1, /715 Arbor St/);
+  const [a2, b2] = await Promise.all([chat.reply("phoneA", "850"), chat.reply("phoneB", "skip")]);
+  assert.match(a2, /850 sq ft, built/); // A re-estimated with its size
+  assert.match(b2, /keeping the estimated size/); // B skipped; A's answer didn't land here
+  const [a3, b3] = await Promise.all([chat.reply("phoneA", "electric"), chat.reply("phoneB", "gas")]);
+  assert.match(a3, /single-, double- or triple-pane/);
+  assert.match(b3, /single-, double- or triple-pane/);
+  const fixesA = await chat.reply("phoneA", "fixes");
+  assert.match(fixesA, /912 Mary St/); // A's landlord email names A's address
+  assert.doesNotMatch(fixesA, /715 Arbor/);
 });

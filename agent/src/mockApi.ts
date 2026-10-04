@@ -2,11 +2,27 @@
 // Shaped like PLAN.md §10. Its numbers are made up for wiring only; the agent labels every mock reply "demo data".
 import type { Api, ApiResult, Band, Calibration, Estimate, EstimateRequest, Fixes, Question } from "./api.ts";
 
+// P2's real questions (api/app/estimate.py QUESTIONS): {value, label} options, values not always 1..n.
 const QUESTIONS: Question[] = [
-  { id: "windows", text: "Are the windows single-pane or double-pane?", options: ["single-pane", "double-pane", "not sure"] },
-  { id: "floor", text: "Is the unit on the top, middle or ground floor?", options: ["top", "middle", "ground"] },
-  { id: "insulation", text: "Has the landlord added insulation or air sealing since 2010?", options: ["yes", "no", "not sure"] },
+  { id: "heating_fuel", text: "Is the heat gas or electric?", options: [{ value: "gas", label: "Gas" }, { value: "electric", label: "Electric" }] },
+  { id: "window_panes", text: "Are the windows single-, double- or triple-pane?",
+    options: [{ value: "1", label: "Single-pane" }, { value: "2", label: "Double-pane" }, { value: "3", label: "Triple-pane" }] },
+  { id: "floor_level", text: "Is the unit on the ground floor, a middle floor or the top floor?",
+    options: [{ value: "0", label: "Ground floor" }, { value: "1", label: "Middle floor" }, { value: "2", label: "Top floor" }] },
 ];
+const SKIP = new Set(["skip", "not sure", "unsure", "idk", "dont know", "don't know", "i don't know"]);
+
+/** Like P2's _parse: an option value, label words, or skip (null); undefined = bad_answer. */
+function parseAnswer(q: Question, raw: string): string | null | undefined {
+  const a = raw.trim().toLowerCase();
+  if (SKIP.has(a)) return null;
+  const opts = q.options as { value: string; label: string }[];
+  const byValue = opts.find((o) => o.value === a);
+  if (byValue) return byValue.value;
+  const hits = opts.filter((o) => o.label.toLowerCase().split(/[^a-z0-9]+/).some((w) => w && a.split(/[^a-z0-9]+/).includes(w)));
+  return hits.length === 1 ? hits[0].value : undefined;
+}
+
 // Each answer narrows the band and the grade span; the last one locks the grade (PLAN.md §5 "lock in your grade").
 const STAGES: { halfWidth: number; span: string[] }[] = [
   { halfWidth: 600, span: ["B", "C", "D"] },
@@ -17,10 +33,11 @@ const STAGES: { halfWidth: number; span: string[] }[] = [
 
 const band = (p50: number, half: number): Band => ({ p10: p50 - half, p50, p90: p50 + half });
 
-function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered: Set<string>, address: string): Estimate {
+function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered: Set<string>, address: string, skipped = new Set<string>()): Estimate {
   const stage = STAGES[Math.min(answered.size, STAGES.length - 1)];
   const p50 = Math.round(1.6 * sqft);
-  const locked = stage.span.length === 1;
+  const open = QUESTIONS.filter((q) => !answered.has(q.id) && !skipped.has(q.id));
+  const locked = stage.span.length === 1 || open.length === 0;
   return {
     session_id: sessionId,
     building: { address, type: "Multi-Family with 2 - 4 Units", sqft, sqft_estimated: sqftEstimated, year_built: 1962, year_built_source: "mock" },
@@ -41,13 +58,17 @@ function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered
     percentile_peers: 0.68,
     percentile_city: 0.71,
     hidden_rent_usd_mo: 22,
-    badges: answered.has("windows") ? ["double-pane-club"] : [],
-    questions: locked ? [] : QUESTIONS.filter((q) => !answered.has(q.id)).slice(0, 3),
+    badges: answered.has("window_panes") ? ["double-pane-club"] : [],
+    questions: locked ? [] : open,
   };
 }
 
 export function mockApi(): Api {
-  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string>; bills?: number }>();
+  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string>; skipped?: Set<string>; bills?: number }>();
+  const body = (id: string) => {
+    const s = sessions.get(id)!;
+    return build(id, s.sqft, s.sqftEstimated, s.answered, s.address, s.skipped);
+  };
   let next = 1;
   return {
     mock: true,
@@ -78,6 +99,9 @@ export function mockApi(): Api {
           pct_vs_expected_for_weather: pct,
           streak_months: s.bills,
           badges: ["weather-beater"],
+          meaningful: true,
+          noise_floor: 9.5,
+          note: "Gas only: electricity (kWh) isn't compared with the weather yet.",
           estimate: build(req.session_id, s.sqft, s.sqftEstimated, s.answered, s.address),
         },
       };
@@ -89,12 +113,13 @@ export function mockApi(): Api {
         ok: true,
         data: {
           fixes: [
-            { item: "Air sealing", grh_points: 12, co2_kg_saved: 410, usd_saved_yr: 160, cost_usd: 600, rebate_usd: 300, new_grade: "B" },
-            { item: "Attic insulation to R-50", grh_points: 10, co2_kg_saved: 380, usd_saved_yr: 150, cost_usd: 1800, rebate_usd: 600, new_grade: "A" },
-            { item: "Smart thermostat", grh_points: 4, co2_kg_saved: 120, usd_saved_yr: 50, cost_usd: 150, rebate_usd: 50, new_grade: "B" },
+            { item: "Air sealing (blower-door tested)", grh_points: 9, co2_kg_saved: 410, usd_saved_yr: 160, cost_usd: null, rebate_usd: 500, new_grade: "B" },
+            { item: "Cold-climate heat pump", grh_points: 35, co2_kg_saved: 900, usd_saved_yr: -120, cost_usd: 15400, rebate_usd: 4000, new_grade: "B" },
+            { item: "ENERGY STAR low-e storm windows", grh_points: 4, co2_kg_saved: null, usd_saved_yr: null, cost_usd: null, rebate_usd: null, new_grade: null, unpriced: true },
           ],
           grh_points_now: 48,
           grh_points_after: 74,
+          grh_points_required: 70,
           landlord_email:
             `Subject: Energy fixes for ${s.address}\n\nHi,\n\nI'm a tenant at ${s.address}. Air sealing and attic insulation ` +
             "would cut heating costs and earn points toward Ann Arbor's Green Rental Housing requirement. DTE rebates cover " +
@@ -102,11 +127,19 @@ export function mockApi(): Api {
         },
       };
     },
-    async answer({ session_id, question_id }): Promise<ApiResult> {
+    async answer({ session_id, question_id, answer }): Promise<ApiResult> {
       const s = sessions.get(session_id);
       if (!s) return { ok: false, code: "not_found", message: "That session expired. Send the listing again." };
-      s.answered.add(question_id);
-      return { ok: true, data: build(session_id, s.sqft, s.sqftEstimated, s.answered, s.address) };
+      const q = QUESTIONS.find((x) => x.id === question_id);
+      if (!q) return { ok: false, code: "bad_answer", message: "I don't have that question. Answer one of the questions I sent, or say skip." };
+      const v = parseAnswer(q, String(answer));
+      if (v === undefined) {
+        const labels = (q.options as { label: string }[]).map((o) => o.label);
+        return { ok: false, code: "bad_answer", message: `Sorry, I didn't catch that. ${q.text} Reply ${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}, or say skip.` };
+      }
+      if (v === null) (s.skipped ??= new Set()).add(question_id);
+      else s.answered.add(question_id);
+      return { ok: true, data: body(session_id) };
     },
   };
 }
