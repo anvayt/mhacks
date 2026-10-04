@@ -200,7 +200,6 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
       <div><div class="sub2">Heating intensity (gas per ft² per degree-day)</div><div id="cv-heat"></div></div>
       <div><div class="sub2">Cooling intensity (electricity per ft² per degree-day)</div><div id="cv-cool"></div></div>
     </div>
-    <details class="more"><summary>Earlier approach: one model over all building-months (GroupKFold by building)</summary><div id="cv-panel"></div></details>
     <details class="more"><summary>ResStock model: train/test split on simulated homes</summary><div id="cv-resstock"></div></details>
 
     <h3>2 · Predicted vs actual on real meters (data the models never saw)</h3>
@@ -639,7 +638,9 @@ function colorExpr() {
 function recolorMap() { if (window._map.getLayer("b")) window._map.setPaintProperty("b", "circle-color", colorExpr()); }
 
 // ---------------------------------------------------------------- "How this number was made"
-const MODEL_NAME = { mlr: "ridge multiple regression", random_forest: "random forest", xgboost: "XGBoost", null_median: "no-skill median" };
+const MODEL_NAME = { mlr: "ridge multiple regression", random_forest: "random forest", xgboost: "XGBoost", null_median: "baseline median",
+  baseline_median: "baseline median", year_built_median_reg: "median reg. on year built", median_lasso: "median reg. + lasso", ols: "OLS",
+  lasso: "lasso", ridge: "ridge", elastic_net: "elastic net", huber: "Huber" };
 const f3 = (x, d = 3) => x == null ? "–" : Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
 function renderDetail(e) {
   const d = e.model_detail, box = $("detail"); box.className = "calc"; box.replaceChildren();
@@ -673,60 +674,66 @@ function renderDetail(e) {
 // ---------------------------------------------------------------- model comparison
 function cvTable(target, el_) {
   const box = $(el_); box.replaceChildren();
-  if (!target || !target.cv) { box.append(el("p", { class: "muted" }, target && target.note ? target.note : "n/a")); return; }
-  const order = ["null_median", "mlr", "random_forest", "xgboost"];
-  const rows = order.filter((k) => target.cv[k]).map((k) => ({ k, ...target.cv[k] }));
-  // bar chart: median absolute % error (lower is better)
-  const W = Math.max(300, box.clientWidth || 460), rowH = 30, m = { l: 168, r: 56, t: 8, b: 26 }, H = m.t + m.b + rowH * rows.length;
-  const max = Math.ceil(Math.max(...rows.map((r) => r.median_ape)) * 1.1 * 10) / 10;  // round up to a 10% step
-  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Median absolute error by model" });
+  if (!target || !target.families) { box.append(el("p", { class: "muted" }, target && target.note ? target.note : "n/a")); return; }
+  const rows = Object.entries(target.families).map(([k, r]) => ({ k, ...r })).sort((a, b) => a.complexity - b.complexity || a.test_medape_mean - b.test_medape_mean);
+  // bar chart: mean held-out median abs % error with ±1 SD across repeats (lower is better)
+  const W = Math.max(320, box.clientWidth || 480), rowH = 26, m = { l: 230, r: 64, t: 8, b: 26 }, H = m.t + m.b + rowH * rows.length;
+  const max = Math.ceil(Math.max(...rows.map((r) => r.test_medape_mean + r.test_medape_sd)) * 1.05 * 10) / 10;
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Held-out error by model" });
   const x = (v) => m.l + (W - m.l - m.r) * v / max;
   for (let i = 0; i <= Math.round(max * 10); i++) { const v = i / 10; svg.append(sv("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, stroke: css("--grid") }));
     const t = sv("text", { x: x(v), y: H - 8, "text-anchor": "middle" }); t.textContent = Math.round(v * 100) + "%"; svg.append(t); }
+  const thr = target.selection && target.selection.threshold;
+  if (thr) svg.append(sv("line", { x1: x(thr), x2: x(thr), y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-dasharray": "3 3" }));
   rows.forEach((r, i) => {
-    const y0 = m.t + i * rowH + 6, h = rowH - 12, w = Math.max(2, x(r.median_ape) - m.l);
-    const lab = sv("text", { x: m.l - 8, y: y0 + h / 2 + 4, "text-anchor": "end" }); lab.textContent = MODEL_NAME[r.k] + (r.k === target.chosen ? "  ✓" : "");
+    const y0 = m.t + i * rowH + 5, h = rowH - 10, w = Math.max(2, x(r.test_medape_mean) - m.l);
+    const lab = sv("text", { x: m.l - 8, y: y0 + h / 2 + 4, "text-anchor": "end" }); lab.textContent = r.label.replace(/ \(.*\)$/, "") + (r.k === target.chosen ? "  ✓" : "");
     if (r.k === target.chosen) lab.setAttribute("class", "val");
-    const bar = sv("path", { d: `M${m.l},${y0} H${m.l + w - 4} Q${m.l + w},${y0} ${m.l + w},${y0 + 4} V${y0 + h - 4} Q${m.l + w},${y0 + h} ${m.l + w - 4},${y0 + h} H${m.l} Z`,
-      fill: r.k === "null_median" ? css("--text-muted") : css("--accent") });
-    const val = sv("text", { x: m.l + w + 6, y: y0 + h / 2 + 4, class: "val" }); val.textContent = (r.median_ape * 100).toFixed(1) + "%";
-    const hit = sv("rect", { x: 0, y: y0 - 6, width: W, height: rowH, fill: "transparent" });
-    hit.addEventListener("pointermove", (ev) => tip(ev, (r.median_ape * 100).toFixed(1) + "% median error", MODEL_NAME[r.k], `within ±25%: ${(r.within_25pct * 100).toFixed(0)}% of buildings · R² (log) ${r.r2_log}`));
+    const bar = sv("rect", { x: m.l, y: y0, width: w, height: h, rx: 3, fill: r.k === "baseline_median" ? css("--text-muted") : css("--accent") });
+    const lo = x(Math.max(0, r.test_medape_mean - r.test_medape_sd)), hi = x(r.test_medape_mean + r.test_medape_sd);
+    const wh = sv("line", { x1: lo, x2: hi, y1: y0 + h / 2, y2: y0 + h / 2, stroke: css("--text-primary"), "stroke-width": 1.5 });
+    const val = sv("text", { x: hi + 6, y: y0 + h / 2 + 4, class: "val" }); val.textContent = (r.test_medape_mean * 100).toFixed(1) + "%";
+    const hit = sv("rect", { x: 0, y: y0 - 5, width: W, height: rowH, fill: "transparent" });
+    hit.addEventListener("pointermove", (ev) => tip(ev, `${(r.test_medape_mean * 100).toFixed(1)}% ± ${(r.test_medape_sd * 100).toFixed(1)}`, r.label,
+      `train ${(r.train_medape_mean * 100).toFixed(1)}% · overfit gap ${(r.overfit_gap * 100).toFixed(1)} pts · vs baseline ${(r.vs_baseline_mean * 100).toFixed(1)} ± ${(r.vs_baseline_sd * 100).toFixed(1)} pts`));
     hit.addEventListener("pointerleave", hideTip);
-    svg.append(lab, bar, val, hit);
+    svg.append(bar, wh, lab, val, hit);
   });
   box.append(svg);
   const t = el("table"), hd = el("tr");
-  ["Model", "Median abs. error", "Within ±25%", "R² (log scale)", "Mean abs. error"].forEach((h) => hd.append(el("th", {}, h))); t.append(hd);
+  ["Model", "Held-out error (mean ± SD)", "Train error", "Overfit gap", "vs baseline", "Within ±25%", "R² (log)"].forEach((h) => hd.append(el("th", {}, h))); t.append(hd);
   rows.forEach((r) => { const tr = el("tr"); if (r.k === target.chosen) tr.className = "chosen";
-    [MODEL_NAME[r.k], pct(r.median_ape), pct(r.within_25pct), String(r.r2_log), pct(r.mean_ape)].forEach((v) => tr.append(el("td", {}, v))); t.append(tr); });
+    [r.label, `${pct(r.test_medape_mean)} ± ${(r.test_medape_sd * 100).toFixed(1)}`, pct(r.train_medape_mean), `${(r.overfit_gap * 100).toFixed(1)} pts`,
+     `${r.vs_baseline_mean <= 0 ? "" : "+"}${(r.vs_baseline_mean * 100).toFixed(1)} ± ${(r.vs_baseline_sd * 100).toFixed(1)} pts`, pct(r.within_25pct), r.r2_log.toFixed(3)]
+      .forEach((v) => tr.append(el("td", {}, v))); t.append(tr); });
   box.append(t);
-  if (target.feature_importance) {
-    const fi = Object.entries(target.feature_importance).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${(v * 100).toFixed(0)}%`).join(" · ");
-    box.append(el("p", { class: "note", style: "margin-top:6px" }, "Feature importance (chosen model): " + fi));
+  const notes = [];
+  if (target.selection) notes.push(`Chosen by the one-standard-error rule: the simplest model whose error is within 1 SD of the best (${MODEL_NAME[target.selection.best_by_mean] || target.selection.best_by_mean}, dashed line).`);
+  if (target.final_params && Object.keys(target.final_params).length) notes.push("Tuned settings of the chosen model (refit on all buildings): " + Object.entries(target.final_params).map(([k, v]) => `${k} = ${v}`).join(", ") + ".");
+  if (target.feature_importance) notes.push("Feature importance (chosen model): " + Object.entries(target.feature_importance).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${(v * 100).toFixed(0)}%`).join(" · ") + ".");
+  notes.forEach((n) => box.append(el("p", { class: "note", style: "margin:6px 0 0" }, n)));
+  // linear models' coefficients (log scale, per 1 SD of the feature): mean ± SD across the 25 outer folds
+  const lin = target.linear_coef_by_family;
+  if (lin) {
+    const fams = ["year_built_median_reg", "median_lasso", "ols", "lasso", "ridge", "elastic_net", "huber"].filter((k) => lin[k]);
+    const feats = lin.ols ? lin.ols.features : Object.values(lin)[0].features;
+    const det = el("details", { class: "more" }); det.append(el("summary", {}, "Linear model coefficients (effect of +1 SD of each feature on log intensity; mean ± SD over the 25 outer folds; % = folds where lasso-type models keep it)"));
+    const ct = el("table"), ch = el("tr"); ch.append(el("th", {}, "Feature")); fams.forEach((k) => ch.append(el("th", {}, MODEL_NAME[k] || k))); ct.append(ch);
+    feats.forEach((f) => { const tr = el("tr"); tr.append(el("td", {}, f));
+      fams.forEach((k) => { const L = lin[k], i = L.features.indexOf(f);
+        tr.append(el("td", {}, i < 0 ? "–" : `${L.mean[i] >= 0 ? "+" : ""}${L.mean[i].toFixed(3)} ± ${L.sd[i].toFixed(3)}` + (/lasso|elastic/.test(k) ? ` (${Math.round(L.nonzero_freq[i] * 100)}%)` : ""))); });
+      ct.append(tr); });
+    const dd = el("div", { class: "tscroll" }); dd.append(ct); det.append(dd); box.append(det);
   }
 }
 
 function renderModeling(v) {
   const bm = v.building_model, h = bm.targets.heat_gas, c = bm.targets.cool_elec;
-  $("cv-scheme").textContent =
-    `Training data: one row per metered property. Target = that property's weather-normalized intensity from its own change-point fit ` +
-    `(heating: ${h.unit}, n = ${h.n}; cooling: ${c.unit}, n = ${c.n}), modelled as log(intensity). Features (public record only, so they exist for any building): ` +
-    `floor area (log), year built, max stories, max height, wall+roof per volume, number of buildings, footprint / floor area. ` +
-    `Test scheme: repeated 5-fold cross-validation (5 folds × 4 repeats); every building is predicted 4 times by models that never saw it. ` +
-    `Lower error is better; the grey bar is a no-skill model that predicts the median for everyone, so a useful model must beat it. ✓ = model used in the service.`;
+  const sc = bm.scheme || {};
+  $("cv-scheme").textContent = `Rows: ${sc.rows} (heating n = ${h.n}, cooling n = ${c.n}). Target: ${sc.target}. Features: ${(sc.features || []).join(", ")}. ` +
+    `Metric: ${sc.metric}. Tuning: ${sc.inner_cv}. Measuring: ${sc.outer_cv}. Selection: ${sc.selection}. Final model: ${sc.final_fit}. ` +
+    `Bars = mean held-out error, whiskers = ±1 SD across repeats; grey = baseline that predicts the median for every building.`;
   cvTable(h, "cv-heat"); cvTable(c, "cv-cool");
-  // monthly-panel comparison (earlier approach)
-  const pm = v.train && v.train.models;
-  if (pm) {
-    const t = el("table"), hd = el("tr");
-    ["Energy", "Model", "Monthly R²", "Building annual R²", "Building annual median abs. error", "Buildings / building-months"].forEach((x) => hd.append(el("th", {}, x))); t.append(hd);
-    for (const [fuel, ms] of Object.entries(pm)) for (const [k, r] of Object.entries(ms)) {
-      const ak = Object.keys(r).find((z) => z.endsWith("_r2") && z.startsWith("building")), mk = Object.keys(r).find((z) => z.endsWith("_mape"));
-      const tr = el("tr"); [fuel === "gas" ? "Gas (heating)" : "Electricity (cooling)", MODEL_NAME[k] || k, String(r.monthly_r2), String(r[ak]), pct(r[mk]), `${r.n_buildings} / ${r.n_building_months}`]
-        .forEach((x) => tr.append(el("td", {}, x))); t.append(tr); }
-    $("cv-panel").replaceChildren(el("p", { class: "note" }, "Rows = building-months (weather + building features → gas or electricity per ft² per day); 5-fold GroupKFold so a building's months are never split across train and test. It scored worse at the building level than the building-level models above, so it is kept only for comparison."), t);
-  }
   const rs = v.resstock;
   if (rs) {
     const t = el("table"), hd = el("tr");
