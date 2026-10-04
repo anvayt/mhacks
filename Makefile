@@ -24,3 +24,11 @@ phase2-check:
 .PHONY: demo-video
 demo-video:
 	@bash demo/video/run.sh $(VIDEO_ARGS)
+
+.PHONY: asi-agent asi-agent-test
+ASI_ENV_FILE ?= /Users/anvaytodkar/Code/mhacks/.env
+asi-agent:
+	@uv run --project asi-agent --env-file "$(ASI_ENV_FILE)" python asi-agent/agent.py
+
+asi-agent-test:
+	@uv run --project asi-agent pytest asi-agent/tests -q
