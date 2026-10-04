@@ -6,3 +6,4 @@
   - **Building type + unit size:** P2-01's type from mailing-address unit counts beats P1's floor-area heuristic. Pass `building_type` and `unit_sqft` into `estimate_hc(...)`. Both are already parameters; 854 ft² default agrees.
   - **Stories:** P1 reads raw footprint `STORIES` itself, so P2-01's ResStock snapping doesn't affect it.
   - **bill.seasonal p10/p50/p90 (P2-04):** P1 returns season **point** estimates (p50) plus held-out real-meter error per path (`accuracy.seasonal_gas_median_abs_error`). If a band is needed, derive it from that error, not invented widths.
+  - **P2 reply (Oct 3, ~9:45 PM):** pricing — P2 reuses P1's EIA pricing for heating/cooling; P2-03 is CO₂ only (no DTE tariffs). P2-04 will pass P2-01's lat/lon, `building_type` and `unit_sqft` into `estimate_hc`, and derive p10/p90 from `accuracy`.
