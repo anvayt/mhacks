@@ -2,7 +2,9 @@
 
 **P4 rehearsal draft, October 4, 2026.** Assign actual names to P1–P4 before rehearsing. Spoken copy is in blockquotes; operator directions and source notes are not spoken. The slots below total **180 seconds**. P4 owns the timer and cuts to the next slot at its boundary; finish at 3:00.
 
-This script uses recorded repository evidence, not a fresh live verification. Backend reference: `dev` at `534f67a`; notes: `main` at `6d8638f`. `demo/DEMO_PICKS.md` and its JSON were captured at `fd8c31c`, before the current city scoring table. Keep that distinction on any replay caption. **TODO before the live pitch:** rerun against the final merged web/API/model, refresh the exact numbers if needed, and save the final recording locally. At drafting time the model was unavailable, so no current full live run is claimed.
+This script uses recorded repository evidence, including the later real-model warm checks and terminal validation linked below. Backend reference: `dev` at `534f67a`; notes: `main` at `6d8638f`. `demo/DEMO_PICKS.md` and its JSON were captured at `fd8c31c`, before the current city scoring table. Keep that distinction on any replay caption. **TODO before the live pitch:** rerun against the final merged web/API/model, refresh the exact numbers if needed, and save the final recording locally. P1 has restored the model. The public-demo handoff records passing real-model warm checks for all five estimates and maps, one forecast and the city layer, with annual values matching the evidence card. This does not replace the final merged UI rehearsal or authorize its final recording. [`README.md` public-demo verification][public-check].
+
+The later real API/model terminal run confirms Morton’s C/45 current grade, C/56 window projection and provisional 120-therm bill signal. The web recorder passed all six beats at both 1280×720 and 390×844, with 44 screenshots and no browser errors. This was a temporary integration rehearsal, not the final recording; no final WebM/MP4 exists yet. [`agent/PHASE2_REPORT.md`][agent-report]; [`demo/video/README.md`][video-check].
 
 ## Three-minute script
 
@@ -72,7 +74,7 @@ Do not mix the old **150-therm January** capture (−67.6%) with the **120-therm
 
 ## Thirty-second fallback — no Wi-Fi
 
-**Prerequisite:** download the final real-site backup video and screenshots to the demo laptop, then test playback with Wi-Fi disabled. **TODO video owner:** record the final merged UI and fill in the local video filename. The raw JSON in `demo/picks/` is evidence for replay; it is not a working offline API. If the video is not ready, show the saved comparison capture as explicitly recorded evidence and omit claims about a working offline app.
+**Prerequisite:** download the final real-site backup video and screenshots to the demo laptop, then test playback with Wi-Fi disabled. **TODO video owner:** wait for the lead to confirm the web merge, then record the final merged UI and fill in the local video filename. Dry-run artifacts remain rehearsal evidence. The raw JSON in `demo/picks/` is evidence for replay; it is not a working offline API. If the video is not ready, show the saved comparison capture as explicitly recorded evidence and omit claims about a working offline app.
 
 | Time | Speaker / display |
 |---|---|
@@ -137,3 +139,7 @@ Source: `NEW_CHANGES.md` §7/§9/§16, `api/app/bills.py`, `api/app/boards.py`. 
 [bills]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/api/app/bills.py
 [layer]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/api/data/city_layer.json
 [city-csv]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/api/data/city_scores.csv
+
+[public-check]: https://github.com/anvayt/mhacks/blob/b369a65b2289e75b66447ed9f49226d74ed4b94f/README.md
+[agent-report]: https://github.com/anvayt/mhacks/blob/d9a74423af6387f54284b875b94f59810769bea8/agent/PHASE2_REPORT.md
+[video-check]: https://github.com/anvayt/mhacks/blob/4e3b134348f9c88578e8035fa4667c536f755bee/demo/video/README.md
