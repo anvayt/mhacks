@@ -14,3 +14,7 @@ demo-check:
 
 phase2-check:
 	@bash scripts/phase2-e2e.sh
+
+.PHONY: demo-video
+demo-video:
+	@bash demo/video/run.sh $(VIDEO_ARGS)
