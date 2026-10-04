@@ -126,6 +126,7 @@ Rules: project built with **Cursor**, and it uses the **Grok Imagine or Voice AP
 
 - [x] *Watch your report* is live at `https://hidden-rent-mhacks.vercel.app/watch?session=<id>`: Grok Voice narrates the home's report (script built from our API numbers) over a Grok Imagine illustrated clip, with the real numbers overlaid by our UI
 - [ ] Add **Grok Imagine**, **Grok Voice** and **Cursor** to Built With
+- [ ] Mention the city map's **Satellite view**: Ann Arbor satellite/aerial imagery (Esri World Imagery: Maxar, Earthstar Geographics) under every building, colored by its predicted grade (`/map`, Map / Satellite switch). Call it "satellite and aerial imagery", because at street zoom part of Esri's imagery is aerial photography.
 - [ ] Devpost note: "Built in Cursor (team rules in `.cursor/rules`). Grok Voice reads each report aloud; the script is built from our API's numbers, so Grok never invents a figure. Grok Imagine generated the illustrated seasonal clips behind it (`api/scripts/make_clips.py`). Grok vision also reads bill photos."
 - [ ] Put a screenshot of the /watch page in the gallery, and show it for ~10 s in the video
 
