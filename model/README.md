@@ -1,26 +1,151 @@
-# /model (P1: data + ML)
+# /model: heating + cooling estimates (P1 data/ML)
 
-Seasonal heating + cooling point estimates per apartment building, grounded in real Ann Arbor meters.
-Research write-up and every number: [`research/heating_cooling.md`](research/heating_cooling.md).
+For an Ann Arbor location this returns a **point estimate of heating and cooling cost and energy for each season**
+(winter = Dec–Feb, spring = Mar–May, summer = Jun–Aug, fall = Sep–Nov) for one apartment. It also returns the weather
+that drives the estimate (mean temperature, heating/cooling degree-days at the building's 800 m PRISM cell), how the
+number was computed, and its measured accuracy against real utility meters.
+
+How the models work and how well they do: [`research/heating_cooling.md`](research/heating_cooling.md), and the
+"Model performance" section of the dashboard.
+
+## 1. Set up once (downloads everything, then works from local files)
+
+Run from the repo root:
 
 ```bash
-make -C model setup        # .venv + requirements
-make -C model build        # downloads once (cached), trains, validates, scores
-make -C model test
-make -C model dashboard    # heating/cooling server (model.heating_cooling.server) → http://localhost:8001/dashboard
-curl 'localhost:8001/hc/estimate?address=2000+Pauline+Blvd,+Ann+Arbor,+MI&unit_sqft=800&mode=normal'
+make -C model setup     # .venv + requirements (Python 3.12)
+make -C model build     # downloads all source data once, trains, validates, pre-scores Ann Arbor
+make -C model test      # 7 tests
+make -C model dashboard # heating/cooling server (model.heating_cooling.server) → http://localhost:8001/dashboard (API docs /docs)
+make -C model stop
 ```
-The dashboard is a page served by that Python server. Every number on it comes from the server's `/hc/*` endpoints (live
-estimates, `buildings_hc.parquet`, `results/*.json`); nothing is hardcoded.
+
+`make build` downloads, then caches under `model/data/` (git-ignored):
+
+| Data | Covers | Stored at |
+|---|---|---|
+| City of Ann Arbor energy benchmarking (monthly gas + electricity, 2021–23) | all reporting properties | `data/raw/arcgis/a2_benchmarking.geojson` |
+| City of Ann Arbor building footprints (35,007) | whole city | `data/raw/arcgis/a2_footprints.geojson` |
+| PRISM 800 m monthly mean temperature + 1991–2020 normals | Michigan (cropped) | `data/raw/prism/tmean/*.tif` |
+| Open-Meteo ERA5 daily temperature 1991 → today | every 0.1° cell used so far (covers Ann Arbor's metered buildings) | `data/cache/openmeteo_full/*.parquet` |
+| NREL ResStock 2024.2 Michigan (18,756 homes) | Michigan | `data/raw/resstock/` |
+| EIA Michigan residential gas + electricity prices | Michigan | `data/raw/eia/`, `data/processed/prices_mi.json` |
+| ACS 5-yr block-group year built + heating fuel | Washtenaw County | `data/cache/census/` |
+
+Trained models go to `artifacts/*.pkl` (git-ignored, rebuilt by `make build`). Small derived tables and every
+validation result are committed: `data/processed/*`, `results/*`.
+
+## 2. Get an estimate
+
+### Python (preferred inside the repo)
+
+```python
+from model.heating_cooling.service import estimate_hc
+
+e = estimate_hc(
+    lat=42.2680, lon=-83.7743,     # or address="2000 Pauline Blvd, Ann Arbor, MI 48103"
+    unit_sqft=800,                 # the apartment's size; default 854 ft² (ResStock MI median 5+ unit) or the whole building
+    mode="normal",                 # "normal" = typical year (1991–2020) | "forecast" = next 12 months | 2023 (a past year)
+    answers={"window_panes": 1, "floor_level": 2},   # optional; codes: GET /hc/answers
+    heating_fuel=None,             # "gas" | "electric" to override the lookup
+    building_type=None,            # e.g. "Multi-Family with 5+ Units" to override the guess
+)
+e["seasons"]   # 4 dicts, one per season
+e["annual"]    # yearly totals
+```
+
+### HTTP (`make -C model dashboard`, port 8001)
+
+| Endpoint | Returns |
+|---|---|
+| `GET /hc/estimate?address=…` or `?lat=…&lon=…` (+ `unit_sqft`, `mode`, `heating_fuel`, `building_type`, `window_panes`, `floor_level`, `foundation_code`, `cooling_code`, `occupants`) | the `estimate_hc` result below |
+| `GET /hc/weather?lat=&lon=&mode=` | monthly + seasonal temperature, HDD, CDD at the PRISM cell |
+| `GET /hc/bill_check?year=&month=&gas_ccf=&unit_sqft=&address=` (or `lat`, `lon`) | a real gas bill vs what that month's weather predicts |
+| `GET /hc/buildings` | the 591 pre-scored Ann Arbor apartment buildings (same as `buildings_hc.csv`) |
+| `GET /hc/metered`, `GET /hc/metered/{building_id}` | metered properties; monthly actual vs model for one |
+| `GET /hc/heldout?fuel=gas` or `elec` | held-out predicted-vs-actual rows for every estimate path |
+| `GET /hc/validation` | every validation result file |
+| `GET /hc/answers` | renter answers the model accepts, with their codes |
+
+### What comes back
+
+```jsonc
+{
+  "seasons": [                       // winter, spring, summer, fall
+    {"season": "winter", "months": [1, 2, 12],
+     "heating": {"usd": 170.0, "gas_ccf": 189.3, "electric_kwh": 0.0},
+     "cooling": {"usd": 0.0, "electric_kwh": 0.0},
+     "total_usd": 170.0,
+     "weather": {"tmean_f": 26.4, "hdd65": 3486.0, "cdd65": 0.0, "hdd60": 3034.0}}
+  ],
+  "annual": {"heating_usd", "cooling_usd", "total_usd", "gas_ccf", "electric_kwh", "hdd65", "cdd65", "tmean_f"},
+  "method": "metered" | "meter_model+resstock" | "resstock",     // estimate path, see §3
+  "building": {"name", "gfa_ft2", "year_built", "stories", "buildings_on_property", "heating_fuel", "building_type",
+               "...": "each has a *_source field saying where it came from"},
+  "unit_sqft", "unit_sqft_source", "mode",
+  "model_detail": {"equation", "intensities" or "gas_fit"/"elec_fit", "unit_share", "degree_days_year"},  // the arithmetic
+  "accuracy": {"seasonal_gas_median_abs_error": {"all", "winter", "spring", "summer", "fall"}, "basis"},
+  "cross_check_resstock": {"heating_usd", "cooling_usd"},       // when method != "resstock"
+  "location": {"lat", "lon", "matched_address", "block_group"},
+  "weather_source", "prices", "sources"
+}
+```
+
+Units: gas in **ccf** (1 ccf ≈ 1.04 therms), electricity in **kWh**, money in **USD**. Gas is priced at the EIA
+Michigan *marginal* price by month (fixed charges removed), electricity at the EIA-861M Michigan average price by
+month. Building totals are scaled to the unit by floor area.
+
+### Whole-city table: no calls needed
+
+`data/processed/buildings_hc.csv` has 591 Ann Arbor apartment buildings/complexes (108 metered, the rest estimated),
+typical year, 854 ft² unit. Columns: `id, method, name, lat, lon, gfa_ft2, year_built, unit_sqft, heating_usd_yr,
+cooling_usd_yr, winter_usd, spring_usd, summer_usd, fall_usd, hdd65, cdd65, tmean_f`.
+Regenerate it with `python -m model.heating_cooling.score_buildings`.
+
+## 3. Estimate paths (chosen automatically, most grounded first)
+
+1. **`metered`**: the location is inside an Ann Arbor benchmarked property. It uses that building's own change-point
+   fit on its 2021–23 monthly meters: `use = base·days + slope·HDD(τ) [+ slope·CDD(τ)]`. Held-out seasonal error:
+   gas 7.4%, electricity 4.5%.
+2. **`meter_model+resstock`**: an unmetered multifamily building of 10,000 ft² or more. It takes a weighted geometric
+   mean of two intensities: (a) a model trained on the metered buildings (heating: a tuned random forest; cooling:
+   their median, because no model beat it), and (b) ResStock calibrated to the meters. Weights are in
+   `results/blend_weights.json`. Held-out seasonal error is about 29% for gas and 30% for electricity.
+3. **`resstock`**: a smaller building. It uses the ResStock model alone (plus renter answers); this path is trained
+   on simulation.
+
+Model selection, tuning and every metric: `results/building_model_validation.json` (nested CV, one-standard-error
+rule) and `results/validation_real.json` (held-out vs real meters, with every parameter estimated in-fold).
+
+## 4. Network use at run time
+
+After `make build`, these are the only calls an estimate can make:
+
+| Call | When | Avoid it by |
+|---|---|---|
+| US Census geocoder | an `address=` that hasn't been looked up before (each address is cached permanently) | passing `lat`/`lon` |
+| Open-Meteo forecast + seasonal | `mode="forecast"` only; cached 6 h / 24 h; the stale copy is used if offline | `mode="normal"` or a year |
+| Open-Meteo archive (append new days) | at most once a day per cell; on failure the cached series is used | nothing needed (never blocks) |
+
+PRISM, footprints, benchmarking, ResStock, EIA, ACS and the trained models are always read locally. Every real network
+request is logged to `data/cache/requests.log`.
+
+**Limitations:**
+- With `lat`/`lon` input there's no block group. For an *unmetered* building, year built then falls back to the
+  median of the metered buildings and heating fuel to gas; pass `heating_fuel` if you know it.
+- A point outside the 0.1° weather cells already cached triggers one archive download for that cell.
+- Footprints cover the City of Ann Arbor only.
+
+## 5. Layout
 
 | Path | What |
 |---|---|
-| `data_sources/` | cached clients: ResStock, benchmarking, footprints, PRISM, Open-Meteo, EIA, Census, NOAA (via `http.py`; every real request is logged to `data/cache/requests.log`) |
-| `climate.py` | 800 m localized monthly/seasonal weather: typical year, past year, forecast |
-| `heating_cooling/changepoint.py` | PRISM (Princeton Scorekeeping Method) change-point fits |
-| `heating_cooling/train.py`, `heating_cooling/building_model.py` | meter-trained models (MLR / random forest / XGBoost, CV by building) |
-| `heating_cooling/resstock_model.py` | ResStock per-degree-day model + renter answers, calibrated to meters |
-| `heating_cooling/leakage_analysis.py`, `heating_cooling/validate.py` | can bills reveal leakiness; NOAA + held-out real-meter checks |
-| `heating_cooling/service.py`, `heating_cooling/server.py` | `estimate_hc`, `weather`, `bill_check`; FastAPI dev server |
-| `data/processed/buildings_hc.csv` | 591 Ann Arbor apartment buildings/complexes, seasonal $ (for the map) |
+| `data_sources/` | cached clients: ResStock, benchmarking, footprints, PRISM, Open-Meteo, EIA, Census (`http.py` logs requests) |
+| `climate.py` | weather at the 800 m PRISM cell: typical year, past year, forecast; seasonal aggregation |
+| `heating_cooling/changepoint.py` | change-point (Princeton Scorekeeping) fits |
+| `heating_cooling/modelsel.py`, `building_model.py` | model families, nested CV, one-SE selection, final fits |
+| `heating_cooling/resstock_model.py` | ResStock per-degree-day XGBoost + renter answers, calibrated to meters |
+| `heating_cooling/validate.py`, `leakage_analysis.py` | NOAA check; held-out real-meter checks; the leakage question |
+| `heating_cooling/service.py`, `server.py`, `dashboard.html` | `estimate_hc` and friends; FastAPI app; explorer UI |
+| `scripts/build_all.py` | what `make build` runs |
 | `scripts/reproduce_resstock.py` | 10:30 PM checkpoint (R² 0.548 → 0.764) |
