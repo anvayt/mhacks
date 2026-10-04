@@ -89,6 +89,23 @@ export async function listSharedUsers(
   return { users: data.users.map(toUser), total: data.total };
 }
 
+/** DELETE /projects/{id}/users/{userId}: soft-deletes the user, which removes it from the allowlist. */
+export async function deleteUser(creds: PhotonCreds, userId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  await photonRequest<{ userId: string }>(creds, `/users/${encodeURIComponent(userId)}/`, { method: "DELETE" }, fetchImpl);
+}
+
+/** Remove every shared user registered with this phone. Returns the removed users (empty if none matched). */
+export async function removeSharedUserByPhone(
+  creds: PhotonCreds,
+  phoneNumber: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SharedUser[]> {
+  const { users } = await listSharedUsers(creds, fetchImpl);
+  const matches = users.filter((u) => u.phoneNumber === phoneNumber);
+  for (const u of matches) await deleteUser(creds, u.id, fetchImpl);
+  return matches;
+}
+
 /** Public Photon endpoint that 302s into Messages (SMS deep link) with the opener pre-filled. */
 export function redirectUrl(userId: string, msg = OPENER): string {
   return `${API}/users/${encodeURIComponent(userId)}/redirect?msg=${encodeURIComponent(msg)}`;

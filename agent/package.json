@@ -6,6 +6,7 @@
     "agent": "tsx src/agent.ts",
     "onboard": "tsx src/onboard.ts",
     "add-user": "tsx scripts/add-user.ts",
+    "remove-user": "tsx scripts/remove-user.ts",
     "doctor": "tsx scripts/doctor.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
