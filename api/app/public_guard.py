@@ -1,7 +1,7 @@
 """Single-worker public-demo guard. Limits are operational budgets, not model thresholds.
 
-30 model requests/minute per visitor permits a survey + map; 3 photos/10 minutes
-limits the two paid vision calls per photo. Trust Cloudflare's client header only
+RATE_LIMIT_PER_MIN defaults to 120 model requests/minute per visitor; 3 photos/10
+minutes limits the two paid vision calls per photo. Trust Cloudflare's client header only
 on the launcher-only loopback socket (uvicorn --no-proxy-headers).
 """
 import hmac
@@ -10,6 +10,7 @@ import json
 import os
 import time
 from collections import deque
+from urllib.parse import parse_qs
 
 from starlette.responses import JSONResponse
 
@@ -17,18 +18,26 @@ MAX_BODY = 8 * 1024 * 1024 + 64 * 1024  # 8 MiB base64 photo plus JSON/typed bil
 MAX_PHOTO = 8 * 1024 * 1024
 
 
-def protected(method, path):
+def protected(method, path, query_string=b""):
     path = path.rstrip("/")
+    if method == "GET" and (path == "/leaderboard/position" or path.startswith("/leaderboard/position/")):
+        # Plain positions are cached reads; catalog_ids asks for a modeled what-if.
+        # Parse query names, including percent escapes and empty/repeated values.
+        return "catalog_ids" in parse_qs(query_string.decode("utf-8", errors="replace"), keep_blank_values=True)
     return (method == "POST" and path in {
         "/estimate", "/answer", "/compare", "/calibrate", "/projection", "/properties", "/auth/web/start",
     }) or (method == "GET" and any(path == p or path.startswith(p + "/") for p in (
-        "/map", "/forecast", "/fixes", "/debug/features", "/commitments/suggested", "/leaderboard/position",
+        "/map", "/forecast", "/fixes", "/debug/features",
     )))
 
 
 class PublicGuard:
-    def __init__(self, app, limit=30, window=60, photo_limit=3, photo_window=600, clock=time.monotonic):
+    def __init__(self, app, limit=None, window=60, photo_limit=3, photo_window=600, clock=time.monotonic):
         self.app = app
+        if limit is None:
+            limit = int(os.environ.get("RATE_LIMIT_PER_MIN", "120"))
+        if limit < 1:
+            raise ValueError("RATE_LIMIT_PER_MIN must be a positive integer")
         self.limit, self.window = limit, window
         self.photo_limit, self.photo_window = photo_limit, photo_window
         self.clock = clock
@@ -113,7 +122,7 @@ class PublicGuard:
                 return await reject(422, "bad_bill", "That bill request is too complex. Try a photo or type the numbers from your bill.")
             except (ValueError, UnicodeDecodeError):
                 pass  # The endpoint supplies its normal malformed-JSON error.
-        if protected(scope["method"], scope["path"]) and not self.agent(headers):
+        if protected(scope["method"], scope["path"], scope.get("query_string", b"")) and not self.agent(headers):
             if not self.allow(self.visitor(scope, headers), photo):
                 return await reject(429, "slow_down", "Please give us a moment before trying again. You can keep reading your current report.")
 
