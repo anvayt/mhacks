@@ -1,0 +1,26 @@
+---
+description: How agents develop Hidden Rent (MHacks 2026) — ownership, tasks, branches, coordination
+alwaysApply: true
+---
+
+# Hidden Rent: agent dev workflow
+
+Read before any work: `PLAN.md` (what we build, §8 timeline, §10 API contract), `DEV_STRATEGY.md` (collaboration rules), `TASK_TEMPLATE.md` (task format).
+The coordination folder is the repo root on `main` (`/Users/dennisfj/Michigan/mhacks`). Always read/write `tasks/` and `notes/` there by absolute path, even when working in another worktree.
+
+## Before starting
+1. Find your task in `tasks/` (or create one from `TASK_TEMPLATE.md`); set `status: in-progress`.
+2. Read every `notes/P*.md`, `notes/requests.md`, `notes/contract-changes.md`.
+3. Check `depends_on`: if a dependency isn't done, build against P2's mocks in `/api/fixtures/`. Never wait.
+
+## While working
+- Only write to your own dir (P1 `/model`, P2 `/api`, P3 `/web`, P4 `/agent`) and only what's in your task's `services_touched`. Need a change elsewhere → add to `notes/requests.md`.
+- Code lives on `dev`. Work in your own worktree: `git worktree add ../mhacks-<task> -b p<#>/<task> dev`. Never commit code to `main`; never edit docs (`*.md` at root, `tasks/`, `notes/`) on code branches.
+- The PLAN.md §10 API contract is frozen. Any change → `notes/contract-changes.md` with acks from consumers; after freeze, additive only.
+- Small commits; rebase on `dev` often. Keep `notes/<P#>.md` current (doing / done / blocked on / what I expose).
+- PLAN.md §0 rules: no secrets (use `.env`, list names in `.env.example`), no invented numbers (cite a source for every figure), the chat agent only says numbers from our API.
+
+## Finishing
+1. Tests and a contract check pass; merge into `dev` only via a `type: merge` task (or as its owner says).
+2. Fill the task's **Handoff** section; set `status: review` or `done`; update `notes/<P#>.md`; tell the owners in `blocks`.
+3. Remove your worktree when merged: `git worktree remove ../mhacks-<task>`.
