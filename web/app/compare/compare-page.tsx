@@ -56,7 +56,7 @@ export default function ComparePage() {
             <div className={styles.gradeRow}><strong className={styles.grade}>{gradeLabel(e)}</strong><p>{e.locked === false ? `Point estimate ${e.grade}; answers can change it.` : "Your predicted efficiency grade."}<br />{peerLabel(e)}</p></div>
             <p className={styles.annual}>{money(e.bill.annual.p50)}<span>/year</span></p><p className={styles.range}>{annualRange(e)} · estimated range</p>{buildingLine(e) && <p className={styles.range}>{buildingLine(e)}</p>}
             <dl className={styles.stats}><div><dt>Hidden rent vs same-type median</dt><dd>{hiddenRent(e)}</dd></div><div><dt>Predicted carbon</dt><dd>{carbon(e)}</dd></div></dl>
-            <p className={styles.note}>{e.building.address} · {e.building.sqft.toLocaleString()} sq ft. {e.bill.note}</p>
+            <p className={styles.note}>{e.building.address} · {e.building.sqft != null ? `${e.building.sqft.toLocaleString()} sq ft` : "size unknown"}. {e.bill.note}</p>
             <Link className={styles.cardLink} href={`/share?session=${encodeURIComponent(e.session_id)}`}>Share this dossier ↗</Link>
           </div> : <p className={styles.placeholder}>Two places. Their real public records. A clearer decision.</p>}
         </section>;
