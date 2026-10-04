@@ -287,6 +287,13 @@ def _position(session: dict, snapshots: list[dict], projection: dict | None, pro
     nearby = range(max(0, center - 2), min(len(peers), center + 3))
     neighbors = [{"rank": _placement(peers[i], peers)["rank"], "score": _placement(peers[i], peers)["score"],
                   "cost_per_sqft": round(peers[i], 6)} for i in nearby]
+    try:  # footprint ids let the web highlight each bar's building on the map; omitted if the lists disagree
+        ids = city.city_cost_ids(building.get("type"))
+        if len(ids) == len(peers):
+            for n, i in zip(neighbors, nearby):
+                n["id"] = ids[i]
+    except Exception:
+        pass
     return {"current": current, "projected": projected, "neighbors": neighbors,
             "percentile_basis": "same_type_city_costs", "label": "current",
             "current_source": latest["source"] if latest else "session",

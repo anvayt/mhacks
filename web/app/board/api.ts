@@ -10,7 +10,7 @@ export type Snapshot = { id: string; source: string; grade: string; grade_span?:
 export type Position = {
   current: { score: number; grade: string; percentile_city: number; rank: number; of: number };
   projected: { rank?: number; score: number; percentile_city?: number; percentile?: number; label: string } | null;
-  neighbors: { rank: number; score: number; cost_per_sqft: number }[];
+  neighbors: { rank: number; score: number; cost_per_sqft: number; id?: number }[]; // id: the bar's city footprint
   model_version?: string; current_source?: string; projection_reason?: { code: string; message: string } | null;
 };
 export type Suggestion = {

@@ -40,3 +40,12 @@
 .homeRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; }
 .linkButton { border: 0; padding: 0; background: none; color: inherit; font: inherit; font-size: 14px; opacity: .8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .linkButton:hover, .linkButton:focus-visible { opacity: 1; }
+
+/* Wide board: Raise your score on the left, the leaderboard (bars over the map) on the right; leaderboard first when stacked. */
+.screen :global(.board) { width: min(1400px, 100%); }
+.columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 32px; align-items: start; width: 100%; }
+.columns > div { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1000px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+  .columns > div:last-child { order: -1; }
+}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { HiddenRentMap, getMapWidgetData, type Focus, type MapWidgetData } from "@/components/hidden-rent-map";
 
 /** The city map under the grade, so the result shows where the home sits without another click. */
-export function GradeMap({ session }: { session: string }) {
+export function GradeMap({ session, highlightId = null }: { session: string; highlightId?: number | null }) {
   const [data, setData] = useState<MapWidgetData | null>(null);
   const [focus, setFocus] = useState<Focus>("building");
   useEffect(() => {
@@ -15,7 +15,7 @@ export function GradeMap({ session }: { session: string }) {
   if (!data) return null;
   return (
     <section className="score-reveal score-reveal-late" aria-label="This home on the Ann Arbor map" style={{ alignSelf: "stretch", width: "100%" }}>
-      <HiddenRentMap data={data} step={data.steps.length - 1} focus={focus} onFocusChange={setFocus} />
+      <HiddenRentMap data={data} step={data.steps.length - 1} focus={focus} onFocusChange={setFocus} highlightId={highlightId} />
       <p className="ranking-source">
         Every Ann Arbor building, colored by its predicted grade. Switch to Satellite or hide neighbors in the corner.{" "}
         <Link href={`/map?session=${encodeURIComponent(session)}`}>Open the full city map ↗</Link>

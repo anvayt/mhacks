@@ -90,6 +90,11 @@ def city_costs(building_type: str) -> list[float]:
     return [row["cost_per_sqft"] for row in _table() if row["type"] == building_type]
 
 
+def city_cost_ids(building_type: str) -> list[int]:
+    """Footprint ids in the same order as sorted(city_costs(type)), so a neighbor bar can name its building."""
+    return [fid for _, fid in sorted((row["cost_per_sqft"], row["footprint_id"]) for row in _table() if row["type"] == building_type)]
+
+
 def _round_coordinates(coords):
     # Six decimal WGS84 degrees are about 0.1 m: below the source imagery precision.
     return [_round_coordinates(c) if isinstance(c, (list, tuple)) else round(c, 6) for c in coords]
