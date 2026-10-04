@@ -2,7 +2,7 @@
 id: P1-01
 title: Research heating + cooling utility estimates per location (PRISM)
 owner: P1
-status: in-progress
+status: done
 branch: p1/heating-cooling
 type: research
 checkpoint: 1:00 AM GO/NO-GO
@@ -58,8 +58,8 @@ Find and prototype a defensible way to get **one heating estimate and one coolin
 - [ ] Runs offline from cached data
 - [ ] No secrets committed; every number has a cited source (PLAN.md §0 rules)
 
-## Handoff (fill in when done; DEV_STRATEGY #1)
-- What changed (files, functions)
-- How to use it / run it
-- Known gaps, TODOs, anything mocked that still needs to be real
-- Who needs to act next (`blocks` owners)
+## Handoff
+- Write-up with every number and source: `model/research/heating_cooling.md` (branch `p1/heating-cooling` @ ddbed97).
+- Answer: seasonal heating/cooling $ per apartment from (1) the building's own real meters via PRISM change-point fits, (2) a blend of a meter-trained regression and meter-calibrated ResStock for unmetered complexes, (3) ResStock for small buildings. Weather at the 800 m PRISM cell; past year, typical year or forecast.
+- Grounding: degree-days within 2.5% of NOAA 1991–2020 normals (U-M station) in every season. Held-out seasonal gas error is 7.4% (metered) and 28.3% (unmetered blend).
+- Leakage: "uses X% more heat than peers for the weather" is a stable, real-meter-backed trait (94% persistent). Attributing it to air leakage is simulation-only.

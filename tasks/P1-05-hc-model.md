@@ -2,7 +2,7 @@
 id: P1-05
 title: Heating + cooling energy and cost model (seasonal, building-level)
 owner: P1
-status: review
+status: done
 branch: p1/heating-cooling
 type: build
 checkpoint: 1:00 AM GO/NO-GO
@@ -35,8 +35,8 @@ For any building location, return **point estimates of heating and cooling energ
 - [ ] Seasonal heating/cooling $ for 5 real Ann Arbor complexes look plausible vs RECS/EIA
 
 ## Handoff
-- Code: `model/hc/changepoint.py` (PRISM scorekeeping fits), `model/hc/train.py` (monthly-panel MLR/RF/XGBoost, kept for comparison), `model/hc/building_model.py` (building-level, used in serving).
-- **Metered buildings:** per-building change-point fits on real meters: gas median R² **0.961** (n=108), CV(RMSE) 0.13. Out-of-year test (fit 2 yrs, predict the 3rd): annual gas median error **4.2%** (p90 15%).
-- **Unmetered ≥10k ft²:** building-level models, repeated 5-fold CV. Heating: MLR median APE **0.34** vs 0.42 null. Cooling: RF 0.40 vs 0.41 null, so features barely help cooling. Honest limit: building-to-building spread is ~3× within the same vintage.
-- Prices (`model/data_sources/eia.py`): gas = EIA MI **marginal** $/ccf by month (revenue~volume regression, R² 0.99, fixed charges removed). Electricity = EIA-861M average $/kWh by month (the marginal fit isn't identifiable because of seasonal rates).
-- Results: `model/results/hc_validation.json`, `building_model_validation.json`, `leakage_analysis.json`.
+- Code: `model/hc/changepoint.py`, `train.py` (monthly panel, for comparison), `building_model.py` (served), `validate.py`.
+- Metered: gas median R² 0.961 (n=108). Out-of-year annual error 4.2%; seasonal 7.4%.
+- Unmetered ≥10k ft²: blend of the ridge/MLR heating model + calibrated ResStock = **28.3%** seasonal median error on held-out real buildings (null 35.4%). Cooling is weak (features ≈ median).
+- Prices: EIA MI marginal gas $/ccf by month (R² 0.99); EIA-861M average electricity $/kWh by month.
+- Results: `model/results/{building_model_validation,hc_validation,validation_real,leakage_analysis}.json`.
