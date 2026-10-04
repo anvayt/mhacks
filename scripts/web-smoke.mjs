@@ -96,9 +96,9 @@ async function apiOnce() {
   r = await api("/estimate", { address: NOT_HOME });
   ok(sc, "500 S State St -> 422 not_a_home", r.data?.detail?.code === "not_a_home");
   r = await api("/compare", { listings: [{ address: COMPARE[0] }, { url: ZUMPER }] });
-  // ponytail: compare.py spreads the inner detail after code, so code is the inner one (needs_address), not estimate_failed.
+  // W3's reviewed contract preserves the listing's own status/code and hint.
   ok(sc, "compare with bad side -> 422 + listing b", r.status === 422 && r.data?.detail?.listing === "b", `code ${r.data?.detail?.code}`);
-  ok(sc, "compare error code is estimate_failed (contract)", r.data?.detail?.code === "estimate_failed", `got ${r.data?.detail?.code}`, true);
+  ok(sc, "compare preserves needs_address and its hint", r.data?.detail?.code === "needs_address" && !!r.data.detail.hint, `got ${r.data?.detail?.code}`);
   r = await api("/session/nope-not-a-session");
   ok(sc, "unknown session -> 404 not_found", r.status === 404 && r.data?.detail?.code === "not_found");
 }
@@ -155,6 +155,29 @@ async function waitText(page, re, timeout = 20000) {
   }
 }
 const stored = (page, key) => page.evaluate((k) => localStorage.getItem(k), key);
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const boardVisual = (page) => page.evaluate(() => {
+  const main = document.querySelector("main.board-screen");
+  const you = document.querySelector(".board-col.you");
+  const rail = document.querySelector('[aria-label="Current and projected city percentiles"]');
+  const markers = [...(rail?.children ?? [])];
+  const currentMarker = markers.find(e => e.textContent.startsWith("You"));
+  const ghostMarker = markers.find(e => e.textContent.startsWith("Projected if completed"));
+  return {
+    solid: {
+      value: you?.querySelector(".board-value")?.textContent,
+      rank: you?.querySelector(".board-label")?.textContent,
+      height: you?.querySelector(".board-bar")?.style.height,
+      color: you?.querySelector(".board-bar")?.style.background,
+      marker: currentMarker?.textContent,
+      left: currentMarker?.style.left,
+    },
+    blue: main?.style.getPropertyValue("--blue-end"),
+    red: main?.style.getPropertyValue("--red-start"),
+    ghostMarker: ghostMarker?.textContent,
+    ghostLeft: ghostMarker?.style.left,
+  };
+});
 
 // Seeds a session the way W1 should have (estimate + answers via the API) so W2 can be checked on its own branch.
 async function seed(page, addr) {
@@ -182,10 +205,16 @@ async function webFlow(addr) {
     const unitAsk = page.getByLabel(/how big is the unit|unit size/i).first();
     await Promise.race([page.waitForURL(/\/survey/, { timeout: 40000 }), unitAsk.waitFor({ timeout: 40000 })]);
     if (await unitAsk.isVisible().catch(() => false)) {
-      rec(w1, "unit-size ask shown (not in P3 design)", "WARN", "skipped");
       await audit(page, w1, "unit-size ask");
+      const originalSession = await stored(page, "hr_session_id");
+      let skipEstimates = 0;
+      const watchSkip = q => { if (q.url().startsWith(API) && q.method() === "POST" && new URL(q.url()).pathname === "/estimate") skipEstimates++; };
+      page.on("request", watchSkip);
       await page.getByRole("button", { name: /^skip$/i }).first().click();
       await page.waitForURL(/\/survey/, { timeout: 20000 });
+      page.off("request", watchSkip);
+      ok(w1, "optional unit-size skip keeps the existing estimate", !!originalSession && (await stored(page, "hr_session_id")) === originalSession && skipEstimates === 0,
+        `${skipEstimates} additional estimates`);
     }
     sid = await stored(page, "hr_session_id");
     ok(w1, "session saved as hr_session_id", !!sid, sid ?? "missing");
@@ -251,15 +280,45 @@ async function webFlow(addr) {
     if (sug.length) await waitText(page, new RegExp(sug[0].title.slice(0, 20).replace(/[()]/g, ".")), 15000);
     bt = await text(page);
     for (const c of sug.slice(0, 3)) ok(w2, `commitment "${c.title.slice(0, 30)}" listed`, bt.includes(c.title.slice(0, 20)), "", true);
+    for (const c of sug.filter(c => c.pending_model)) {
+      const tip = page.getByRole("button", { name: new RegExp(`^${escapeRegex(c.title)}`) }).first();
+      const tipText = await tip.innerText();
+      ok(w2, `unmodeled tip "${c.title.slice(0, 30)}" is disabled`, await tip.isDisabled() && await tip.getAttribute("aria-pressed") === "false");
+      ok(w2, "unmodeled tip has no savings figures", /Tip · savings not modeled yet/.test(tipText)
+        && !/\$\s*[\d,.]+|\d[\d,.]*\s*(?:kg|tonnes?|tons?)\s*CO[₂2]|\d[\d,.]*\s*GRH\s*points/i.test(tipText), c.catalog_id);
+    }
     if (modeled.length) {
       const c = modeled[0];
-      const gp = (await api(`/leaderboard/position?session_id=${sid}&catalog_ids=${c.catalog_id}`)).data;
       const pr = (await api("/projection", { session_id: sid, commitment_ids: [c.catalog_id] })).data;
-      await page.getByRole("button", { name: new RegExp(c.title.slice(0, 20).replace(/[()]/g, "."), "i") }).first().click().catch(() => rec(w2, "toggle modeled commitment", "FAIL", "button not found"));
-      ok(w2, `"projected if completed" after toggling ${c.catalog_id}`, await waitText(page, /projected if completed/i, 20000));
-      ok(w2, `projected score ${pr.projected.score} shown`, await waitText(page, new RegExp(`score ${pr.projected.score}\\b`), 5000), "", true);
-      ok(w2, `ghost at projected rank ${gp.projected.rank}`, await waitText(page, new RegExp(num(gp.projected.rank)), 3000), "", true);
-    } else rec(w2, "toggle modeled commitment", "WARN", "no modeled commitment for this home (all pending_model)");
+      const before = await boardVisual(page);
+      const toggleCalls = [];
+      const watchToggle = q => { if (q.url().startsWith(API)) toggleCalls.push({ method: q.method(), url: new URL(q.url()) }); };
+      page.on("request", watchToggle);
+      const [response] = await Promise.all([
+        page.waitForResponse(r => r.url().startsWith(API) && new URL(r.url()).pathname === "/projection" && r.request().method() === "POST", { timeout: 30000 }),
+        page.getByRole("button", { name: new RegExp(`^${escapeRegex(c.title)}`) }).first().click(),
+      ]);
+      const liveProjection = await response.json();
+      ok(w2, "toggle returns the real projected score and percentile", response.ok() && liveProjection.label === "projected_if_completed"
+        && liveProjection.projected?.score === pr.projected.score && liveProjection.projected?.percentile_city === pr.projected.percentile_city);
+      const ghostLabel = `Projected if completed: score ${pr.projected.score}, ${money(pr.projected.building_annual_usd ?? pr.projected.bill_annual.p50)} per year`;
+      const ghost = page.getByRole("img", { name: ghostLabel, exact: true });
+      ok(w2, "accessible ghost shows the API score and annual cost", await ghost.waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false), ghostLabel);
+      page.off("request", watchToggle);
+      const after = await boardVisual(page);
+      const projectedPercent = (pr.projected.percentile_city * 100).toLocaleString("en-US", { maximumFractionDigits: 1 });
+      const expectedLeft = Math.max(0, Math.min(100, (1 - pr.projected.percentile_city) * 100));
+      ok(w2, "ghost marker uses the API percentile", !!after.ghostMarker?.includes(`Score ${pr.projected.score} · ${projectedPercent}%`)
+        && Math.abs(parseFloat(after.ghostLeft) - expectedLeft) < .01, after.ghostMarker);
+      ok(w2, "solid You bar, rank and marker stay unchanged", !!before.solid.height && !!before.solid.rank
+        && JSON.stringify(before.solid) === JSON.stringify(after.solid), before.solid.rank);
+      const expectedBlue = Math.round((75 - (1 - pr.projected.percentile_city) * 60) * 100) / 100;
+      ok(w2, "background follows the projected percentile", Math.abs(parseFloat(after.blue) - expectedBlue) < .01
+        && (pr.projected.percentile_city === pos.current.percentile_city || before.blue !== after.blue || before.red !== after.red), `${before.blue} → ${after.blue}`);
+      ok(w2, "anonymous toggle makes one model request without a ghost-rank re-run",
+        toggleCalls.filter(q => q.method === "POST" && q.url.pathname === "/projection").length === 1
+        && !toggleCalls.some(q => q.url.pathname.startsWith("/leaderboard/position") && q.url.searchParams.has("catalog_ids")));
+    } else ok(w2, "all suggestions remain honest unmodeled tips", sug.length > 0 && sug.every(c => c.pending_model), `${sug.length} tips; no projection available`);
     await audit(page, w2, "/board");
     // Monthly bill (decision 3): typed therms.
     const no = page.getByRole("button", { name: /^no$/i }).first();
@@ -347,6 +406,19 @@ async function webOnce() {
     ok(sc, `hidden rent ${money(est.hidden_rent_usd_mo)} shown`, t.includes(money(est.hidden_rent_usd_mo)), "", true);
     ok(sc, "no illustrative copy", !BAD_COPY.test(t), t.match(BAD_COPY)?.[0]);
     await audit(page, sc, "/share");
+    const origin = new URL(WEB).origin;
+    const qr = page.getByRole("img", { name: `QR code linking to ${origin}`, exact: true });
+    ok(sc, "share QR identifies this site's origin", await qr.isVisible()
+      && await page.getByRole("link", { name: "Check your place", exact: true }).getAttribute("href") === origin, origin);
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }),
+      page.getByRole("button", { name: /^Download PNG/ }).click(),
+    ]);
+    const pngPath = await download.path();
+    const png = pngPath ? readFileSync(pngPath) : Buffer.alloc(0);
+    ok(sc, "Download PNG produces an actual PNG file", await download.failure() === null
+      && download.suggestedFilename() === "hidden-rent-dossier.png"
+      && png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), `${png.length} bytes`);
     await page.goto(`${WEB}/share?session=nope-not-a-session`);
     ok(sc, "expired session message", await waitText(page, /expired|send the listing again|not found/i, 10000));
   } catch (e) {
