@@ -2,7 +2,7 @@
 id: P1-06
 title: Heating + cooling estimate service (Python API + dev HTTP server in /model)
 owner: P1
-status: in-progress
+status: done
 branch: p1/heating-cooling
 type: build
 checkpoint: 1:00 AM GO/NO-GO
@@ -29,8 +29,8 @@ One call returns seasonal heating and cooling point estimates for a location or 
 - [ ] Tests pass; works offline after warm-up
 
 ## Handoff
-- `model/hc/service.py`: `estimate_hc(address|lat,lon, unit_sqft, mode, answers, heating_fuel, building_type)` → per-season {heating, cooling} {usd, ccf/kWh} + weather (tmean, HDD, CDD) + building + method + accuracy + sources. Also `weather()` and `bill_check()`.
-- Routing: metered (own meters) → meter_model (≥10k ft²) → resstock (smaller). A ResStock cross-check is included.
-- `model/hc/server.py`: `uvicorn model.hc.server:app --port 8001` (`/hc/estimate`, `/hc/weather`, `/hc/bill_check`, `/hc/answers`, `/hc/buildings`).
-- `model/hc/score_buildings.py` → `model/data/processed/buildings_hc.{parquet,csv}`: **591** Ann Arbor apartment buildings/complexes scored (108 metered, 464 meter-model, 19 ResStock).
-- TODO: tests, a one-command rebuild (artifacts `*.pkl` are git-ignored), and a P2 wrap (notes/requests.md).
+- `model/hc/service.py`: `estimate_hc(address|lat,lon, unit_sqft, mode="normal"|"forecast"|YYYY, answers, heating_fuel, building_type)` → per-season {heating, cooling} × {usd, gas_ccf, electric_kwh} + weather (tmean_f, HDD65, CDD65, HDD60) + annual + building (name, GFA, year built, fuel, each with a source) + method + accuracy (from real meters) + sources. Also `weather()` and `bill_check()` (path-specific noise floor).
+- Server: `uvicorn model.hc.server:app --port 8001` → `/hc/estimate`, `/hc/weather`, `/hc/bill_check`, `/hc/answers`, `/hc/buildings`.
+- Map table: `model/data/processed/buildings_hc.csv`, 591 apartment buildings/complexes (108 metered, 464 blend, 19 ResStock).
+- Rebuild: `python -m model.scripts.build_all` (95 s warm, zero network requests). Tests: `python -m pytest model/tests -q` (7 pass).
+- Next: P2 wraps it in `/estimate` + `/calibrate` (notes/requests.md). P3 can use `buildings_hc.csv`.

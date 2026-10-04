@@ -2,7 +2,7 @@
 id: P1-07
 title: ResStock heating/cooling per-degree-day model with renter answers (small buildings + cross-check)
 owner: P1
-status: in-progress
+status: done
 branch: p1/heating-cooling
 type: build
 checkpoint: 1:00 AM GO/NO-GO
@@ -30,4 +30,8 @@ Ann Arbor's meters only cover properties of 10,000 ft² and up. This task covers
 - [ ] ResStock monthly timeseries check of the degree-day seasonal split (NREL per-building timeseries, sample of Washtenaw homes)
 
 ## Handoff
-- See P1-05/P1-06 handoffs; results in `model/results/resstock_hc_validation.json` and `leakage_analysis.json`.
+- `model/hc/resstock_model.py`: per-degree-day XGBoost (gas heat, electric heat, cooling) with optional renter-knowable answers (window panes, floor level, foundation, cooling type, occupants), trained with random answer masking.
+- Heating median APE 0.248 → 0.211 with answers; cooling 0.380 → 0.319 (simulation hold-out).
+- Calibrated to real meters for multifamily: heating ×1.14, cooling ×0.63. On held-out *real* Ann Arbor buildings, calibrated ResStock alone gets 29.6% seasonal error (better than the meter-trained regression's 31.2%), and the blend gets 28.3%.
+- The seasonal split was validated on real meters (`validate.py`) instead of ResStock timeseries, which is more grounded.
+- Leakage analysis: `model/hc/leakage_analysis.py` → `results/leakage_analysis.json`.
