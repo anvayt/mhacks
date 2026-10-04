@@ -34,17 +34,21 @@ def script(s: dict) -> str:
     street = b.get("address", "this home").split(",")[0].title()
     span = s.get("grade_span") or [s["grade"]]
     g = f"{'an' if s['grade'] in 'AEF' else 'a'} {s['grade']}"
-    grade = f"It earns {g}." if len(span) == 1 else f"It grades {span[0]} to {span[-1]}, most likely {g}."
+    grade = f"It earns {g}." if len(span) == 1 else f"It grades {span[0]} to {span[-1]}, likely {g}."
     a = bill["annual"]
     heat_included = (s.get("answers") or {}).get("heating_fuel") == "included"
     what = "to cool, and your landlord pays the heat" if heat_included else "to heat and cool"
-    parts = [f"Here's your Hidden Rent report for {street}.", grade,
-             f"Expect about {_usd(a['p10'])} to {_usd(a['p90'])} a year {what}."]
+    parts = [f"Your Hidden Rent report for {street}.", grade,
+             f"Most likely about {_usd(a['p50'])} a year {what}."]
+    if a.get("p10") and a.get("p90") and a["p90"] <= 2 * a["p10"]:  # say the range only when it's tight
+        parts.append(f"Somewhere between {_usd(a['p10'])} and {_usd(a['p90'])}.")
+    elif s.get("questions"):
+        parts.append("Answer a few questions to narrow it down.")
     hr = s.get("hidden_rent_usd_mo")
     if hr is not None:
-        parts.append(f"That's about {_usd(hr)} a month of hidden rent versus similar homes." if hr > 0 else
+        parts.append(f"That's about {_usd(hr)} a month of hidden rent." if hr > 0 else
                      f"That's about {_usd(-hr)} a month less than similar homes." if hr < 0 else
-                     "That's about the same as similar homes.")
+                     "That's in line with similar homes.")
     if (co2 := (s.get("co2_t") or {}).get("p50")) is not None:
         parts.append(f"It emits about {co2:.0f} tons of CO2 a year." if co2 >= 10 else
                      f"It emits about {co2:.1f} tons of CO2 a year.")
