@@ -3,7 +3,7 @@
     estimate_hc(address="…") or estimate_hc(lat=…, lon=…)
       unit_sqft  – the apartment's size (default: the building, or 854 ft² for a multifamily unit*)
       mode       – "normal" (typical year, 1991–2020), "forecast" (next 12 months), or a past year (e.g. 2024)
-      answers    – optional renter answers (model.hc.resstock_model.ANSWERS)
+      answers    – optional renter answers (model.heating_cooling.resstock_model.ANSWERS)
       heating_fuel – "gas" | "electric" to override the lookup
 
 Routing, most grounded first:
@@ -35,10 +35,10 @@ from model import climate
 from model.data_sources import census
 from model.data_sources.eia import price_table
 from model.data_sources.footprints import FootprintIndex, envelope_features
-from model.hc.building_model import TAU_C, TAU_H_ELEC, TAU_H_GAS
-from model.hc.features import BUILDING, building_features
-from model.hc.resstock_model import ANSWERS, BTYPES, MULTIFAMILY
-from model.hc.train import cp_object
+from model.heating_cooling.building_model import TAU_C, TAU_H_ELEC, TAU_H_GAS
+from model.heating_cooling.features import BUILDING, building_features
+from model.heating_cooling.resstock_model import ANSWERS, BTYPES, MULTIFAMILY
+from model.heating_cooling.train import cp_object
 from model.paths import ARTIFACTS, PROCESSED, RESULTS
 
 DEFAULT_UNIT_SQFT_MF = 854.0

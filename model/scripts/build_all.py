@@ -4,7 +4,7 @@ Run: python -m model.scripts.build_all   (≈ 2–3 min warm; first run download
 benchmarking, PRISM grids and Open-Meteo history)
 """
 from model.data_sources.eia import price_table
-from model.hc import building_model, leakage_analysis, resstock_model, score_buildings, train, validate
+from model.heating_cooling import building_model, leakage_analysis, resstock_model, score_buildings, train, validate
 from model.scripts import build_meters, fetch_prism, reproduce_resstock
 
 
