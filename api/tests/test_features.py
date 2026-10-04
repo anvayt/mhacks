@@ -322,6 +322,60 @@ def test_city_geocoder_fallback_and_offline_cache(monkeypatch, tmp_path, local_c
     assert geocoder.geocode(address) == hit and len(calls) == 1
 
 
+@pytest.fixture
+def offline_bg(monkeypatch, tmp_path, local_city_index):
+    """1 Main St (footprint OBJECTID 2) with a cached outline around its city point and a city_scores row."""
+    local_city_index.props[1].update(STORIES=1, ABG_BLD_HG=12, Struc_Type="Residential", PackedPin=None)
+    monkeypatch.setattr(geocoder, "CACHE_PATH", tmp_path / "geocode.json")
+    hit = footprints.city_address("1 Main St, Ann Arbor, MI")
+    outlines = tmp_path / "map_block_groups"
+    outlines.mkdir()
+    (outlines / "261610000001.geojson").write_text(json.dumps(mapping(Point(hit["lon"], hit["lat"]).buffer(0.001))))
+    (outlines / "261610000009.geojson").write_text(json.dumps(mapping(box(-80, 40, -79.9, 40.1))))  # elsewhere
+    monkeypatch.setattr(geocoder, "BG_OUTLINES", outlines)
+    monkeypatch.setattr(geocoder.city_scores, "_table", lambda: [{"footprint_id": 2, "block_group": "261610000002"}])
+    calls = []
+
+    def census(mode):
+        def get(url, **kwargs):
+            calls.append(url)
+            if mode == "error":
+                raise httpx.ConnectError("Census down")
+            body = ({"result": {"addressMatches": [{"matchedAddress": "1 MAIN ST, ANN ARBOR, MI, 48104",
+                                                    "coordinates": {"x": hit["lon"], "y": hit["lat"]},
+                                                    "geographies": {"2020 Census Blocks": [{"GEOID": "261614005006000"}]}}]}}
+                    if mode == "ok" else {"result": {"addressMatches": []}} if url.endswith("/onelineaddress")
+                    else {"result": {"geographies": {}}})  # no_match: coordinates lookup has no block either
+            return httpx.Response(200, request=httpx.Request("GET", url), json=body)
+        monkeypatch.setattr(httpx, "get", get)
+        return calls
+    return census, outlines
+
+
+@pytest.mark.parametrize("mode", ["error", "no_match"])
+def test_census_miss_takes_block_group_from_outline_cache_then_city_scores(monkeypatch, offline_bg, mode):
+    census, outlines = offline_bg
+    calls = census(mode)
+    f = get_features("1 Main St, Ann Arbor, MI", year_built=1960)
+    assert (f["block_group_geoid"], f["block_group_source"]) == ("261610000001", "tigerweb_outline_cache")
+    assert all("geocoding.geo.census.gov" in u for u in calls)  # fallback itself is disk-only
+    for p in outlines.iterdir():
+        p.unlink()
+    f = get_features("1 Main St, Ann Arbor, MI", year_built=1960)
+    assert (f["block_group_geoid"], f["block_group_source"]) == ("261610000002", "city_scores")
+    monkeypatch.setattr(geocoder.city_scores, "_table", lambda: [])  # footprint not scored either: today's behaviour
+    f = get_features("1 Main St, Ann Arbor, MI", year_built=1960)
+    assert (f["block_group_geoid"], f["block_group_source"]) == (None, None)
+
+
+def test_census_block_group_wins_when_census_works(offline_bg):
+    census, _ = offline_bg
+    census("ok")
+    f = get_features("1 Main St, Ann Arbor, MI", year_built=1960)
+    assert f["matched_address"] == "1 MAIN ST, ANN ARBOR, MI, 48104"
+    assert (f["block_group_geoid"], f["block_group_source"]) == ("261614005006", "census_geocoder")
+
+
 def test_city_point_survives_census_outage_without_wrong_block(monkeypatch, tmp_path, local_city_index):
     monkeypatch.setattr(geocoder, "CACHE_PATH", tmp_path / "empty.json")
 
