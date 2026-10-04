@@ -208,11 +208,15 @@ def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[lis
 # ------------------------------------------------------------------ public API
 def estimate_hc(address: str | None = None, lat: float | None = None, lon: float | None = None,
                 unit_sqft: float | None = None, mode: str | int = "normal", answers: dict | None = None,
-                heating_fuel: str | None = None, building_type: str | None = None, block_group: str | None = None) -> dict:
+                heating_fuel: str | None = None, building_type: str | None = None, block_group: str | None = None,
+                year_built: int | None = None, changes: dict | None = None) -> dict:
     """block_group: 12-digit census block-group GEOID for a lat/lon caller (e.g. /api, which already geocoded),
     so year built and heating fuel come from ACS instead of the metered-building median / gas default."""
     r = _res()
-    answers = answers or {}
+    answers = dict(answers or {})
+    no_ac = answers.get("cooling_code") == 0
+    if no_ac:
+        answers.pop("cooling_code")  # Heating uses its unchanged missing-AC baseline; no out-of-distribution code.
     loc = {"lat": lat, "lon": lon, "matched_address": None, "block_group": block_group}
     if address:
         g = census.geocode(address)
@@ -279,6 +283,13 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         feat = {"gfa_ft2": gfa, "year_built": yb, "stories_max": env["stories_max"], "height_ft_max": env["height_ft_max"],
                 "surface_to_volume": env["surface_to_volume"], "fp_count": env["fp_count"], "fp_area_ft2": env["fp_area_ft2"]}
 
+    if year_built is not None:
+        from datetime import date
+        if not 1 <= year_built <= date.today().year:
+            raise ValueError("year_built must be a past or current calendar year")
+        feat["year_built"] = year_built
+        building.update(year_built=year_built, year_built_source="caller override")
+
     # unnamed footprints / missing ENERGY STAR scores are NaN, which JSON (the HTTP server) can't encode
     building = {k: None if isinstance(v, float) and not np.isfinite(v) else v for k, v in building.items()}
     btype = building_type or _guess_btype(float(feat["gfa_ft2"]), float(feat["stories_max"]))
@@ -317,6 +328,17 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
     sources.append("NREL ResStock 2024.2 Michigan (18,756 simulated homes)")
     sources.append("City of Ann Arbor building footprints; US Census geocoder + ACS 5-yr (B25037, B25040)")
 
+    if no_ac:
+        monthly = monthly.assign(cool_kwh=0.0)
+        if cross is not None:
+            cross = cross.assign(cool_kwh=0.0)
+    effect_metadata = None
+    if changes:
+        from model.heating_cooling.effects import apply_effects
+        monthly, effect_metadata = apply_effects(monthly, w, {
+            "method": method, "feat": rs_feat, "btype": btype, "answers": answers,
+            "fuel": fuel, "location": loc, "area": area}, changes)
+
     # building totals → this unit (floor-area share)
     scale = unit_sqft / area
     seasons, annual, months = _seasonal(monthly, w, scale)
@@ -333,6 +355,17 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
                    "electricity_usd_per_kwh": "EIA-861M MI residential average, by month"},
         "sources": sources,
     }
+    if effect_metadata is not None:
+        out["effects"] = effect_metadata
+        if effect_metadata.get("heating_fuel_after"):
+            out["building"]["baseline_heating_fuel"] = fuel
+            out["building"]["heating_fuel"] = effect_metadata["heating_fuel_after"]
+            out["building"]["heating_fuel_source"] = "projected heat-pump scenario; see effects.sources and assumptions"
+            out["model_detail"]["baseline_heating_fuel"] = fuel
+            out["model_detail"]["heating_fuel"] = effect_metadata["heating_fuel_after"]
+        out["model_detail"]["effects_note"] = "The baseline equation is modified by the separately reported effects in one composed run."
+    if no_ac:
+        out["cooling_note"] = "No AC: cooling is zero; heating uses the same inputs with the cooling answer omitted."
     if cross is not None:
         _, ca, _ = _seasonal(cross, w, 1.0)
         out["cross_check_resstock"] = {"heating_usd": ca["heating_usd"], "cooling_usd": ca["cooling_usd"],

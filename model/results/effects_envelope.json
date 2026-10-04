@@ -1,0 +1,1093 @@
+{
+  "method": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+  "source": "NREL ResStock 2024.2 Michigan baseline, existing processed resstock_frame.parquet",
+  "source_sha256": "649c3c08eadb8b9034160cf1cf1fe7f00da9eb9fd5a3edd9c25a651a6ff1278e",
+  "raw_source_sha256": "703df8f1e081f168a2e6b761307c2e89befa62be2662c99faacc4261fa81fd6b",
+  "n_gas_homes": 13380,
+  "train_n": 10704,
+  "test": {
+    "n": 2676,
+    "r2_log": 0.6773649284009102,
+    "median_abs_pct_error": 21.513570660396592
+  },
+  "seed": 20261004,
+  "features": [
+    "intercept",
+    "log_sqft",
+    "vintage",
+    "stories",
+    "occupants",
+    "renter",
+    "low_e",
+    "log1p_roof_r",
+    "log_ach50",
+    "minus_log1p_wall_r",
+    "minus_log1p_ceiling_r",
+    "minus_log_afue",
+    "btype_Multi-Family with 2 - 4 Units",
+    "btype_Multi-Family with 5+ Units",
+    "btype_Single-Family Attached",
+    "btype_Single-Family Detached",
+    "window_panes_2.0",
+    "window_panes_3.0",
+    "foundation_code_1.0",
+    "foundation_code_2.0",
+    "foundation_code_3.0",
+    "foundation_code_4.0",
+    "floor_level_1.0",
+    "floor_level_2.0",
+    "attic_type_None",
+    "attic_type_Unvented Attic",
+    "attic_type_Vented Attic"
+  ],
+  "coefficients": {
+    "intercept": -3.712940368685043,
+    "log_sqft": -0.00025071419629350285,
+    "vintage": -0.11174773171424923,
+    "stories": 0.035772585561186974,
+    "occupants": 0.0415605835267103,
+    "renter": 0.11429014718257881,
+    "low_e": -0.025016152129014174,
+    "log1p_roof_r": -0.10403875249883975,
+    "log_ach50": 0.44128246119553216,
+    "minus_log1p_wall_r": 0.09919698429410059,
+    "minus_log1p_ceiling_r": 0.06746146862063027,
+    "minus_log_afue": 0.8600907198740128,
+    "btype_Multi-Family with 2 - 4 Units": -0.12922092948866762,
+    "btype_Multi-Family with 5+ Units": -0.5249963138437391,
+    "btype_Single-Family Attached": -0.1925537118337519,
+    "btype_Single-Family Detached": 0.1557296721339835,
+    "window_panes_2.0": -0.06046421106407769,
+    "window_panes_3.0": -0.05184171703470978,
+    "foundation_code_1.0": 0.19702399307090063,
+    "foundation_code_2.0": 0.15099723096137635,
+    "foundation_code_3.0": 0.29805278192095946,
+    "foundation_code_4.0": 0.3430580824541374,
+    "floor_level_1.0": -0.8216665136791639,
+    "floor_level_2.0": -0.2088382869893816,
+    "attic_type_None": 0.14139041301001995,
+    "attic_type_Unvented Attic": 0.05835192234935922,
+    "attic_type_Vented Attic": 0.07089651574754187
+  },
+  "cohorts": {
+    "Mobile Home": {
+      "all": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 675
+        },
+        "attic_ceiling_r": null,
+        "n": 675,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1950": {
+        "ach50": 15.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 52
+        },
+        "attic_ceiling_r": null,
+        "n": 52,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 1228.0
+      },
+      "1960": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 190
+        },
+        "attic_ceiling_r": null,
+        "n": 190,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1970": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 341
+        },
+        "attic_ceiling_r": null,
+        "n": 341,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1980": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 529
+        },
+        "attic_ceiling_r": null,
+        "n": 529,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1990": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 573
+        },
+        "attic_ceiling_r": null,
+        "n": 573,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "2000": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 478
+        },
+        "attic_ceiling_r": null,
+        "n": 478,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "2010": {
+        "ach50": 10.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 327
+        },
+        "attic_ceiling_r": null,
+        "n": 327,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "2020": {
+        "ach50": 8.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 132
+        },
+        "attic_ceiling_r": null,
+        "n": 132,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 881.0,
+        "sqft_max": 3310.0
+      }
+    },
+    "Multi-Family with 2 - 4 Units": {
+      "all": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 443
+        },
+        "attic_ceiling_r": null,
+        "n": 443,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1920": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 117
+        },
+        "attic_ceiling_r": null,
+        "n": 117,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1930": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 146
+        },
+        "attic_ceiling_r": null,
+        "n": 146,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1940": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 185
+        },
+        "attic_ceiling_r": null,
+        "n": 185,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1950": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 115
+        },
+        "attic_ceiling_r": null,
+        "n": 115,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1960": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 197
+        },
+        "attic_ceiling_r": null,
+        "n": 197,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1970": {
+        "ach50": 20.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 215
+        },
+        "attic_ceiling_r": null,
+        "n": 215,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "1980": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 217
+        },
+        "attic_ceiling_r": null,
+        "n": 217,
+        "insulated_wall_r": 9.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2115.0
+      },
+      "1990": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 204
+        },
+        "attic_ceiling_r": null,
+        "n": 204,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "2000": {
+        "ach50": 10.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 129
+        },
+        "attic_ceiling_r": null,
+        "n": 129,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "2010": {
+        "ach50": 10.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 82
+        },
+        "attic_ceiling_r": null,
+        "n": 82,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      },
+      "2020": {
+        "ach50": 8.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 41
+        },
+        "attic_ceiling_r": null,
+        "n": 41,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 322.0,
+        "sqft_max": 3171.0
+      }
+    },
+    "Multi-Family with 5+ Units": {
+      "all": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 993
+        },
+        "attic_ceiling_r": null,
+        "n": 993,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "1920": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 58
+        },
+        "attic_ceiling_r": null,
+        "n": 58,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2648.0
+      },
+      "1930": {
+        "ach50": 25.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 73
+        },
+        "attic_ceiling_r": null,
+        "n": 73,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2648.0
+      },
+      "1940": {
+        "ach50": 25.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 107
+        },
+        "attic_ceiling_r": null,
+        "n": 107,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2648.0
+      },
+      "1950": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 142
+        },
+        "attic_ceiling_r": null,
+        "n": 142,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "1960": {
+        "ach50": 20.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 396
+        },
+        "attic_ceiling_r": null,
+        "n": 396,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "1970": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 570
+        },
+        "attic_ceiling_r": null,
+        "n": 570,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "1980": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 722
+        },
+        "attic_ceiling_r": null,
+        "n": 722,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "1990": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 755
+        },
+        "attic_ceiling_r": null,
+        "n": 755,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 6348.0
+      },
+      "2000": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 539
+        },
+        "attic_ceiling_r": null,
+        "n": 539,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2115.0
+      },
+      "2010": {
+        "ach50": 10.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 350
+        },
+        "attic_ceiling_r": null,
+        "n": 350,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2115.0
+      },
+      "2020": {
+        "ach50": 10.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 0,
+        "attic_type_counts": {
+          "None": 164
+        },
+        "attic_ceiling_r": null,
+        "n": 164,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 322.0,
+        "sqft_max": 2115.0
+      }
+    },
+    "Single-Family Attached": {
+      "all": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 362,
+        "attic_type_counts": {
+          "None": 430,
+          "Vented Attic": 323,
+          "Unvented Attic": 39,
+          "Finished Attic or Cathedral Ceilings": 26
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 818,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "1920": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 7.0,
+        "heating_afue": 80.0,
+        "attic_n": 42,
+        "attic_type_counts": {
+          "Vented Attic": 35,
+          "None": 21,
+          "Finished Attic or Cathedral Ceilings": 13,
+          "Unvented Attic": 7
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 76,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "1930": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 7.0,
+        "heating_afue": 80.0,
+        "attic_n": 64,
+        "attic_type_counts": {
+          "Vented Attic": 54,
+          "None": 31,
+          "Finished Attic or Cathedral Ceilings": 15,
+          "Unvented Attic": 10
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 110,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "1940": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 10.0,
+        "heating_afue": 80.0,
+        "attic_n": 96,
+        "attic_type_counts": {
+          "Vented Attic": 80,
+          "None": 52,
+          "Finished Attic or Cathedral Ceilings": 18,
+          "Unvented Attic": 16
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 166,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "1950": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 7.0,
+        "heating_afue": 80.0,
+        "attic_n": 79,
+        "attic_type_counts": {
+          "Vented Attic": 70,
+          "None": 67,
+          "Unvented Attic": 9,
+          "Finished Attic or Cathedral Ceilings": 6
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 152,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 625.0,
+        "sqft_max": 7414.0
+      },
+      "1960": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 7.0,
+        "heating_afue": 80.0,
+        "attic_n": 146,
+        "attic_type_counts": {
+          "None": 131,
+          "Vented Attic": 131,
+          "Unvented Attic": 15,
+          "Finished Attic or Cathedral Ceilings": 6
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 283,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 625.0,
+        "sqft_max": 7414.0
+      },
+      "1970": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 169,
+        "attic_type_counts": {
+          "None": 183,
+          "Vented Attic": 153,
+          "Unvented Attic": 16,
+          "Finished Attic or Cathedral Ceilings": 8
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 360,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 625.0,
+        "sqft_max": 7414.0
+      },
+      "1980": {
+        "ach50": 15.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 213,
+        "attic_type_counts": {
+          "None": 234,
+          "Vented Attic": 196,
+          "Unvented Attic": 17,
+          "Finished Attic or Cathedral Ceilings": 8
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 455,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "1990": {
+        "ach50": 10.0,
+        "wall_r": 11.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 232,
+        "attic_type_counts": {
+          "None": 321,
+          "Vented Attic": 209,
+          "Unvented Attic": 23,
+          "Finished Attic or Cathedral Ceilings": 7
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 560,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 273.0,
+        "sqft_max": 7414.0
+      },
+      "2000": {
+        "ach50": 10.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 174,
+        "attic_type_counts": {
+          "None": 278,
+          "Vented Attic": 157,
+          "Unvented Attic": 17,
+          "Finished Attic or Cathedral Ceilings": 7
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 459,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 273.0,
+        "sqft_max": 3228.0
+      },
+      "2010": {
+        "ach50": 8.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 129,
+        "attic_type_counts": {
+          "None": 216,
+          "Vented Attic": 116,
+          "Unvented Attic": 13,
+          "Finished Attic or Cathedral Ceilings": 3
+        },
+        "attic_ceiling_r": 38.0,
+        "n": 348,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 273.0,
+        "sqft_max": 3228.0
+      },
+      "2020": {
+        "ach50": 8.0,
+        "wall_r": 15.0,
+        "ceiling_r": 0.0,
+        "heating_afue": 80.0,
+        "attic_n": 53,
+        "attic_type_counts": {
+          "None": 144,
+          "Vented Attic": 47,
+          "Unvented Attic": 6
+        },
+        "attic_ceiling_r": 38.0,
+        "n": 197,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 273.0,
+        "sqft_max": 3228.0
+      }
+    },
+    "Single-Family Detached": {
+      "all": {
+        "ach50": 15.0,
+        "wall_r": 0.0,
+        "ceiling_r": 19.0,
+        "heating_afue": 80.0,
+        "attic_n": 6986,
+        "attic_type_counts": {
+          "Vented Attic": 6560,
+          "None": 3220,
+          "Unvented Attic": 426,
+          "Finished Attic or Cathedral Ceilings": 245
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 10451,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1920": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 13.0,
+        "heating_afue": 80.0,
+        "attic_n": 1200,
+        "attic_type_counts": {
+          "Vented Attic": 1121,
+          "None": 430,
+          "Finished Attic or Cathedral Ceilings": 109,
+          "Unvented Attic": 79
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 1739,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1930": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 13.0,
+        "heating_afue": 80.0,
+        "attic_n": 1911,
+        "attic_type_counts": {
+          "Vented Attic": 1776,
+          "None": 767,
+          "Unvented Attic": 135,
+          "Finished Attic or Cathedral Ceilings": 133
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 2811,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1940": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 13.0,
+        "heating_afue": 80.0,
+        "attic_n": 3338,
+        "attic_type_counts": {
+          "Vented Attic": 3103,
+          "None": 1471,
+          "Unvented Attic": 235,
+          "Finished Attic or Cathedral Ceilings": 197
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 5006,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1950": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 13.0,
+        "heating_afue": 80.0,
+        "attic_n": 3084,
+        "attic_type_counts": {
+          "Vented Attic": 2889,
+          "None": 1460,
+          "Unvented Attic": 195,
+          "Finished Attic or Cathedral Ceilings": 96
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 4640,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1960": {
+        "ach50": 20.0,
+        "wall_r": 0.0,
+        "ceiling_r": 13.0,
+        "heating_afue": 80.0,
+        "attic_n": 3954,
+        "attic_type_counts": {
+          "Vented Attic": 3713,
+          "None": 1858,
+          "Unvented Attic": 241,
+          "Finished Attic or Cathedral Ceilings": 101
+        },
+        "attic_ceiling_r": 19.0,
+        "n": 5913,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1970": {
+        "ach50": 15.0,
+        "wall_r": 0.0,
+        "ceiling_r": 19.0,
+        "heating_afue": 80.0,
+        "attic_n": 3677,
+        "attic_type_counts": {
+          "Vented Attic": 3460,
+          "None": 1742,
+          "Unvented Attic": 217,
+          "Finished Attic or Cathedral Ceilings": 80
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 5499,
+        "insulated_wall_r": 7.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1980": {
+        "ach50": 15.0,
+        "wall_r": 7.0,
+        "ceiling_r": 19.0,
+        "heating_afue": 80.0,
+        "attic_n": 2961,
+        "attic_type_counts": {
+          "Vented Attic": 2814,
+          "None": 1404,
+          "Unvented Attic": 147,
+          "Finished Attic or Cathedral Ceilings": 21
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 4386,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "1990": {
+        "ach50": 10.0,
+        "wall_r": 11.0,
+        "ceiling_r": 30.0,
+        "heating_afue": 80.0,
+        "attic_n": 2552,
+        "attic_type_counts": {
+          "Vented Attic": 2404,
+          "None": 1258,
+          "Unvented Attic": 148,
+          "Finished Attic or Cathedral Ceilings": 40
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 3850,
+        "insulated_wall_r": 11.0,
+        "sqft_min": 298.0,
+        "sqft_max": 5587.0
+      },
+      "2000": {
+        "ach50": 8.0,
+        "wall_r": 15.0,
+        "ceiling_r": 30.0,
+        "heating_afue": 80.0,
+        "attic_n": 1832,
+        "attic_type_counts": {
+          "Vented Attic": 1726,
+          "None": 932,
+          "Unvented Attic": 106,
+          "Finished Attic or Cathedral Ceilings": 35
+        },
+        "attic_ceiling_r": 30.0,
+        "n": 2799,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 634.0,
+        "sqft_max": 5587.0
+      },
+      "2010": {
+        "ach50": 7.0,
+        "wall_r": 15.0,
+        "ceiling_r": 30.0,
+        "heating_afue": 80.0,
+        "attic_n": 1398,
+        "attic_type_counts": {
+          "Vented Attic": 1324,
+          "None": 711,
+          "Unvented Attic": 74,
+          "Finished Attic or Cathedral Ceilings": 32
+        },
+        "attic_ceiling_r": 38.0,
+        "n": 2141,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 634.0,
+        "sqft_max": 5587.0
+      },
+      "2020": {
+        "ach50": 6.0,
+        "wall_r": 15.0,
+        "ceiling_r": 30.0,
+        "heating_afue": 80.0,
+        "attic_n": 687,
+        "attic_type_counts": {
+          "Vented Attic": 643,
+          "None": 345,
+          "Unvented Attic": 44,
+          "Finished Attic or Cathedral Ceilings": 27
+        },
+        "attic_ceiling_r": 38.0,
+        "n": 1059,
+        "insulated_wall_r": 15.0,
+        "sqft_min": 634.0,
+        "sqft_max": 5587.0
+      }
+    }
+  },
+  "attic_supported_btypes": [
+    "Single-Family Detached",
+    "Single-Family Attached"
+  ],
+  "attic_types_modeled": [
+    "Vented Attic",
+    "Unvented Attic"
+  ],
+  "attic_minimum_cohort_n": 30,
+  "attic_raw_gas_counts": {
+    "Mobile Home": {
+      "None": 675
+    },
+    "Multi-Family with 2 - 4 Units": {
+      "None": 778
+    },
+    "Multi-Family with 5+ Units": {
+      "None": 1619
+    },
+    "Single-Family Attached": {
+      "None": 430,
+      "Vented Attic": 323,
+      "Unvented Attic": 39,
+      "Finished Attic or Cathedral Ceilings": 26
+    },
+    "Single-Family Detached": {
+      "Vented Attic": 6560,
+      "None": 3220,
+      "Unvented Attic": 426,
+      "Finished Attic or Cathedral Ceilings": 245
+    }
+  },
+  "attic_training_gas_counts": {
+    "Mobile Home": {
+      "None": 675
+    },
+    "Multi-Family with 2 - 4 Units": {
+      "None": 443
+    },
+    "Multi-Family with 5+ Units": {
+      "None": 993
+    },
+    "Single-Family Attached": {
+      "None": 430,
+      "Vented Attic": 323,
+      "Unvented Attic": 39,
+      "Finished Attic or Cathedral Ceilings": 26
+    },
+    "Single-Family Detached": {
+      "Vented Attic": 6560,
+      "None": 3220,
+      "Unvented Attic": 426,
+      "Finished Attic or Cathedral Ceilings": 245
+    }
+  },
+  "bounds": {
+    "ach50": {
+      "min": 1.0,
+      "max": 50.0
+    },
+    "wall_r": {
+      "min": 0.0,
+      "max": 19.0
+    },
+    "ceiling_r": {
+      "min": 0.0,
+      "max": 49.0
+    },
+    "heating_afue": {
+      "min": 60.0,
+      "max": 92.5
+    }
+  },
+  "caveats": [
+    "Cross-sectional baseline simulations are not paired retrofit simulations.",
+    "Holdout accuracy validates simulated heating intensity, not causal intervention effects.",
+    "Envelope values are stock medians, not a blower-door test or insulation survey.",
+    "Only gas/non-metered scenarios are supported; cooling savings are not claimed.",
+    "R-50 is represented by R-49, the highest ceiling insulation in the training stock.",
+    "Attic scenarios require single-family type and at least 30 cohort homes with vented/unvented attics.",
+    "A top-floor answer cannot supply missing attic support for multifamily/mobile homes.",
+    "Attic baseline R excludes attic_type=None and finished/cathedral roof configurations."
+  ]
+}
