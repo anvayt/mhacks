@@ -44,7 +44,7 @@ Terminal identity defaults to the fictional `+12025550164`; override with `AGENT
 | `add to calendar` | Return OAuth URL; after connecting, say `calendar connected`. Creates events only for accepted commitments with a target date; failures never undo a commitment. Mock Calendar is labeled. |
 | `fixes` / `landlord` | Existing model-priced fixes + copyable landlord email |
 
-A replacement web session or corrected unit-size estimate is detached from the old property until saved. Billing asks for `save` first instead of attaching a bill to the wrong home. Every authenticated endpoint sends `X-Agent-Key`; ordinary public estimate calls do not need it.
+A replacement web session or corrected unit-size estimate is detached from the old property until saved. Billing asks for `save` first instead of attaching a bill to the wrong home. Every API call sends the configured `X-Agent-Key`, including public estimate and answer routes, so concurrent texters do not share the public visitor rate limit. The key stays on the agent server.
 
 ## Reminder delivery and restart behavior
 
