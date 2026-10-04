@@ -5,7 +5,8 @@ import { networkInterfaces } from "node:os";
 import { pathToFileURL } from "node:url";
 import QRCode from "qrcode";
 import { env } from "./env.ts";
-import { OPENER, createSharedUser, normalizePhone, redirectUrl, type SharedUser } from "./photon.ts";
+import { openerFor, validSession } from "./handoff.ts";
+import { createSharedUser, normalizePhone, redirectUrl, type SharedUser } from "./photon.ts";
 
 export type Register = (phone: string, name?: string) => Promise<SharedUser>;
 
@@ -29,12 +30,25 @@ const page = (body: string) => `<!doctype html>
   label { display:block; font-weight:600; margin:14px 0 6px; }
   input { width:100%; box-sizing:border-box; font-size:18px; padding:12px; border-radius:10px; border:1px solid #8886; background:transparent; color:inherit; }
   button { margin-top:20px; width:100%; font-size:18px; font-weight:600; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#fff; }
-  small { display:block; margin-top:16px; color:var(--muted); }
+  small { display:block; margin-top:16px; color:var(--muted); overflow-wrap:anywhere; }
+  .center { text-align:center; }
+  /* QR always fits its box: the SVG scales to the card's width (no fixed pixel size). */
+  .qr { width:100%; max-width:320px; margin:0 auto; padding:12px; box-sizing:border-box; background:#fff; border-radius:12px; }
+  .qr svg { display:block; width:100%; height:auto; }
+  @media (max-width:360px) { main { padding:16px 12px; } .card { padding:16px; } h1 { font-size:24px; } }
+  @media print {
+    :root { --bg:#fff; --fg:#000; --muted:#333; --card:#fff; }
+    body { background:#fff; } main { max-width:none; padding:0; }
+    .card { box-shadow:none; border:2px solid #000; max-width:5in; margin:0.5in auto; break-inside:avoid; }
+    .noprint { display:none; }
+  }
 </style></head><body><main><div class="card">${body}</div></main></body></html>`;
 
-const FORM = page(`<h1>What's your hidden rent?</h1>
-<p>Text our agent a rental listing and get the energy bill the listing doesn't show.</p>
-<form method="post" action="/join">
+const esc = (x: string) => x.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+const form = (session: string | null) => page(`<h1>What's your hidden rent?</h1>
+<p>${session ? "Pick up your report in iMessage." : "Text our agent a rental listing and get the energy bill the listing doesn't show."}</p>
+<form method="post" action="/join">${session ? `\n  <input type="hidden" name="session" value="${esc(session)}">` : ""}
   <label for="phone">Your iPhone number</label>
   <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(734) 555-0123" required>
   <label for="name">First name (optional)</label>
@@ -45,10 +59,11 @@ const FORM = page(`<h1>What's your hidden rent?</h1>
 
 // Printable table card (PLAN.md §11 demo idea 8). Print from the browser.
 const card = (qrSvg: string, publicUrl: string) =>
-  page(`<h1 style="text-align:center">What's your apartment's hidden rent?</h1>
-<p style="text-align:center">Scan, text us a listing, get the energy bill it doesn't show.</p>
-<div style="max-width:320px;margin:0 auto;background:#fff;border-radius:12px">${qrSvg}</div>
-<small style="text-align:center">${publicUrl.replace(/^https?:\/\//, "")}</small>`);
+  page(`<h1 class="center">What's your apartment's hidden rent?</h1>
+<p class="center">Scan, text us a listing, get the energy bill it doesn't show.</p>
+<div class="qr">${qrSvg}</div>
+<small class="center">${esc(publicUrl.replace(/^https?:\/\//, ""))}</small>
+<small class="center noprint">Print this page (⌘P). The QR scales to the card.</small>`);
 
 const errorPage = (msg: string) =>
   page(`<h1>Hmm.</h1><p>${msg}</p><a href="/">Try again</a>`);
@@ -68,22 +83,27 @@ export function createHandler(register: Register, mock: boolean, publicUrl: stri
     const html = (status: number, body: string) =>
       res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" }).end(body);
 
-    if (req.method === "GET" && url.pathname === "/") return html(200, FORM);
+    if (req.method === "GET" && url.pathname === "/") return html(200, form(validSession(url.searchParams.get("session"))));
 
-    if (req.method === "GET" && (url.pathname === "/qr.svg" || url.pathname === "/card")) {
+    if (req.method === "GET" && url.pathname === "/card") {
+      // no width: the SVG keeps only its viewBox, so CSS sizes it to the card
+      const svg = (await QRCode.toString(publicUrl, { type: "svg", margin: 2 })).replace(/ width="\d+" height="\d+"/, "");
+      return html(200, card(svg, publicUrl));
+    }
+    if (req.method === "GET" && url.pathname === "/qr.svg") {
       const svg = await QRCode.toString(publicUrl, { type: "svg", margin: 2, width: 512 });
-      if (url.pathname === "/card") return html(200, card(svg, publicUrl));
       return res.writeHead(200, { "Content-Type": "image/svg+xml" }).end(svg);
     }
 
     if (req.method === "POST" && url.pathname === "/join") {
-      const form = await readForm(req);
-      const phone = normalizePhone(form.get("phone") ?? "");
+      const fields = await readForm(req);
+      const phone = normalizePhone(fields.get("phone") ?? "");
+      const opener = openerFor(validSession(fields.get("session")));
       if (!phone) return html(400, errorPage("That doesn't look like a phone number. Use the one your iMessage is on."));
       try {
-        const user = await register(phone, form.get("name")?.trim() || undefined);
+        const user = await register(phone, fields.get("name")?.trim() || undefined);
         console.log(`allowlisted ${phone} → user ${user.id}${mock ? " (mock)" : ""}`);
-        const location = mock ? `sms:&body=${encodeURIComponent(OPENER)}` : redirectUrl(user.id);
+        const location = mock ? `sms:&body=${encodeURIComponent(opener)}` : redirectUrl(user.id, opener);
         return res.writeHead(302, { Location: location }).end();
       } catch (err) {
         console.error("register failed:", err);
