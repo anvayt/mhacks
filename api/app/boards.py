@@ -6,6 +6,8 @@ Neighborhoods are Census tracts, and require five distinct homes (D7). Public
 responses expose aliases or tract aggregates, never user/property IDs or addresses.
 Individual boards cover the city even when scope=neighborhood is supplied: that
 parameter alone does not identify a neighborhood. board=neighborhood gives tracts.
+board=habit_streak: current daily habit streak (app/habits.py), opted-in renters with a chosen alias only, ties
+broken by best streak. Self-reported check-ins, so it is never mixed with verified evidence.
 """
 
 import json
@@ -21,10 +23,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app import accounts, bills, calibrate, city, commitments, db, score, sessions
+from app import accounts, bills, calibrate, city, commitments, db, habits, score, sessions
 
 router = APIRouter()
-BOARDS = ("verified_cut", "co2_avoided", "streak", "follow_through", "neighborhood")
+BOARDS = ("verified_cut", "co2_avoided", "streak", "follow_through", "neighborhood", "habit_streak")
 MIN_HOMES = 5  # NEW_CHANGES D7, not a statistical confidence threshold.
 
 
@@ -135,12 +137,15 @@ def _participants() -> list[dict]:
         # Only same-property verified ledger references establish completion;
         # commitment status/evidence alone never qualifies.
         verified_ids = {cid for impact in impacts for cid in impact.get("commitment_ids", [])}
+        habit = habits.summary(user)
         rows.append({"alias": _alias(user), "home": _home_key(prop), "tract": _tract(prop, session or {}),
                      "co2_kg_avoided": sum(float(i["co2_kg_avoided"]) for i in impacts
                                            if date.fromisoformat(i["period"]["end"]).year == date.today().year),
                      "baseline_co2_kg_yr": baseline, "streak_months": _streak(prop.get("session_id")),
                      "accepted": len(accepted), "verified": len(set(accepted) & verified_ids),
-                     "verified_impact_count": len(impacts), "demo": False})
+                     "verified_impact_count": len(impacts), "demo": False,
+                     "named": _alias(user) != "Anonymous renter",  # habit_streak shows chosen aliases only
+                     "habit_streak": habit["current"], "habit_best": habit["best"]})
     return rows
 
 
@@ -155,7 +160,8 @@ def _demo_rows() -> list[dict]:
 
 def board_result(board: str, scope: str = "city") -> dict:
     if board not in BOARDS:
-        raise _fail(422, "bad_board", "Choose verified_cut, co2_avoided, streak, follow_through or neighborhood.")
+        raise _fail(422, "bad_board", "Choose verified_cut, co2_avoided, streak, follow_through, neighborhood or "
+                    "habit_streak.")
     if scope not in {"city", "neighborhood"}:
         raise _fail(422, "bad_scope", "Choose scope=city or scope=neighborhood.")
     rows = _participants() + _demo_rows()
@@ -175,9 +181,14 @@ def board_result(board: str, scope: str = "city") -> dict:
                                 "unit": "kg", "evidence": "demo" if demo else "verified", "demo": demo})
     else:
         for row in rows:
-            if not row["verified_impact_count"]:
+            best = 0
+            if board == "habit_streak":
+                if not row.get("named"):  # an alias the renter chose, never "Anonymous renter"
+                    continue
+                value, unit, best = row.get("habit_streak", 0), "days", row.get("habit_best", 0)
+            elif not row["verified_impact_count"]:
                 continue
-            if board == "verified_cut":
+            elif board == "verified_cut":
                 if row["co2_kg_avoided"] <= 0 or not row["baseline_co2_kg_yr"]:
                     continue
                 value, unit = 100 * row["co2_kg_avoided"] / row["baseline_co2_kg_yr"], "percent"
@@ -191,18 +202,20 @@ def board_result(board: str, scope: str = "city") -> dict:
                 value, unit = 100 * row["verified"] / row["accepted"], "percent"
             if value <= 0:
                 continue
+            evidence = {"streak": "bill_checks_with_verified_impact", "habit_streak": "self_reported_checkins"}
             entries.append({"alias": row["alias"], "value": round(value, 2), "unit": unit,
-                            "evidence": "demo" if row["demo"] else ("bill_checks_with_verified_impact" if board == "streak" else "verified"),
-                            "demo": row["demo"]})
-    entries.sort(key=lambda e: (-e["value"], e.get("alias", e.get("geoid", "")), e["demo"]))
+                            "evidence": "demo" if row["demo"] else evidence.get(board, "verified"),
+                            "demo": row["demo"], **({"best": best} if board == "habit_streak" else {})})
+    key = lambda e: (e["value"], e.get("best", 0))  # habit_streak ties go to the better best streak
+    entries.sort(key=lambda e: (-e["value"], -e.get("best", 0), e.get("alias", e.get("geoid", "")), e["demo"]))
     for i, entry in enumerate(entries):
-        entry["rank"] = 1 + sum(other["value"] > entry["value"] for other in entries[:i])
+        entry["rank"] = 1 + sum(key(other) > key(entry) for other in entries[:i])
     return {"board": board, "scope": scope, "coverage": "census_tract" if board == "neighborhood" else "city",
             "entries": entries, "empty_reason": None if entries else
             ("No census tract has verified reductions from at least five opted-in homes yet." if board == "neighborhood"
              else "No opted-in homes have qualifying evidence for this board yet."),
             "year": date.today().year, "model_version": "verified_ledger_v1",
-            "metric_note": "Verified kg are observed reductions in billing periods ending this year; verified_cut divides by the same home's initial annual CO2 baseline. Streaks are bill checks at homes with verified impact, not verified annual savings."}
+            "metric_note": "Verified kg are observed reductions in billing periods ending this year; verified_cut divides by the same home's initial annual CO2 baseline. Streaks are bill checks at homes with verified impact, not verified annual savings. Habit streaks are self-reported daily check-ins, not savings."}
 
 
 def _placement(cost: float, peers: list[float]) -> dict:

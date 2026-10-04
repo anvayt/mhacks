@@ -27,13 +27,13 @@ test("agent-key header covers every API endpoint so texters do not share the pub
   const seen: { path: string; method: string; key: string | null }[] = [];
   const fetcher = (async (url: string, init: RequestInit) => { seen.push({ path: new URL(url).pathname, method: init.method!, key: new Headers(init.headers).get("X-Agent-Key") }); return new Response(JSON.stringify({})); }) as typeof fetch;
   const api = httpApi("http://api", fetcher, () => {}, "test-secret");
-  await api.authPhone({ phone: sender.handle }); await api.confirmLogin({ phone: sender.handle, code: "123456" }); await api.me("u"); await api.patchMe("u", { pending_checkin: null }); await api.property({ user_id: "u", session_id: "s" }); await api.checkin("u"); await api.suggestions("p"); await api.commitments("p"); await api.commit({ user_id: "u", property_id: "p", catalog_id: "window_upgrade" }); await api.updateCommitment("c", "completed"); await api.projection({ property_id: "p", commitment_ids: ["c"] }); await api.remindersDue(); await api.reminderSent("r"); await api.reminderInbound("u"); await api.reminderControl("u", "stop"); await api.reminderDemo("u"); await api.calendarConnect("u"); await api.calendarReminder({ user_id: "u", commitment_id: "c", cadence: "once" }); await api.calibrate({ session_id: "s", property_id: "p", therms: 120, start: "2026-09-01", end: "2026-09-30" });
+  await api.authPhone({ phone: sender.handle }); await api.confirmLogin({ phone: sender.handle, code: "123456" }); await api.me("u"); await api.patchMe("u", { pending_checkin: null }); await api.property({ user_id: "u", session_id: "s" }); await api.checkin("u"); await api.suggestions("p"); await api.commitments("p"); await api.commit({ user_id: "u", property_id: "p", catalog_id: "window_upgrade" }); await api.updateCommitment("c", "completed"); await api.projection({ property_id: "p", commitment_ids: ["c"] }); await api.remindersDue(); await api.reminderSent("r"); await api.reminderInbound("u"); await api.reminderControl("u", "stop"); await api.reminderDemo("u"); await api.habitCheckin("u", { source: "imessage" }); await api.habits("u"); await api.calendarConnect("u"); await api.calendarReminder({ user_id: "u", commitment_id: "c", cadence: "once" }); await api.calibrate({ session_id: "s", property_id: "p", therms: 120, start: "2026-09-01", end: "2026-09-30" });
   await api.estimate({ address: "1514 Morton Ave" });
   await api.answer({ session_id: "s", question_id: "heating_fuel", answer: "gas" });
   await api.session("s"); await api.fixes("s");
   await api.calibrate({ session_id: "s", therms: 120, start: "2026-09-01", end: "2026-09-30" });
   assert.ok(seen.every((x) => x.key === "test-secret")); assert.ok(seen.some((x) => x.method === "PATCH"));
-  assert.equal(seen.length, 24);
+  assert.equal(seen.length, 26);
 });
 
 test("an unconfigured agent key is omitted rather than sent as an empty header", async () => {

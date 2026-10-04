@@ -44,6 +44,7 @@ export function Leaderboard() {
   const [notice, setNotice] = useState("");
   const [calendar, setCalendar] = useState<{ auth_url: string; mock: boolean; message?: string } | null>(null);
   const [calendarConnected, setCalendarConnected] = useState(false);
+  const [habit, setHabit] = useState<{ current: number; best: number } | null>(null); // GET /me habit_streak, signed in only
   // The current API's projection model still uses the pre-bill session. Until it
   // supports calibrated projections, keep post-bill what-ifs out of the chart.
   const calibrated = snapshot?.source === "bill_regrade" || position?.current_source === "bill_regrade";
@@ -74,12 +75,13 @@ export function Leaderboard() {
       const query = new URLSearchParams(window.location.search);
       let sid = query.get("session_id") ?? query.get("session") ?? load("session");
       let pid = load("property"); const uid = load("user"); let signed = !!(uid && load("token"));
-      type Me = { current_property_id: string | null; current_estimate?: Estimate; calendar_connected?: boolean; properties: { id: string; session_id: string }[] };
+      type Me = { current_property_id: string | null; current_estimate?: Estimate; calendar_connected?: boolean; properties: { id: string; session_id: string }[]; habit_streak?: { current: number; best: number } };
       const me = signed ? await apiFetch<Me>(`/me/${encodeURIComponent(uid!)}`).catch(e => {
         // Expired or someone else's token: drop the stale sign-in and carry on anonymously with the stored session.
         if (!(e instanceof ApiError) || (e.status !== 401 && e.status !== 403)) throw e;
         save("token", null); save("user", null); save("property", null); signed = false; return null;
       }) : null;
+      setHabit(me?.habit_streak ?? null);
       if (me) {
         setCalendarConnected(!!me.calendar_connected);
         const home = me.properties.find(p => p.id === me.current_property_id);
@@ -188,6 +190,7 @@ export function Leaderboard() {
       <p className="ranking-notice">Predicted heating + cooling · Ann Arbor city data</p>
       <section className="board">
         <h1 className="board-title">Same-type peers</h1>
+        {habit && <p className="board-note">🔥 {habit.current}-day habit streak (best {habit.best})</p>}
         {loading && <p role="status">Loading your home, city rank and model-scored options…</p>}
         {error && <div role="alert" className={`${styles.status} ${styles.error}`}>{error} <button type="button" className="control choice" onClick={initialize} disabled={loading}>Retry</button> <Link href="/address">Try another address</Link></div>}
         {!loading && !context && !error && <p>Look up a home to see your predicted place. <Link href="/address">Find my hidden rent ↗</Link></p>}

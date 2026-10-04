@@ -24,7 +24,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app import bills, commitments, db, gcal, sessions
+from app import bills, commitments, db, gcal, habits, sessions
 from app.estimate import MULTIFAMILY, _fail, estimate
 from app.geo.footprints import _index
 from app.map_widget import _selected
@@ -437,13 +437,15 @@ def _me(user_id: str) -> dict:
     est = sessions.get(cur["session_id"]) if cur else None
     # "your grade": the latest snapshot that isn't a provisional bill signal (one bill inside P1's noise never moves it)
     snap = next((x for x in reversed(bills.list_snapshots(cur["id"])) if not x.get("provisional")), None) if cur else None
+    habit = habits.summary(u)
     return {"user_id": u["id"], "phone_masked": mask(u["phone_number"]), "alias": u["alias"],
             "leaderboard_opt_in": u["leaderboard_opt_in"], "timezone": u["timezone"],
             "reminder_prefs": u["reminder_prefs"], "current_property_id": u["current_property_id"],
             "properties": props, "current_estimate": est and {k: v for k, v in est.items() if k not in INTERNAL_KEYS},
             "pending_checkin": u["pending_checkin"], "calendar_connected": gcal.is_connected(u["id"]),
             "current_grade": snap and {k: snap.get(k) for k in ("source", "grade", "score", "percentile_city",
-                                                                "bill_annual", "label", "created_at")}}
+                                                                "bill_annual", "label", "created_at")},
+            "habit_streak": {k: habit[k] for k in ("current", "best", "checked_in_today")}}
 
 
 @router.get("/me/{user_id}")
