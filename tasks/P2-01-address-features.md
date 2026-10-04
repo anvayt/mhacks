@@ -60,7 +60,7 @@ Given any Ann Arbor street address, return the building features the bill model 
 
 ## Follow-up 2 (team decisions Oct 3, ~9:45 PM)
 - Side-by-side duplexes stay **Single-Family Attached** (RECS definition, which ResStock follows).
-- [ ] **Guard:** skip the townhouse rule when floor area per address is above 5,587 sq ft (ResStock MI single-family max), so co-ops/sororities (e.g. Escher Co-op, AEPhi) aren't labelled townhouses.
+- [x] **Guard:** skip the townhouse rule when floor area per address is above 5,587 sq ft (ResStock MI single-family max), so co-ops/sororities (e.g. Escher Co-op, AEPhi) aren't labelled townhouses.
 - Corner lots with addresses on two streets: leave as is.
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
