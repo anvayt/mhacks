@@ -13,7 +13,7 @@ services_touched:
   - /web
 services_read:
   - /model (P1, branch p1/heating-cooling): estimate_hc, resstock_frame.parquet, cached footprints
-  - /model (P1, branch p1/leakage-model): cached Washtenaw block-group shapes
+  - Census TIGERweb block-group outline (external, no key; fetched once by the fixture script). No leakage-model data.
   - OpenFreeMap positron basemap (external, no key)
 contract_change: additive          # proposed GET /map/{session_id}; see notes/contract-changes.md
 ```
