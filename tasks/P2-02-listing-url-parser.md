@@ -2,7 +2,7 @@
 id: P2-02
 title: Listing URL → address parser (Zillow, Redfin, Apartments.com)
 owner: P2
-status: in-progress
+status: review
 branch: p2/listing-parser
 type: build
 checkpoint: 10:30 PM checkpoint
@@ -29,14 +29,15 @@ Turn a pasted listing link into a street address **from the URL text only, never
   - Anything else → `needs_address: true`.
 
 ## Steps
-- [ ] Parsers for the three sites (unit numbers, ZIP, state, city names with hyphens)
-- [ ] `tests/test_listing.py` with 10+ real-shaped URLs, including units, short links and junk input
+- [x] Parsers for the three sites (unit numbers, ZIP, state, city names with hyphens)
+- [x] `tests/test_listing.py` with 10+ real-shaped URLs, including units, short links and junk input
 
 ## Done when
-- [ ] All tests pass; no network calls anywhere in the module
+- [x] All tests pass; no network calls anywhere in the module
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
-- What changed (files, endpoints)
-- How to use it / run it
-- Known gaps, TODOs, anything mocked that still needs to be real
-- Who needs to act next (`blocks` owners)
+- **What changed:** branch `p2/listing-parser` (commit c196308, pushed; not merged). New files only: `api/app/__init__.py` (empty), `api/app/listing.py`, `api/tests/test_listing.py`. No endpoints, no deps beyond stdlib, no mocks.
+- **How to use:** `from app.listing import parse_listing_url` → dict exactly as in Outputs above. `address` includes the unit (`"549 Longshore Dr Apt A, Ann Arbor, MI 48105"`), `unit` is `"Apt A"` / `"Unit C1"` / `"#4"`, `zip` may be None (Zillow `/b/` and Apartments.com slugs have no ZIP). Also accepts a URL inside a sentence (iMessage text). Handles Zillow `/homedetails/…_zpid/`, `/homes/…_rb/`, `/b/` building pages; Redfin `/<ST>/<City>/<street>-<zip>/[unit-x/]home|apartment/<id>`; Apartments.com `/<slug>/<id>/`; mobile domains, no scheme, query strings, fragments, `%23`/`#` units.
+- **Run tests:** `cd api && uv run --no-project --with pytest python -m pytest tests/test_listing.py -q` → `41 passed`.
+- **Known gaps:** short links (`redf.in/…`) and `/homedetails/<id>_zpid/` with no slug return `needs_address: true, hint: None` (expanding them needs a network call, which is out of scope). Property-name slugs only split off the city for cities in `KNOWN_CITIES` (Ann Arbor area + a few MI cities); otherwise the hint is e.g. `"Willow Tree Apartments Southfield, MI"`. Zillow slugs with a bare unit and no APT/UNIT/# marker aren't detected. Street/city split for cities outside `KNOWN_CITIES` uses the last street suffix, so a city like "St Clair Shores" would need adding to the list.
+- **Next:** P2-04 calls `parse_listing_url(url)` in `POST /estimate`; if `needs_address` is true, ask the user for the address (show `hint` when present) or try geocoding the hint.
