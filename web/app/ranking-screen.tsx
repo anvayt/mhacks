@@ -9,6 +9,7 @@ import {
   errorText,
   gradeStatus,
   gradeText,
+  imessageUrl,
   sessionIsHome,
   usd,
   usdRange,
@@ -99,6 +100,10 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
                 Share preview
                 <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
               </Link>
+              <a className="ghost-action" href={imessageUrl(session)}>
+                Continue in iMessage
+                <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
+              </a>
               {home !== "hidden" ? (
                 <button className="ghost-action" type="button" disabled={home !== "offer"} onClick={saveHome}>
                   {home === "saved" ? "Saved as your home ✓" : home === "saving" ? "Saving…" : "Save this as my home"}
