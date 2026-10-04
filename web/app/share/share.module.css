@@ -1,0 +1,36 @@
+.page { max-width:1200px; padding:28px 36px 64px; margin:auto; }
+.nav { display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; font:12px var(--font-mono); text-transform:uppercase; }
+.header { margin:64px 0 36px; }
+.header h1 { font:clamp(64px,8vw,112px)/.94 var(--font-display); text-transform:uppercase; margin:18px 0; }
+.header h1 em { font:italic 1em var(--font-serif); text-transform:none; }
+.header p,.eyebrow { font:11px var(--font-mono); letter-spacing:.06em; }
+.card { max-width:650px; margin:0 auto; padding:36px; background:var(--paper); color:var(--ink); border:2px solid var(--ink); box-shadow:10px 10px 0 var(--ink); }
+.cardTop { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:20px; border-bottom:1px solid var(--ink); font:11px var(--font-mono); }
+.cardTop strong { font:28px var(--font-display); }
+.eyebrow { margin-top:28px; }
+.card h2 { font:30px/1.1 var(--font-display); margin:18px 0 0; }
+.grade { display:block; font:clamp(140px,20vw,230px)/1 var(--font-display); letter-spacing:-.05em; margin-top:18px; }
+.gradeNote { font:11px/1.6 var(--font-mono); }
+.percentile { font-size:18px; line-height:1.4; margin:22px 0; }
+.bill { border-top:1px solid var(--ink); padding-top:24px; }
+.bill strong { font:62px/1 var(--font-display); }
+.bill strong span { font:15px var(--font-mono); margin-left:8px; }
+.bill p { font:12px var(--font-mono); }
+.stats { margin:24px 0; }
+.stats div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #c9c7c0; padding:16px 0; }
+.stats dt { font-size:12px; max-width:50%; }
+.stats dd { margin:0; font:26px var(--font-display); text-align:right; }
+.qrRow { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-top:28px; }
+.qrRow h3 { font:32px var(--font-display); text-transform:uppercase; margin:0; }
+.qrRow p { font:11px/1.6 var(--font-mono); overflow-wrap:anywhere; }
+.qr { display:block; width:132px; height:132px; }
+.actions { display:flex; max-width:650px; margin:34px auto 0; gap:12px; }
+.actions button { flex:1; padding:20px 14px; cursor:pointer; border:1px solid var(--ink); background:var(--ink); color:white; font:14px var(--font-mono); }
+.actions button:disabled { opacity:.7; cursor:wait; }
+.actions button:focus-visible { outline:3px solid #ffb000; outline-offset:3px; }
+.status { text-align:center; font:12px/1.6 var(--font-mono); }
+.notice { padding:32px; background:var(--paper); color:var(--ink); line-height:1.6; }
+.notice button { padding:10px 16px; margin-right:12px; cursor:pointer; }
+@media(max-width:600px) { .page { padding:20px 16px 40px; } .nav { font-size:10px; } .header { margin-top:44px; } .header h1 { font-size:64px; } .card { padding:22px; box-shadow:5px 5px 0 var(--ink); } .card h2 { font-size:26px; } .grade { font-size:148px; } .cardTop { font-size:9px; } .cardTop strong { font-size:24px; } .bill strong { font-size:54px; } .stats dd { font-size:22px; } .qr { width:106px; height:106px; } .qrRow { gap:10px; } .qrRow h3 { font-size:27px; } .qrRow p { font-size:10px; } .actions button { font-size:12px; padding:18px 12px; } }
+
+.billNote { font: 12px/1.6 var(--font-sans); border-left: 3px solid var(--blue); padding-left: 12px; }

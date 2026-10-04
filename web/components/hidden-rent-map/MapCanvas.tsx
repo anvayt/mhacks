@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ExpressionSpecification, LngLatBoundsLike, Map as MLMap, Marker, Popup } from "maplibre-gl";
-import type { Geometry, Position } from "geojson";
+import type { FeatureCollection, Geometry, Position } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { GRADE_COLORS } from "./grade-colors";
 import styles from "./hidden-rent-map.module.css";
 import type { CityBuildingProps, Focus, MapWidgetData } from "./types";
 
@@ -12,7 +13,7 @@ const FT_TO_M = 0.3048;
 const BLUE = "#173bfa";
 const INK = "#11121a";
 const HOVER = "#ffb000";
-const RESIDENTIAL = "#d8d5cb";
+
 const OTHER = "#bdbab0";
 
 interface Props {
@@ -43,7 +44,7 @@ function centroid(g: Geometry): [number, number] {
 }
 
 const hovered: ExpressionSpecification = ["boolean", ["feature-state", "hover"], false];
-const similar: ExpressionSpecification = ["boolean", ["feature-state", "similar"], false];
+const gradeColor: ExpressionSpecification = ["match", ["get", "grade"], "A", GRADE_COLORS.A, "B", GRADE_COLORS.B, "C", GRADE_COLORS.C, "D", GRADE_COLORS.D, "F", GRADE_COLORS.F, OTHER];
 
 export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding, reducedMotion }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -53,14 +54,26 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
   const onHoverRef = useRef(onHoverBuilding);
   onHoverRef.current = onHoverBuilding;
   const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [cityCount, setCityCount] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let map: MLMap | null = null;
     (async () => {
+      let city: FeatureCollection<Geometry, CityBuildingProps>;
+      try {
+        const response = await fetch(data.buildings_url);
+        if (!response.ok) throw new Error();
+        city = await response.json();
+        if (!Array.isArray(city.features)) throw new Error();
+      } catch {
+        if (!cancelled) setFailed("The city footprint layer is unavailable. Reload to try again; your estimate is still shown below.");
+        return;
+      }
       const maplibregl = (await import("maplibre-gl")).default;
       if (cancelled || !container.current) return;
+      setCityCount(city.features.length);
       try {
         map = new maplibregl.Map({
           container: container.current,
@@ -71,7 +84,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
           attributionControl: { compact: true },
         });
       } catch {
-        setFailed(true);
+        setFailed("The map needs WebGL, which this browser has turned off.");
         return;
       }
       mapRef.current = map;
@@ -105,14 +118,14 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
           paint: { "line-color": BLUE, "line-width": 2, "line-dasharray": [2, 1.5], "line-opacity": 0.8 },
         });
 
-        map.addSource("city", { type: "geojson", data: data.buildings_url, promoteId: "id" });
+        map.addSource("city", { type: "geojson", data: city, promoteId: "id" });
         map.addLayer({
           id: "city-3d",
           type: "fill-extrusion",
           source: "city",
           filter: ["!=", ["get", "id"], sel],
           paint: {
-            "fill-extrusion-color": ["case", hovered, HOVER, similar, INK, ["==", ["get", "r"], 1], RESIDENTIAL, OTHER],
+            "fill-extrusion-color": ["case", hovered, HOVER, gradeColor],
             "fill-extrusion-height": ["*", ["get", "h"], FT_TO_M],
             "fill-extrusion-opacity": 0.92,
           },
@@ -120,19 +133,21 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
 
         map.addSource("home", {
           type: "geojson",
-          data: { type: "Feature", geometry: data.building.footprint, properties: { h: data.building.height_ft ?? 0 } },
+          data: { type: "Feature", geometry: data.building.footprint, properties: { id: sel, h: data.building.height_ft ?? 0, grade: city.features.find((f) => f.properties.id === sel)?.properties.grade ?? "" } },
         });
         map.addLayer({
           id: "home-3d",
           type: "fill-extrusion",
           source: "home",
           paint: {
-            "fill-extrusion-color": homeColor,
+            "fill-extrusion-color": gradeColor,
             "fill-extrusion-color-transition": { duration: 700 },
             "fill-extrusion-height": ["*", ["get", "h"], FT_TO_M],
             "fill-extrusion-opacity": 1,
           },
         });
+
+        map.addLayer({ id: "home-outline", type: "line", source: "home", paint: { "line-color": BLUE, "line-width": 4 } });
 
         map.addSource("similar-links", {
           type: "geojson",
@@ -256,7 +271,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    map.setPaintProperty("home-3d", "fill-extrusion-color", homeColor);
+
     const pin = markers.current.pin?.getElement();
     if (pin) pin.style.background = homeColor;
   }, [homeColor, ready]);
@@ -282,7 +297,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
   }, [highlightId, ready, data]);
 
   if (failed) {
-    return <div className={styles.mapFallback}>The map needs WebGL, which this browser has turned off.</div>;
+    return <div role="alert" className={styles.mapFallback}>{failed}</div>;
   }
-  return <div ref={container} className={styles.map} role="img" aria-label={`Map of Ann Arbor showing ${data.address}`} />;
+  return <div ref={container} data-building-id={data.building.id} data-city-count={cityCount ?? undefined} className={styles.map} role="img" aria-label={`Map of Ann Arbor showing ${data.address}`} />;
 }
