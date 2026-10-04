@@ -1,0 +1,37 @@
+{
+  "footprints": {
+    "path": "/Users/anvaytodkar/Code/mhacks-integration/data/a2_footprints.geojson",
+    "sha256": "83782ac8ca6f691d4d899158e7cd610475b57004c56c0835437d5bc14b3c09ba",
+    "bytes": 20116533
+  },
+  "benchmark_polygons": {
+    "path": "/Users/anvaytodkar/Code/mhacks-integration/model/data/raw/arcgis/a2_benchmarking.geojson",
+    "sha256": "96860f36db5cf1eed1f7c9f5bf03068d5cceb5f175f89dd693c005bb049a1868",
+    "bytes": 15062501
+  },
+  "city_scores": {
+    "path": "/Users/anvaytodkar/Code/mhacks-snow/api/data/city_scores.csv",
+    "sha256": "2ed1cef3b78d8da61d1c45848f02d2989a95a2786ac91272b88f9e10ba49d80e",
+    "bytes": 2525900
+  },
+  "buildings_hc.csv": {
+    "path": "/Users/anvaytodkar/Code/mhacks-snow/model/data/processed/buildings_hc.csv",
+    "sha256": "a5bf970c1338d1449b94969493713d92fe9a6b51fe7e58b104665e22a3f72feb",
+    "bytes": 102779
+  },
+  "meters_monthly.parquet": {
+    "path": "/Users/anvaytodkar/Code/mhacks-snow/model/data/processed/meters_monthly.parquet",
+    "sha256": "18d2c04cd8b0496af631be5a1e05df4bed42d95817653bffbb220ec622f20955",
+    "bytes": 85766
+  },
+  "building_targets.parquet": {
+    "path": "/Users/anvaytodkar/Code/mhacks-snow/model/data/processed/building_targets.parquet",
+    "sha256": "c555d9dff51f984bea0c98a84f73dcea0693542bcb362ded63b65fe26037050e",
+    "bytes": 41444
+  },
+  "meters_weather.parquet": {
+    "path": "/Users/anvaytodkar/Code/mhacks-snow/model/data/processed/meters_weather.parquet",
+    "sha256": "7981ef4f54bc68beee5bdd4436611bac345d4f81884233f27a50bc7870330b1a",
+    "bytes": 221600
+  }
+}
