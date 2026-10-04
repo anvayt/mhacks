@@ -16,6 +16,9 @@ Secrets go only in git-ignored `.env` files; every variable name is in [`.env.ex
 | onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
 | `/web` Next.js (P3) | 3000 | `cd web && npm ci` | `cd web && npm run dev` |
 
+`make -C model build` (and `leakage`) rewrite committed files under `model/data/processed/` and `model/results/`
+with this machine's retrain; leave those to P1 (`git checkout -- model/data/processed model/results` to drop them).
+
 Start order: model, then api, then agent / web. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
 `http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` and the web form at `NEXT_PUBLIC_API_BASE_URL`
 (both default `http://localhost:8000`; `/api` allows the browser origin in `WEB_ORIGINS`, default `http://localhost:3000`).
