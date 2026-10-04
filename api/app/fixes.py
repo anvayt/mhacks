@@ -10,7 +10,6 @@ inspections Jan 6, 2026 – Jul 5, 2028, 110 after), https://www.a2gov.org/media
 
 from concurrent.futures import ThreadPoolExecutor
 
-import httpx
 from fastapi import APIRouter, HTTPException
 
 from app import estimate, sessions
@@ -22,7 +21,6 @@ router = APIRouter()
 GRH_PDF = "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf"
 GRH_REQUIRED = 70  # checklist points for inspections Jan 6, 2026 – Jul 5, 2028 (110 after)
 EXPIRED = "That session expired. Send the listing again."
-MODEL_DOWN = "Our cost model isn't reachable right now, so we can't price fixes. Try again in a minute."
 NOW_NOTE = "from what you told us: checklist items we can confirm from your answers only"
 
 # Costs/rebates, checked Oct 4, 2026. A per-window figure we can't turn into one unit total stays null, with the
@@ -81,7 +79,7 @@ def _fail(status: int, code: str, message: str) -> HTTPException:
 
 def _candidates(s: dict) -> list[dict]:
     """Model-priced fixes that don't match what the unit already has."""
-    p, hc = s["model_params"], s["heating_cooling"]
+    p, hc = estimate.session_params(s), s["heating_cooling"]
     fuel = p.get("heating_fuel") or hc["building"].get("heating_fuel")
     out = []
     if (p.get("window_panes") or 0) < 2:
@@ -95,17 +93,6 @@ def _candidates(s: dict) -> list[dict]:
         # Ave came out +$6,800/yr), not a cold-climate heat pump, so it's listed unpriced until P1 models one.
         out.append(dict(HEAT_PUMP, methods=set()))
     return out
-
-
-def _run_model(params: dict) -> dict:
-    try:
-        r = httpx.get(f"{estimate.MODEL_BASE_URL}/hc/estimate",
-                      params={k: v for k, v in params.items() if v is not None}, timeout=50)
-    except httpx.HTTPError:
-        raise _fail(503, "model_unavailable", MODEL_DOWN)
-    if r.is_error:
-        raise _fail(503, "model_unavailable", MODEL_DOWN)
-    return r.json()
 
 
 def _priced(fix: dict, base: dict, new: dict, b: dict) -> dict:
@@ -133,7 +120,7 @@ def _rank(f: dict) -> tuple:
 
 def _grh_now(s: dict) -> int:
     """Checklist points the renter's own answers confirm."""
-    p = s["model_params"]
+    p = estimate.session_params(s)
     pts = 15 if p.get("heating_fuel") == "electric" else 0  # Electricity is the Primary ... Space Heating
     return pts + (2 if p.get("cooling_code") in (2, 3) else 0)  # Space Cooling is Provided (central AC/heat pump)
 
@@ -171,7 +158,8 @@ def fixes_for(session_id: str) -> dict:
     cands = _candidates(s)
     todo = [f for f in cands if hc["method"] in f["methods"]]
     with ThreadPoolExecutor(max_workers=max(len(todo), 1)) as ex:
-        runs = list(ex.map(lambda f: _run_model({**s["model_params"], **f["change"]}), todo))
+        # _hc_ac: same model call as /estimate (No AC never sends cooling_code=0; cooling stays $0)
+        runs = list(ex.map(lambda f: estimate._hc_ac({**estimate.session_params(s), **f["change"]}), todo))
     out = [_priced(f, hc["annual"], new, b) for f, new in zip(todo, runs)]
     # model says it doesn't cut CO₂ here (noise: double-pane on 912 Mary St's electric path came out +$29/yr): keep
     # the points and rebate, not the numbers
@@ -179,6 +167,7 @@ def fixes_for(session_id: str) -> dict:
     out += [_unpriced(f) for f in cands if f not in todo] + [_unpriced(f) for f in UNPRICED]
     out.sort(key=_rank)
     out = [{k: v for k, v in f.items() if k not in ("change", "methods")} for f in out]
+    sessions.save({**s, "used_fixes": True})  # badges: leak-hunter
     now = _grh_now(s)
     after = now + sum(f["grh_points"] for f in out)
     return {"fixes": out, "grh_points_now": now, "grh_points_after": after, "grh_points_now_note": NOW_NOTE,
