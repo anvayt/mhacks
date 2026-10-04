@@ -3,6 +3,7 @@ model/heating_cooling/service.py (estimate_hc months[], model_detail; weather() 
 daily JSON."""
 
 import datetime as dt
+import json
 import math
 
 import httpx
@@ -133,3 +134,123 @@ def test_metered_bases_come_from_the_buildings_own_fit():
     hc = {"method": "metered", "model_detail": {"heating_fuel": "electric", "gas_fit": {"tau_h": None},
                                                  "elec_fit": {"tau_h": 55.0, "tau_c": 70.0}}}
     assert forecast._bases(hc) == (55, 70)
+
+
+FETCHED_AT = "2027-01-10T13:00:00+00:00"
+
+
+def _clock(monkeypatch, value: str):
+    monkeypatch.setattr(forecast, "_now", lambda: dt.datetime.fromisoformat(value))
+
+
+def _warm(monkeypatch):
+    _clock(monkeypatch, FETCHED_AT)
+    bodies = _bodies(JAN, -5.0, 1, heat_usd=130, cool_usd=0, hdd60=7 * _hdd60(-5.0), cdd65=0)
+    _serve(monkeypatch, bodies)
+    response = client.get(f"/forecast/{SID}")
+    assert response.status_code == 200, response.text
+    path = forecast.DATA_DIR / "openmeteo_forecast_42.30_-83.70.json"
+    return bodies, response.json(), path
+
+
+def test_success_saves_raw_forecast_per_grid_cell_with_fetch_time(monkeypatch):
+    bodies, out, path = _warm(monkeypatch)
+    assert "stale_as_of" not in out
+    saved = json.loads(path.read_text())
+    assert saved == {"fetched_at": FETCHED_AT, "response": bodies[2]}
+    assert not list(forecast.DATA_DIR.glob("*.tmp"))
+
+
+@pytest.mark.parametrize("error", [httpx.ConnectError("offline"), httpx.ReadTimeout("timeout")])
+def test_network_failure_uses_last_good_timestamp_and_drops_past_days(monkeypatch, error):
+    bodies, live, path = _warm(monkeypatch)
+    original = path.read_bytes()
+    _clock(monkeypatch, "2027-01-12T13:00:00+00:00")
+    _serve(monkeypatch, bodies)
+    get = forecast.httpx.get
+    def offline(url, **kwargs):
+        if url == forecast.FORECAST:
+            raise error
+        return get(url, **kwargs)
+    monkeypatch.setattr(forecast.httpx, "get", offline)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["stale_as_of"] == FETCHED_AT
+    assert out["days"] == live["days"][2:]
+    assert out["week"]["total_usd"] == round(sum(d["heating_usd"] + d["cooling_usd"] for d in out["days"]), 2)
+    assert path.read_bytes() == original  # using an old forecast never makes it look freshly fetched
+    _clock(monkeypatch, "2027-01-13T13:00:00+00:00")
+    assert client.get(f"/forecast/{SID}").json()["stale_as_of"] == FETCHED_AT
+    assert path.read_bytes() == original
+
+
+@pytest.mark.parametrize("now,status,remaining", [
+    ("2027-01-14T13:00:00+00:00", 200, JAN[4:]),  # exactly 3 valid days, including today
+    ("2027-01-15T04:59:59+00:00", 200, JAN[4:]),  # still Jan 14 in Open-Meteo's New York timezone
+    ("2027-01-15T05:00:00+00:00", 503, None),     # midnight New York: only 2 days remain
+    ("2027-01-17T13:00:00+00:00", 503, None),
+])
+def test_cached_forecast_needs_three_days_using_local_calendar(monkeypatch, now, status, remaining):
+    bodies, _, _ = _warm(monkeypatch)
+    _clock(monkeypatch, now)
+    _serve(monkeypatch, bodies, down=forecast.FORECAST)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == status, r.text
+    if status == 200:
+        assert [d["date"] for d in r.json()["days"]] == remaining
+    else:
+        assert r.json()["detail"]["code"] == "forecast_unavailable"
+
+
+def test_null_temperature_does_not_count_toward_three_remaining_days(monkeypatch):
+    bodies, _, path = _warm(monkeypatch)
+    saved = json.loads(path.read_text())
+    saved["response"]["daily"]["temperature_2m_min"][-1] = None
+    path.write_text(json.dumps(saved))
+    _clock(monkeypatch, "2027-01-14T13:00:00+00:00")
+    _serve(monkeypatch, bodies, down=forecast.FORECAST)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "forecast_unavailable"
+
+
+def test_failed_fetch_cannot_use_another_grid_cells_cache(monkeypatch):
+    bodies, _, _ = _warm(monkeypatch)
+    s = sessions.get(SID)
+    s["model_params"]["lat"] = 42.4
+    sessions.save(s)
+    _serve(monkeypatch, bodies, down=forecast.FORECAST)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "forecast_unavailable"
+
+
+@pytest.mark.parametrize("bad", ["{", {"response": {}},
+    {"fetched_at": FETCHED_AT, "response": {"daily": {"time": JAN, "temperature_2m_mean": [1],
+         "temperature_2m_min": [0], "temperature_2m_max": [2]}}},
+    {"fetched_at": "not-a-date", "response": {}}])
+def test_corrupt_or_truncated_cache_is_friendly_503(monkeypatch, bad):
+    bodies, _, path = _warm(monkeypatch)
+    path.write_text(bad if isinstance(bad, str) else json.dumps(bad))
+    _serve(monkeypatch, bodies, down=forecast.FORECAST)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "forecast_unavailable"
+
+
+def test_fresh_success_replaces_cache_and_clears_stale_marker(monkeypatch):
+    bodies, _, path = _warm(monkeypatch)
+    _clock(monkeypatch, "2027-01-12T13:00:00+00:00")
+    bodies[2]["daily"]["temperature_2m_mean"] = [-7] * 7
+    _serve(monkeypatch, bodies)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 200 and "stale_as_of" not in r.json()
+    assert json.loads(path.read_text()) == {"fetched_at": "2027-01-12T13:00:00+00:00", "response": bodies[2]}
+
+
+def test_invalid_live_response_preserves_last_good_cache(monkeypatch):
+    bodies, _, path = _warm(monkeypatch)
+    before = path.read_bytes()
+    bodies[2]["daily"]["temperature_2m_mean"] = []
+    _serve(monkeypatch, bodies)
+    r = client.get(f"/forecast/{SID}")
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "forecast_unavailable"
+    assert path.read_bytes() == before
