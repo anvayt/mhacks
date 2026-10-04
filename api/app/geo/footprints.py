@@ -26,6 +26,9 @@ from app.geo import ADDRESSES_PATH, FOOTPRINTS_PATH
 
 NEAREST_MAX_M = 25.0
 CITY_POINT_MAX_M = 250.0
+# Reuse the existing 250 m city-point tolerance only for footprints containing this exact street line.
+# This is an address-constrained fallback, never a wider nearest-building guess.
+ADDRESS_SEARCH_MAX_M = CITY_POINT_MAX_M
 # USPS street-suffix / directional abbreviations, matching the city's PROPSTREET style ("1300 S UNIVERSITY AVE")
 _ABBR = {"STREET": "ST", "AVENUE": "AVE", "ROAD": "RD", "DRIVE": "DR", "BOULEVARD": "BLVD", "COURT": "CT",
          "PLACE": "PL", "LANE": "LN", "CIRCLE": "CIR", "TERRACE": "TER", "PARKWAY": "PKWY", "HIGHWAY": "HWY",
@@ -103,6 +106,29 @@ def _first_by_key(streets) -> dict[str, int]:
     return out
 
 
+def city_address(address: str) -> dict | None:
+    """Exact city MailingAddress street line, including unit rows; never substitute another house number.
+
+    Bare street lines are local (this API serves Ann Arbor). An explicit different town must not
+    borrow an Ann Arbor point with the same street line, even when Census cannot find the address.
+    """
+    locality = address.split(",")[1:]
+    if locality and not re.fullmatch(r"\s*ANN ARBOR(?:\s+(?:MI|MICHIGAN)(?:\s+\d{5})?)?\s*", locality[0], re.I):
+        return None
+    if len(locality) > 1 and not re.fullmatch(r"\s*(?:MI|MICHIGAN)(?:\s+\d{5}(?:-\d{4})?)?\s*", locality[1], re.I):
+        return None
+    if not FOOTPRINTS_PATH.exists() or not ADDRESSES_PATH.exists():
+        return None
+    ix = _index()
+    key = street_key(address)
+    i = ix.addr_by_street.get(key)
+    if i is None:
+        return None
+    lon, lat = _TO_UTM.transform(ix.addr_utm[i].x, ix.addr_utm[i].y, direction="INVERSE")
+    return {"matched_address": f"{key}, ANN ARBOR, MI", "lon": lon, "lat": lat,
+            "block_geoid": None, "source": "City of Ann Arbor MailingAddress (exact street line)"}
+
+
 def stories_from_height(height_ft: float) -> int:
     """Estimate stories from ABG_BLD_HG using the fit above (used only when STORIES is null)."""
     ix = _index()
@@ -131,7 +157,8 @@ def find_building(lon: float, lat: float, streets: list[str] = ()) -> Building:
     usually sits inside the building; else the geocoded lon/lat (interpolated along the
     street, so it often lands outside the footprint). Then: footprint containing the point, else the
     nearest footprint within 25 m, preferring footprints that hold a mailing address (houses over
-    garages). Raises LookupError if nothing is within 25 m.
+    garages). If none is within 25 m, search up to 250 m but only accept footprints containing
+    this exact street line. geocode() corrects displaced Census points before this lookup.
     """
     ix = _index()
     pt, how, key = _project(np.array([Point(lon, lat)]))[0], "census geocoder point", None
@@ -145,7 +172,13 @@ def find_building(lon: float, lat: float, streets: list[str] = ()) -> Building:
 
     near = ix.tree.query(pt, predicate="dwithin", distance=NEAREST_MAX_M)
     if len(near) == 0:
-        raise LookupError(f"No Ann Arbor building footprint within {NEAREST_MAX_M:.0f} m of this address")
+        keys = {street_key(s) for s in streets}
+        nearby = ix.tree.query(pt, predicate="dwithin", distance=ADDRESS_SEARCH_MAX_M)
+        near = [i for i in nearby if keys.intersection(street_key(a) for a in _addresses_in(ix, i))]
+        if not near:
+            raise LookupError(f"No Ann Arbor building footprint within {NEAREST_MAX_M:.0f} m of this address; "
+                              f"no matching-address footprint within {ADDRESS_SEARCH_MAX_M:.0f} m")
+        how += ", expanded search limited to footprints holding the same street line"
     cands = [(shapely.distance(ix.utm[i], pt), not _addresses_in(ix, i), i) for i in near]
     inside = [c for c in cands if c[0] == 0]
     # Containing footprint wins; among several (or among nearest), one holding addresses wins, then distance.

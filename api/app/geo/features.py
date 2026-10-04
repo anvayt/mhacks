@@ -23,11 +23,13 @@ COUNTY = "Washtenaw County"
 SFD, MF24, MF5 = "Single-Family Detached", "Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units"
 SFA = "Single-Family Attached"
 STORIES_CATS = (*range(1, 16), 20, 21, 35)  # in.geometry_stories categories, ResStock 2024.2 MI (team decision Oct 3)
-# in.sqft bounds in the ResStock 2024.2 MI baseline parquet (checked by the P2-01 verifier, 2026-10-03):
-# multi-family minimum 322, single-family-detached maximum 5,587. Outside them, the estimate is suspect.
-SQFT_MIN = {MF24: 322, MF5: 322}
-SQFT_MAX = {SFD: 5587}
-MF_RENTER_MEDIAN_SQFT = 854  # ResStock 2024.2 MI renter-occupied multi-family median in.sqft (n=2,628, same check)
+# ResStock 2024.2 MI baseline, rechecked 2026-10-04 against model/data/processed/resstock_frame.parquet
+# (18,756 homes): observed min/max and type medians, not limits on the size of real homes.
+# Source: model/data_sources/resstock.py -> NREL OEDI 2024/resstock_tmy3_release_2/
+# metadata_and_annual_results/by_state/state=MI/MI_baseline_metadata_and_annual_results.parquet.
+SQFT_MIN = {SFD: 298, SFA: 273, MF24: 322, MF5: 322}
+SQFT_MAX = {SFD: 5587, SFA: 7414, MF24: 6348, MF5: 6348}
+TYPICAL_SQFT = {SFD: 1698, SFA: 1207, MF24: 854, MF5: 854}
 
 
 def vintage(year: int) -> str:
@@ -38,12 +40,15 @@ def vintage(year: int) -> str:
 def building_type(struc_type: str | None, units: int) -> str | None:
     """City Struc_Type + unit count -> ResStock in.geometry_building_type_recs.
 
-    Struc_Type only has Residential / Commercial / Office / Public, so the unit count (mailing addresses
-    inside the footprint) decides: 1 -> Single-Family Detached, 2-4 -> Multi-Family with 2 - 4 Units,
+    Office/Public are not homes: "General Mailing" also includes business addresses. Commercial
+    may have homes above shops (get_features also checks plausible floor area per unit).
+    For residential candidates the unit count decides: 1 -> Single-Family Detached, 2-4 -> Multi-Family with 2 - 4 Units,
     5+ -> Multi-Family with 5+ Units. A Residential footprint with no address counts as 1 unit.
-    A Commercial/Office/Public footprint with no residential address has no ResStock type (None).
+    A Commercial footprint with no mailing address has no ResStock type (None).
     Single-Family Attached comes from townhouse_row() instead. Never produced (no data): Mobile Home.
     """
+    if struc_type in {"Office", "Public"}:
+        return None
     if units >= 5:
         return MF5
     if units >= 2:
@@ -78,7 +83,7 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
     """
     geo = geocode(address)
     if geo is None:
-        raise LookupError(f"Census geocoder found no match for {address!r}")
+        raise LookupError(f"Census geocoder and city MailingAddress found no match for {address!r}")
     b = find_building(geo["lon"], geo["lat"], streets=[address, geo["matched_address"]])
     p = b.props
     warnings: list[str] = []
@@ -115,29 +120,38 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         if row:
             type_src += (f"; townhouse rule skipped by guard: {per_addr} sq ft floor area per address > "
                          f"{SQFT_MAX[SFD]} (ResStock 2024.2 MI single-family max)")
+    # PackedPin identifies accessory structures even when Struc_Type is Residential.
+    # City source: OSI/BuildingFootprints/FeatureServer/0 (e.g. Garage, Carport, Canopy).
+    accessory = str(p.get("PackedPin") or "").strip().lower() in {"garage", "carport", "canopy", "parking deck"}
+    per_unit = building_sqft / max(units, 1)
+    if accessory or (p["Struc_Type"] == "Commercial" and btype is not None
+                     and not SQFT_MIN[btype] <= per_unit <= SQFT_MAX[btype]):
+        btype = None
     if btype is None:
-        warnings.append(f"Footprint Struc_Type is {p['Struc_Type']!r} with no residential address: not a known home")
+        type_src = f"city use rule: Struc_Type {p['Struc_Type']!r}, PackedPin {p.get('PackedPin')!r}; not a known home"
+        warnings.append(type_src + "; General Mailing addresses alone do not establish residential use")
     is_multi = units >= 2
 
-    if unit_sqft:
-        sqft, sqft_src, sqft_est = round(unit_sqft), "unit sq ft given by caller (listing or renter)", False
-    elif btype is None:
+    if btype is None:
         sqft, sqft_src, sqft_est = None, "not a home: no unit sq ft (see building_sqft)", False
+    elif unit_sqft:
+        sqft, sqft_src, sqft_est = round(unit_sqft), "unit sq ft given by caller (listing or renter)", False
     elif is_multi:
         sqft, sqft_est = round(building_sqft / units), True
-        sqft_src = (f"building floor area {building_sqft} sq ft / {units} townhouses (equal split)" if btype == SFA else
+        sqft_src = (f"building floor area {building_sqft} sq ft / {units} townhouses (equal split; includes garages)" if btype == SFA else
                     f"building floor area {building_sqft} sq ft / {units} units (includes hallways and common areas)")
+        warnings.append("Gross footprint floor area may include garages or unconditioned/common space; "
+                        "city geometry does not separate it. Ask for the unit's conditioned sq ft.")
     else:
         sqft, sqft_src, sqft_est = building_sqft, "footprint area (UTM 17N) x stories", False
 
-    if sqft is not None and not SQFT_MIN.get(btype, 0) <= sqft <= SQFT_MAX.get(btype, sqft):
-        warnings.append(f"in.sqft {sqft} is outside the ResStock 2024.2 MI range for {btype} "
-                        "(multi-family min 322, single-family detached max 5,587 sq ft)")
-        if is_multi and not unit_sqft:
-            # Usual cause: the unit points sit in a low podium/annex footprint, not the tower (405 S Main St).
-            sqft, sqft_est = MF_RENTER_MEDIAN_SQFT, True
-            sqft_src = (f"ResStock 2024.2 MI renter multi-family median {MF_RENTER_MEDIAN_SQFT} sq ft (n=2,628), "
-                        f"replacing implausible {sqft_src}")
+    if sqft is not None and not SQFT_MIN[btype] <= sqft <= SQFT_MAX[btype]:
+        warnings.append(f"in.sqft {sqft} is outside the observed ResStock 2024.2 MI range for {btype} "
+                        f"({SQFT_MIN[btype]:,}–{SQFT_MAX[btype]:,} sq ft)")
+        if not unit_sqft:
+            sqft, sqft_est = TYPICAL_SQFT[btype], True
+            sqft_src = (f"ResStock 2024.2 MI {btype} median {sqft} sq ft, "
+                        f"replacing implausible {sqft_src}; ask for unit sq ft")
 
     if year_built:
         year, year_src = int(year_built), "given by caller (listing)"
@@ -164,7 +178,7 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         "block_group_geoid": geo["block_geoid"][:12] if geo["block_geoid"] else None,
         "warnings": warnings,
         "sources": {
-            "lat_lon": "US Census geocoder (Public_AR_Current / Current_Current)",
+            "lat_lon": geo.get("source", "US Census geocoder (Public_AR_Current / Current_Current)"),
             "footprint": f"City of Ann Arbor BuildingFootprints OBJECTID {p['OBJECTID']} "
                          f"(Struc_Type {p['Struc_Type']}), found via {b.match}",
             "in.geometry_stories": f"{stories} stories ({stories_src})"
