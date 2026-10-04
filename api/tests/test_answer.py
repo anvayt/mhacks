@@ -211,3 +211,16 @@ def test_answer_snapshots_a_saved_home(monkeypatch, tmp_path):  # wave 5c: a hom
         pid = accounts._insert_property(con, uid, e, None, None)
     e2 = _answer(e["session_id"], "heating_fuel", "gas")
     assert [(x["source"], x["grade"]) for x in bills.list_snapshots(pid)] == [("questionnaire", e2["grade"])]
+
+
+def test_heat_included_rates_the_building_bills_cooling_only(fakes):  # wave 6
+    e = _estimate()
+    e2 = _answer(e["session_id"], "heating_fuel", "heat is included in my rent")
+    assert e2["answers"]["heating_fuel"] == "included"
+    assert all(c.get("heating_fuel") != "included" for c in fakes)  # never sent to P1: block-group fuel
+    hc, b = e2["heating_cooling"], e2["bill"]
+    assert (e2["grade"], e2["score"], e2["co2_t"]) == (e["grade"], e["score"], e["co2_t"])  # the building's grade
+    assert b["annual"]["p50"] == hc["annual"]["cooling_usd"] and b["building_annual"]["p50"] == hc["annual"]["total_usd"]
+    assert all(m["p50"] == x["cooling"]["usd"] for m, x in zip(b["monthly"].values(), hc["months"]))
+    assert b["note"].startswith("Heat is paid by your landlord") and "cooling only" in e2["hidden_rent_method"]
+    assert "heating_fuel" not in [q["id"] for q in e2["questions"]]
