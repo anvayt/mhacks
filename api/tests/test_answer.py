@@ -37,7 +37,7 @@ def fake_hc(params: dict, metered: bool = False) -> dict:
         "seasons": [{"season": s, "total_usd": round(total * f), "heating": {"usd": round(total * f * 0.8)},
                      "cooling": {"usd": round(total * f * 0.2), "electric_kwh": round(total * f)}} for s, f in SHARE.items()],
         "annual": {"heating_usd": round(total * 0.8), "cooling_usd": round(total * 0.2), "total_usd": float(total),
-                   "electric_kwh": float(total)},
+                   "electric_kwh": float(total), "gas_ccf": float(total)},
         "months": [{"month": i + 1, "total_usd": round(total * f),
                     "cooling": {"usd": round(total * f * 0.2), "electric_kwh": round(total * f)}}
                    for i, f in enumerate(MONTH_SHARE)],
@@ -118,9 +118,9 @@ def test_band_never_widens_after_an_answer():  # floor=middle makes the open win
         assert 0 < a["p10"] <= b["p10"] <= b["p50"] <= b["p90"] <= a["p90"]
 
 
-def test_no_ac_zeroes_cooling():
+def test_no_ac_zeroes_cooling(fakes):
     e = _estimate()
-    no_ac = fake_hc({**e["model_params"], "cooling_code": "0"})["annual"]
+    no_ac = fake_hc(e["model_params"])["annual"]  # cooling_code=0 is never sent: outside P1's training data
     assert e["grade_band_usd"]["p10"] <= no_ac["total_usd"] - no_ac["cooling_usd"]  # No AC counts as $0 cooling
     e = _answer(e["session_id"], "cooling_code", "none")
     hc = e["heating_cooling"]
@@ -128,6 +128,15 @@ def test_no_ac_zeroes_cooling():
     assert all(x["cooling"] == {"usd": 0, "electric_kwh": 0} for x in [*hc["seasons"], *hc["months"]])
     assert sum(m["p50"] for m in e["bill"]["monthly"].values()) < no_ac["total_usd"]
     assert e["bill"]["note"].startswith("No AC")
+    assert all(str(c.get("cooling_code")) != "0" for c in fakes)
+
+
+def test_co2_and_badges_filled():
+    e = _estimate()
+    assert 0 < e["co2_t"]["p10"] <= e["co2_t"]["p50"] <= e["co2_t"]["p90"]
+    assert e["badges"] == []
+    e = _answer(e["session_id"], "window_panes", "double")
+    assert "double-pane-club" in e["badges"]
 
 
 def test_metered_building_asks_only_no_ac(monkeypatch):  # meters, not renter answers, drive the metered path
@@ -167,9 +176,11 @@ def test_answer_unknown_session():
 
 
 def test_score_math_on_known_rows():
+    assert len(score._p1_buildings()) == 589  # fallback: 591 buildings minus 2 with $0 heating
+    assert not np.isclose(score._p1_buildings(), 114 / 854).any()  # Sequoia Place: $0 heat + $114 cooling
     peers = score.peer_costs(MF)
-    assert len(peers) == 589  # 591 buildings minus 2 with $0 heating
-    assert not np.isclose(peers, 114 / 854).any()  # Sequoia Place: $0 heat (tenant-metered) + $114 cooling
+    assert len(peers) == 1048  # every scored 5+ unit building in the city batch (api/data/city_scores.csv)
+    assert len(score.peer_costs(None)) == 25670 and len(score.peer_costs("Mobile Home")) == 589  # < 30 -> fallback
     med = float(np.median(peers))
     s = score.score_for(med * 854, 854, MF)
     assert 45 <= s["score"] <= 55 and s["grade"] == "C" and s["hidden_rent_usd_mo"] == 0
