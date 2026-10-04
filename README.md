@@ -20,8 +20,21 @@ Point `MODEL_DIR` at the checkout with P1's **already-built** artifacts and matc
 AGENT_TERMINAL=1 make demo       # terminal chat, real API estimates, no iMessages
 # In a second terminal, from the same checkout:
 make demo-warm                  # estimates + each map, forecast per weather cell, city layer
+make demo-warm-city             # whole-city caches for judges' own addresses (~2 min, once per checkout)
 make demo-check                 # isolated API/model with outbound Python networking blocked
 ```
+
+`make demo-warm-city` (`api/scripts/warm_city.py`) warms what a judge's **own** Ann Arbor address can hit
+beyond the five demo addresses, one request at a time with a 0.3 s pause: for each of the 4 model weather cells
+holding a scored home, P1's `/hc/estimate` (typical and forecast) and `/hc/weather?mode=forecast` (timed; GETs
+only, the `:8001` process is never started or restarted), plus that cell's Open-Meteo 1991–2020 history and
+last-good 7-day forecast; the TIGERweb outline of all 145 block groups `/map` can hit (scored homes' block groups
+plus every block group touching the city's bounds); and the ACS table if missing. It writes this checkout's
+git-ignored `data/`, so run it from the `make demo` checkout. Only the Census geocoder stays cold: one
+~0.3–0.9 s call per never-seen address. Measured Oct 4 on 12 new addresses across the city (N Campus area,
+Burns Park, Water Hill, Ann Arbor Hills, south side, west side): first `/map` 0.21–0.69 s → 0.04–0.06 s,
+first `/forecast` in a new cell up to 2.7 s → 0.6 s (the live Open-Meteo forecast), `/estimate` 0.5–1.2 s
+(geocoder) either way, 0.17–0.23 s on a repeat.
 
 `make demo` starts or reuses the healthy model on `:8001`, then API `:8000`, web `:3000`, onboarding `:8787`, and
 finally the agent. Open [the website](http://localhost:3000). Without both Photon credentials the agent always
@@ -79,7 +92,15 @@ On demo morning, from the same checkout in each terminal:
    `data/demo/public.env`, and asks the existing demo supervisor to restart its API, web, and onboarding with them.
    It never restarts the model or agent. It prints the judge URL and terminal QR. **Reprint P4's `/card`** at the
    printed onboarding URL each time: quick-tunnel URLs change on restart (NEW_CHANGES §13 R4).
-4. Run `make demo-warm`, then `make demo-check`. Warming reports timings for every estimate and session map,
+   **If the judge URL returns HTTP 530** (or the launcher fails its reachability check), the network is blocking
+   Cloudflare's edge port 7844 (both `--protocol quic` and `http2` use it). Ctrl-C, run `make demo-public-check`
+   (TCP reachability of `region1.v2.argotunnel.com:7844` and `localhost.run:22` only; it opens no tunnel and
+   prints which provider will work), then either `TUNNEL=localhostrun make demo-public` or switch the laptop to
+   a phone hotspot and rerun `make demo-public`. `TUNNEL=localhostrun` uses `ssh -R` over port 22 to
+   [localhost.run](https://localhost.run) (no account; first run adds its host key to `~/.ssh/known_hosts`), with
+   the same three URLs → `public.env` → supervisor restart → judge URL + QR flow; its `https://<id>.lhr.life`
+   URLs also change on every run.
+4. Run `make demo-warm`, `make demo-warm-city`, then `make demo-check`. Warming reports timings for every estimate and session map,
    one forecast per weather cell, and `/city` once. Maps warm the cached TIGERweb block-group outline. Check also
    exercises these routes under the existing isolated-process outbound guard; a model-down failure is not a pass.
 5. Open the printed **judge URL on a phone**, test the listing and sign-in flows, and keep the launch terminals open.
@@ -108,7 +129,10 @@ CORS allows listed origins only, never wildcard credentials. The public launcher
 `WEB_ORIGINS`, sets `WEB_ORIGIN` for Calendar's return link, and enables `PUBLIC_TUNNEL=1`. Only then does the
 API trust Cloudflare's `CF-Connecting-IP`, and only from its loopback peer; it runs with `--no-proxy-headers`
 so untrusted forwarded headers cannot change that trust check. Do not expose that loopback socket through
-another proxy while this mode is enabled. `/health` stays HTTP 200 for API liveness and returns
+another proxy while this mode is enabled. With `TUNNEL=localhostrun` the launcher writes
+`PUBLIC_TUNNEL=localhostrun` instead: localhost.run would pass a visitor's own `CF-Connecting-IP` through, so no
+client-IP header is trusted and **all public visitors share one budget** (the agent's key still bypasses it). If
+judges see "slow down", set a higher `RATE_LIMIT_PER_MIN` in `.env` before `make demo`. `/health` stays HTTP 200 for API liveness and returns
 `{"status":"ok"|"degraded","model":{"available":true|false}}` after a two-second `/hc/answers` check.
 
 Public tunnels do **not** fix onboarding `/join` abuse: that separate `:8787` route is P4-owned and still needs

@@ -135,6 +135,13 @@ uv run uvicorn app.main:app --reload --port 8000
   `/reminders/inbound` also returns `replying_to: {reminder_id, kind, local_date, commitment_id?} | null` (the reminder
   delivered, or demo-shown, since the previous reply, from today or yesterday local). A task reminder's `text_hint`
   carries the habit streak ("Habit streak 4 days; reply done to keep it.").
+- Fast-forward (`app/simulate.py`, a SIMULATION that stores nothing): `POST /simulate/fast-forward {property_id |
+  session_id, days: 1-365, catalog_ids?}` → `{label: simulated_projected_if_kept, label_text, method, start_date, days:
+  [{date, usd_saved, kg_co2_saved, cumulative_usd, cumulative_kg, habit_day}], totals, annual, commitments, modeled,
+  not_modeled, real_habit_streak, simulated_habit_streak}`: /projection's composed what-if spread over typical-year
+  (1991-2020) heating/cooling degree-days at the home, so 365 days sum to the annual delta. property_id: owner or agent
+  (accepted/completed commitments unless catalog_ids); session_id: anonymous. Rate-limited like /projection.
+  `/projection`'s `delta` also carries `building_heating_usd_saved_yr` / `building_cooling_usd_saved_yr`.
 - Daily habit streak (`app/habits.py`; agent key or bearer): `POST /habits/{user_id}/checkin {date?, commitment_id?,
   source: imessage|web}` → `{current, best, checked_in_today, last_checkin_date, badges}`; idempotent per local day
   (user's `timezone`, default America/Detroit); only today or yesterday (422 `bad_date`); needs an accepted or

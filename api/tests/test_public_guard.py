@@ -35,7 +35,8 @@ def test_per_ip_and_window(guarded):
     assert client.post('/estimate', json={}).status_code == 200
 
 
-@pytest.mark.parametrize('path', ['/estimate', '/answer', '/compare', '/calibrate', '/projection', '/properties', '/auth/web/start'])
+@pytest.mark.parametrize('path', ['/estimate', '/answer', '/compare', '/calibrate', '/projection', '/properties', '/auth/web/start',
+                                  '/simulate/fast-forward'])
 def test_post_routes_limited(guarded, path):
     client, _ = guarded
     assert [client.post(path, json={}).status_code for _ in range(4)][-1] == 429
@@ -129,6 +130,8 @@ def test_photo_limit_is_stricter_and_uses_parsed_key(guarded):
 def test_cf_header_only_with_explicit_loopback_trust(monkeypatch):
     guard = PublicGuard(None, limit=30)
     headers = {b'cf-connecting-ip': b'203.0.113.1', b'x-forwarded-for': b'203.0.113.2'}
+    assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '127.0.0.1'
+    monkeypatch.setenv('PUBLIC_TUNNEL', 'localhostrun')  # its visitors could spoof Cloudflare's header
     assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '127.0.0.1'
     monkeypatch.setenv('PUBLIC_TUNNEL', '1')
     assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '203.0.113.1'

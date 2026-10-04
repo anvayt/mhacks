@@ -16,7 +16,7 @@ import json
 
 from app.geo.census import median_year_built
 from app.geo.footprints import find_building, height_fit, stories_from_height
-from app.geo.geocode import geocode
+from app.geo.geocode import geocode, offline_block_group
 
 SQFT_PER_M2 = 10.7639  # 1 m = 3.28084 ft (exact definition: 0.3048 m/ft)
 COUNTY = "Washtenaw County"
@@ -153,10 +153,15 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
             sqft_src = (f"ResStock 2024.2 MI {btype} median {sqft} sq ft, "
                         f"replacing implausible {sqft_src}; ask for unit sq ft")
 
+    # Census gives the 2020 block; when it missed or errored (city point), derive the block group from disk.
+    if geo["block_geoid"]:
+        bg, bg_src = geo["block_geoid"][:12], "census_geocoder"
+    else:
+        bg, bg_src = offline_block_group(geo["lon"], geo["lat"], p["OBJECTID"])
     if year_built:
         year, year_src = int(year_built), "given by caller (listing)"
     else:
-        year, year_src = median_year_built(geo["block_geoid"])
+        year, year_src = median_year_built(bg)
 
     return {
         "in.sqft": sqft,
@@ -175,7 +180,8 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         "sqft_estimated": sqft_est,
         "year_built": year,
         "year_built_source": year_src,
-        "block_group_geoid": geo["block_geoid"][:12] if geo["block_geoid"] else None,
+        "block_group_geoid": bg,
+        "block_group_source": bg_src,  # additive: census_geocoder | tigerweb_outline_cache | city_scores | None
         "warnings": warnings,
         "sources": {
             "lat_lon": geo.get("source", "US Census geocoder (Public_AR_Current / Current_Current)"),

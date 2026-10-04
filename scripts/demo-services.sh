@@ -61,7 +61,8 @@ while true; do
             fi
             unset NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_ONBOARD_URL PUBLIC_URL WEB_ORIGINS WEB_ORIGIN PUBLIC_TUNNEL
             load_env "$ROOT/data/demo/public.env"
-            [[ "${PUBLIC_TUNNEL:-}" == 1 ]] || { echo 'error: missing public environment' > "$CONTROL/result"; continue; }
+            # 1 = Cloudflare (API trusts CF-Connecting-IP); localhostrun = no trusted client-IP header.
+            [[ "${PUBLIC_TUNNEL:-}" =~ ^(1|localhostrun)$ ]] || { echo 'error: missing public environment' > "$CONTROL/result"; continue; }
         else
             export NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 NEXT_PUBLIC_ONBOARD_URL=http://localhost:8787
             export PUBLIC_URL=http://localhost:8787 WEB_ORIGINS=$BASE_WEB_ORIGINS WEB_ORIGIN=http://localhost:3000 PUBLIC_TUNNEL=0

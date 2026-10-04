@@ -2,7 +2,7 @@
 // narrower range, until the API says the grade is locked. One state per chat (Spectrum space), in memory.
 import type { Api, ApiResult, Estimate, EstimateRequest, Question, Me, Suggestion, Commitment, Calibration, ReplyingTo } from "./api.ts";
 import { Accounts, accountHandle, type Sender } from "./accounts.ts";
-import { billResultText, projectionText, suggestionsText } from "./phase2Replies.ts";
+import { billResultText, fastForwardText, projectionText, suggestionsText } from "./phase2Replies.ts";
 import { refInText } from "./handoff.ts";
 import { billImageBase64 } from "./photo.ts";
 import {
@@ -314,6 +314,14 @@ export class Conversations {
       const r = await this.api.habits(uid); if (!r.ok) return r.message;
       const next = r.data.checked_in_today ? "Today already counts." : 'Reply "done today" once you\'ve kept your daily habit.';
       return `🔥 Habit streak: ${r.data.current} day${r.data.current === 1 ? "" : "s"}, best ${r.data.best}. ${next}`;
+    }
+    const ff = text.match(/^(?:fast[- ]?forward|ff)\s+(\d+)(?:\s*days?)?$/i);
+    if (ff) {
+      const days = Number(ff[1]);
+      if (days < 1 || days > 365) return 'Fast-forward 1 to 365 days, like "ff 30".';
+      if (!s.propertyId) return 'Save your home and accept a commitment first, then say "fast forward 30".';
+      const r = await this.api.fastForward({ property_id: s.propertyId, days }); // a simulation: stores nothing
+      return r.ok ? fastForwardText(r.data) : r.message;
     }
     if (/^(moved|i moved|no[, ]+i moved)$/i.test(text)) { s.pending = { kind: "move" }; return "What's your new address or listing link? Your old home's history stays separate."; }
     if (/^save$/i.test(text)) return this.save(s);
