@@ -97,8 +97,21 @@ uv run uvicorn app.main:app --reload --port 8000
   projected_if_completed}, delta, modeled, not_modeled, method, model_version, created_at}`: all modeled changes in one
   P1 run; never touches the session. Errors: 401/403 (accounts), 404 `property_not_found` / `not_found` /
   `commitment_not_found`, 409 `bad_transition`, 422 `unknown_action` / `unknown_commitment` / `missing_input`, 503
-  `model_unavailable`. History (`GET /properties/{id}/history`) lists them. `app/bills.py` is a stub until the bills
-  slice merges (snapshots, bills, impact are empty).
+  `model_unavailable`. History (`GET /properties/{id}/history`) lists them.
+- Bills, snapshots, impact (`app/bills.py`, NC-05): `POST /calibrate` with `property_id` (agent key or bearer) also
+  stores the bill (numbers + image SHA-256, never the image; a resend of the same period or image returns the first
+  response), a `bill_regrade` snapshot (`label: "from your bill, adjusted for weather"`) and, when D3 holds (a full
+  month after a completed commitment, beyond P1's noise floor, meaningful), a verified gas-only `impact`. Extra fields:
+  `bill_id, verified, verification_status, verification_rule, verified_commitment_ids, impact, snapshot,
+  model_version`. Errors: 404 `property_not_found`, 409 `bill_already_used`, 422 `property_session_mismatch`. Without
+  `property_id` the response is exactly the old one. Snapshots: `initial_estimate` (POST /properties, /auth/phone
+  handoff), `questionnaire` (each /answer on a saved home), `bill_regrade`.
+- Reminders (`app/reminders.py`; never sends anything): agent key only: `GET /reminders/due?now=` → `[{reminder_id,
+  user_id, handle, kind: checkin|task|weather, text_hint, property_id, commitment_id?}]` (at most one per user a local
+  day, only in the user's `hour_local`, 8 AM–10 PM, iMessage channel, not paused/stopped, paused after 2 unanswered);
+  `POST /reminders/{id}/sent` after delivery; `POST /reminders/inbound {user_id}` on any reply; `POST
+  /reminders/demo-send {user_id, kind?}` (ignores clock and cap). Agent key or bearer: `POST /reminders/{user_id}/stop
+  | pause | resume`. Weather reminders come from /forecast's alerts (`costly_week` only when ≥ $5 above normal).
 - Boards (`app/boards.py`, NC-06): `GET /leaderboard` without `board` is unchanged. `GET /leaderboard?board=verified_cut|
   co2_avoided|streak|follow_through|neighborhood[&scope=]` → `{board, scope, coverage, entries: [{alias | geoid, value,
   unit, evidence, demo, rank}], empty_reason, year, model_version, metric_note}`: opted-in homes with verified bill
