@@ -1,5 +1,8 @@
 # MHacks 2026: Hidden Rent
 
+![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
+![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
+
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
 in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
 
@@ -242,6 +245,8 @@ Start with `results/pivot-round2/00-synthesis.md` (why Hidden Rent). `results/SU
 Every file opens with the prompt its agent was given, and every factual claim cites its source.
 
 ## ASI:One agent
+
+**Agent: Hidden Rent** (`hidden-rent-mhacks`) · address `agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum` · [Agentverse profile](https://agentverse.ai/agents/details/agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum/profile)
 
 Hidden Rent also has an isolated Fetch.ai chat-protocol uAgent in [`asi-agent/`](asi-agent/README.md). It uses an Agentverse mailbox and ASI:One only for intent parsing; every bill, grade and savings figure comes from the existing API. It does not launch or manage the demo stack.
 
