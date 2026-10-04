@@ -1,7 +1,7 @@
 # NEW_CHANGES.md: Hidden Rent Phase 2 system design
 
 **Status:** proposed design, additive to `PLAN.md` (it doesn't replace it). Decisions in §11 carry a proposed default so work can start; the named owner can overturn them.
-**Merges:** the "NEW_CHANGES" accounts/commitments note, the Phase 2 flow sketch, `web/HOUSE_SCHEMA.md` (on `p3/map-widget`), the integration findings in `notes/integration.md` and `notes/P*.md`, and P4's open checks, all as of Oct 4, 2026, ~2:30 AM EDT.
+**Merges:** the "NEW_CHANGES" accounts/commitments note, the Phase 2 flow sketch, `web/HOUSE_SCHEMA.md` (on `p3/map-widget`), the integration findings in `notes/integration.md` and `notes/P*.md`, and P4's open checks, all as of Oct 4, 2026, ~2:30 AM EDT. Updated ~3 AM after P2's merge wave 2 landed in `dev` (sessions, `/answer`, `GET /session/{id}`, `/calibrate`, `/fixes`, CO₂, badges, `/forecast`, `/compare`, `/leaderboard`, `/city`).
 **Audience:** P1–P4 agents and teammates. Read with `PLAN.md`, `DEV_STRATEGY.md`, your task file and `notes/`.
 
 > **Rules that still apply.** `PLAN.md` §0 (no secrets, no invented numbers, the agent only says API numbers), the §10 contract (additive only, through `notes/contract-changes.md`), directory ownership (P1 `/model`, P2 `/api`, P3 `/web`, P4 `/agent`), mocks-first behind one switch, and the `main`/`dev` rules in `DEV_STRATEGY.md`.
@@ -122,7 +122,7 @@ Devpost, video, pitch, submission; replacing Photon or the ML stack; production-
 | C5 | First messages from unknown numbers show "Report Junk"; links in a first message are suppressed | Photon deliverability docs | Text-only first message, user sends first (already built) |
 | C6 | Android recipients get SMS/RCS fallback (no tapbacks) | Photon pricing | Text-only interactions; no reliance on tapbacks |
 | C7 | Photon management API: **5 req/s** per project | Photon API docs | Batch admin scripts; no per-message management calls |
-| C8 | Model covers **heating + cooling only**; p10/p90 not yet available; cooling validated less well than heating | `notes/integration.md`, P1 `accuracy.cooling_note` | Label `bill.covers`; projections and verification focus on heating; don't show narrower projected ranges than current |
+| C8 | Model covers **heating + cooling only**; p10/p90 come from the grade range widened by P1's held-out meter error (P2-04); cooling validated less well than heating; P1 judges bills only in winter months (Dec–Feb) | `notes/integration.md`, P1 `accuracy.cooling_note`, `/calibrate` `meaningful` | Label `bill.covers`; projections and verification focus on heating; don't show narrower projected ranges than current; outside winter a bill check is a rough read |
 | C9 | P2-01 data quality: some office footprints typed as homes with huge unit sizes; SFA and 2–4-unit areas include garages; year built is a block-group median | `notes/integration.md` | Plausibility checks before scoring; ask unit size; label medians (already done in `/agent`) |
 | C10 | ResStock bill columns flagged inconsistent; prices come from EIA via P1 | `ResStock.md`, `UtilizationToMoney.md` | All $ from P1's pricing, never `out.bills` |
 | C11 | Time: hacking ends **12:00 PM Sun Oct 4**, feature freeze **8:00 AM** | PLAN.md §2, §8 | Two delivery horizons (§14.1); everything else is post-hackathon |
@@ -364,6 +364,7 @@ Projected placement is a **ghost marker** (the sketch's "choosing commitments ch
 | Monthly check-in (default) | Once a month at the user's chosen hour, never at night | Opens with a question; one follow-up, then pause |
 | Task reminders (opt-in) | Daily or weekly, user's choice, only for accepted commitments with a target date | Max one a day; auto-pause after 2 unanswered; "stop"/"pause" any time |
 | Results | Only in reply to the user's bill | Inbound-first |
+| Weather alerts (opt-in) | When P2's `GET /forecast/{session_id}` flags a cold snap or costly week | Counts toward the one-a-day cap; a timely, useful reason to text (e.g. "cold week ahead: close the storm windows") |
 | Calendar (optional) | On accept, if connected | Failure never blocks the commitment |
 
 ---
@@ -411,8 +412,8 @@ Each decision has a proposed default so work isn't blocked. "Reversible" means i
 | **D8** | Where conversation state lives | Agent memory / API | **Durable state in `/api`; agent keeps only short dialog state** (pending question) with rehydration from `/me` + pending check-in after a restart | P4 + P2 | Yes | Restart safety |
 | **D9** | Scheduler for check-ins | Cron / queue / manual trigger | **Manual trigger for the demo** (`npm run checkin -- <phone>` in P4, or `POST /checkins/trigger`); real scheduler post-hackathon | P4 + P2 | Yes | Check-in demo |
 | **D10** | Database | SQLite / Neon Postgres | **SQLite** tonight (PLAN.md stack); Neon only if P2 already chose it | P2 | Medium | Persistence |
-| **D11** | `pct_vs_expected_for_weather` units | Fraction / percent | **Percent** (-12 = 12% below normal); `/agent` already assumes this | P2 confirms | Yes | Bill replies |
-| **D12** | `questions[].options` format | Strings / objects | **Strings or `{value, label}`**; `/agent` accepts both | P2 confirms | Yes | Interview |
+| **D11** | `pct_vs_expected_for_weather` units | Fraction / percent | **Percent** (-12 = 12% below normal). ✅ Confirmed in P2's `/calibrate` | P2 | — | — |
+| **D12** | `questions[].options` format | Strings / objects | **`{value, label}`** ✅ (P2-04). Values aren't always 1..n (e.g. `floor_level` 0/1/2), so clients map a typed option number locally and send the option's value | P2 | — | — |
 | **D13** | Bill photo size | Send full / downscale | **Agent converts HEIC → JPEG; API accepts at least ~6 MB base64 or the agent downscales** | P2 + P4 | Yes | Bill flow |
 | **D14** | Bill image retention | Keep / extract and delete | **Keep only until extraction; store numbers, not images** | P2 | Yes | Privacy |
 | **D15** | Who owns this file | P4 (author) / P2 (owns root docs per DEV_STRATEGY #6) | **P2 owns it after review**; P4 proposes edits through P2 | Team | Yes | — |
@@ -433,11 +434,11 @@ Every unverified assumption becomes a check with an owner, a method and the chec
 | V4 | Real photo attachments arrive and `read()` returns the image (HEIC and PNG) | Send both from an iPhone in demo mode | P4 | D | ⏳ |
 | V5 | ResStock exposes heating-setpoint inputs and upgrade scenarios for each catalog action | Inspect parquet columns + `upgrades_lookup.json` | P1 | C | ⏳ |
 | V6 | Effects compose sensibly in one run (composed ≤ sum) | P1 tests | P1 | C | ⏳ |
-| V7 | Which eGRID year and ccf → therm heat content to use | Pick and cite | P1 | D | ⏳ |
+| V7 | Which eGRID year and ccf → therm heat content to use | P2's CO₂ module uses eGRID2023 RFCM and 1 ccf = 1.037 therms (EIA FAQ) | P1 + P2 | D | ✅ (P2-03) |
 | V8 | Photon user id survives delete/re-add; sender handle is a phone number, not an email | Delete/re-add a test user; check `sender.id` | P4 | A | ⏳ |
 | V9 | Whether Photon can redeliver an inbound message | Docs / Photon support | P4 | A | ⏳ |
 | V10 | `/api` accepts the bill photo size after HEIC → JPEG | Send a real phone photo to `/calibrate` | P2 + P4 | D | ⏳ |
-| V11 | `pct_vs_expected_for_weather` units and `streak_months` meaning (D11) | P2 confirms in `notes/requests.md` | P2 | D | ⏳ |
+| V11 | `pct_vs_expected_for_weather` units and `streak_months` meaning (D11) | Read P2's `/calibrate`: percent; streak = calendar months in a row below normal, a missing month breaks it | P2 | D | ✅ |
 | V12 | Web → iMessage handoff carries the session end to end | Web button with `?session=` → text → resumed report | P3 + P4 | A | ⏳ (P4 side built) |
 | V13 | Unit-size answer re-runs `/estimate` correctly on the live API | Real API + phone | P4 | B | ⏳ |
 | V14 | First-lookup latency keeps the typing indicator alive and the reply arrives | New area on the live API | P4 | B | ⏳ |
@@ -453,7 +454,7 @@ Likelihood and impact are H/M/L for the demo window.
 
 | ID | Risk | L | I | Mitigation | Owner |
 |---|---|---|---|---|---|
-| R1 | P2 endpoints (`/answer`, sessions, `/calibrate`, `/fixes`, accounts, projection) aren't ready by the 8 AM freeze | H | H | Exact-contract mocks behind one switch (built in `/agent`); demo the loop labelled "demo data"; cut lines in §14.1 | P2 |
+| R1 | Phase 2 endpoints (accounts, properties, commitments, projection) aren't ready by the 8 AM freeze. Phase 1 endpoints landed in merge wave 2 | H | H | Exact-contract mocks behind one switch (built in `/agent`); demo Phase 2 labelled "demo data"; cut lines in §14.1 | P2 |
 | R2 | Apple flags the Photon line | L | H | Policy D4, inbound-first, no night sends; fallback demo phone; stop proactive sends if flagged | P4 |
 | R3 | Agent laptop sleeps or restarts mid-demo; dialog state lost | M | M | Keep it awake and plugged in; D8 rehydration; don't restart during judging | P4 |
 | R4 | Tunnel URL changes → QR and web link break | M | H | `PUBLIC_URL` config; reprint card; update P3's env; `npm run doctor` shows the URL | P4 |
