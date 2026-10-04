@@ -31,6 +31,7 @@ export type Calibration = {
   extracted?: { estimated_from_amount?: boolean; note?: string };
   pct_vs_expected_for_weather: number; streak_months: number; badges: string[]; verified?: boolean;
   snapshot?: Snapshot | null; note?: string; noise_floor?: number | null;
+  bill_signal?: { grade: string; score: number; provisional?: boolean; label?: string } | null;
   impact?: { co2_kg_avoided: number; usd_saved: number } | null;
 };
 export type Fixes = {
@@ -38,6 +39,7 @@ export type Fixes = {
   landlord_email: string | { subject?: string; body?: string };
 };
 export const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+export const kg = (value: number) => `${Math.round(value).toLocaleString("en-US")} kg`;
 export function errorText(error: unknown): string {
   if (error instanceof ApiError) return [error.message, error.hint].filter(Boolean).join(" ");
   return error instanceof Error ? error.message : "Something went wrong. Try again.";
