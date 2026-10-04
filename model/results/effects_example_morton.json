@@ -1,0 +1,460 @@
+{
+  "address": "1514 Morton Ave",
+  "coordinates": {
+    "lat": 42.26241,
+    "lon": -83.72838
+  },
+  "unit_sqft": 1500,
+  "building_year": 1938,
+  "method": "resstock",
+  "baseline": {
+    "heating_usd": 1240.0,
+    "cooling_usd": 352.0,
+    "total_usd": 1593.0,
+    "gas_ccf": 1365.6,
+    "electric_kwh": 1660.0,
+    "hdd65": 6491.0,
+    "cdd65": 639.0,
+    "tmean_f": 49.0
+  },
+  "scenarios": {
+    "air_sealing": {
+      "annual": {
+        "heating_usd": 1092.0,
+        "cooling_usd": 352.0,
+        "total_usd": 1445.0,
+        "gas_ccf": 1202.8,
+        "electric_kwh": 1660.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": 148.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "air_sealing",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F",
+              "https://www.energystar.gov/saveathome/seal_insulate/methodology",
+              "https://www.nrel.gov/docs/fy24osti/85625.pdf"
+            ],
+            "assumptions": {
+              "ach50_before": 20.0,
+              "ach50_after": 15.0,
+              "reduction_fraction": 0.25,
+              "scope": "whole-home professional air sealing, not weatherstrip-only"
+            },
+            "heating_factor": 0.8807785445020788
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades."
+        ],
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    },
+    "attic_r": {
+      "annual": {
+        "heating_usd": 1166.0,
+        "cooling_usd": 352.0,
+        "total_usd": 1518.0,
+        "gas_ccf": 1283.8,
+        "electric_kwh": 1660.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": 75.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "attic_r",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "baseline_r": 19.0,
+              "requested_r": 50.0,
+              "modeled_r": 49.0,
+              "scope": "assumes an accessible vented/unvented attic at this single-family home; actual presence is unobserved",
+              "attic_cohort_n": 3338,
+              "attic_type_counts": {
+                "Vented Attic": 3103,
+                "None": 1471,
+                "Unvented Attic": 235,
+                "Finished Attic or Cathedral Ceilings": 197
+              },
+              "baseline_r_source": "median among vented/unvented attics only; excludes None and finished/cathedral roofs"
+            },
+            "heating_factor": 0.9400574219004398
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades."
+        ],
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    },
+    "wall_insulated": {
+      "annual": {
+        "heating_usd": 969.0,
+        "cooling_usd": 352.0,
+        "total_usd": 1322.0,
+        "gas_ccf": 1067.3,
+        "electric_kwh": 1660.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": 271.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "wall_insulated",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "baseline_r": 0.0,
+              "requested_r": 11.0,
+              "modeled_r": 11.0,
+              "scope": "insulated-stock median wall R; existing insulation is not removed"
+            },
+            "heating_factor": 0.7815350770152304
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades."
+        ],
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    },
+    "heat_pump": {
+      "annual": {
+        "heating_usd": 2361.0,
+        "cooling_usd": 352.0,
+        "total_usd": 2713.0,
+        "gas_ccf": 0.0,
+        "electric_kwh": 13734.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": -1120.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "heat_pump",
+            "method": "delivered_heat_over_cop",
+            "sources": [
+              "https://www.michigan.gov/mpsc/-/media/Project/Websites/mpsc/workgroups/EWR_Collaborative/2023/2021CI-and-Res-CCHP-Initiatives-Comprehensive-Evaluation-20220826.pdf",
+              "https://neep.org/blog/checking-neep-ccashp-product-list",
+              "https://www.energy.gov/sites/default/files/2021-09/2-Tom-ASHP.pdf",
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "seasonal_cop": 2.75,
+              "afue": 0.8,
+              "afue_source": "same-type/vintage ResStock gas-home median",
+              "cop_source": "Michigan Consumers Energy 2021 evaluation, Appendix B Table B-4 (assumption, not field measurement)",
+              "ccf_to_therms": 1.037,
+              "kwh_per_ccf": 30.392731535756155,
+              "scope": "all space heating displaced; no modeled backup, capacity limits, ducts or cooling improvement"
+            }
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades.",
+          "A gas-to-heat-pump scenario may increase the bill at Michigan EIA rates; do not label a negative dollar delta as savings."
+        ],
+        "heating_fuel_after": "electric",
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    },
+    "setpoint_delta_f": {
+      "annual": {
+        "heating_usd": 1205.0,
+        "cooling_usd": 352.0,
+        "total_usd": 1558.0,
+        "gas_ccf": 1327.2,
+        "electric_kwh": 1660.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": 35.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "setpoint_delta_f",
+            "method": "degree_day_setback_scenario",
+            "sources": [
+              "https://www.who.int/publications/i/item/9789241550376",
+              "https://content.govdelivery.com/accounts/USEERE/bulletins/3883189"
+            ],
+            "assumptions": {
+              "baseline_indoor_f": 68,
+              "setback_indoor_f": 66.0,
+              "effective_delta_f": -2.0,
+              "minimum_indoor_f": 64,
+              "setback_hours_per_day": 8,
+              "method_note": "Linear interpolation between monthly HDD55/HDD60; eight-hour load-share approximation, no rebound or backup-heat model."
+            },
+            "heating_factor": 0.9718374317495073
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades."
+        ],
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    },
+    "all": {
+      "annual": {
+        "heating_usd": 1484.0,
+        "cooling_usd": 352.0,
+        "total_usd": 1836.0,
+        "gas_ccf": 0.0,
+        "electric_kwh": 9253.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "usd_saved_yr": -243.0,
+      "effects": {
+        "label": "projected_if_completed",
+        "applied": [
+          {
+            "param": "air_sealing",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F",
+              "https://www.energystar.gov/saveathome/seal_insulate/methodology",
+              "https://www.nrel.gov/docs/fy24osti/85625.pdf"
+            ],
+            "assumptions": {
+              "ach50_before": 20.0,
+              "ach50_after": 15.0,
+              "reduction_fraction": 0.25,
+              "scope": "whole-home professional air sealing, not weatherstrip-only"
+            },
+            "heating_factor": 0.8807785445020788
+          },
+          {
+            "param": "attic_r",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "baseline_r": 19.0,
+              "requested_r": 50.0,
+              "modeled_r": 49.0,
+              "scope": "assumes an accessible vented/unvented attic at this single-family home; actual presence is unobserved",
+              "attic_cohort_n": 3338,
+              "attic_type_counts": {
+                "Vented Attic": 3103,
+                "None": 1471,
+                "Unvented Attic": 235,
+                "Finished Attic or Cathedral Ceilings": 197
+              },
+              "baseline_r_source": "median among vented/unvented attics only; excludes None and finished/cathedral roofs"
+            },
+            "heating_factor": 0.9400574219004398
+          },
+          {
+            "param": "wall_insulated",
+            "method": "resstock_envelope_surrogate",
+            "sources": [
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "baseline_r": 0.0,
+              "requested_r": 11.0,
+              "modeled_r": 11.0,
+              "scope": "insulated-stock median wall R; existing insulation is not removed"
+            },
+            "heating_factor": 0.7815350770152304
+          },
+          {
+            "param": "heat_pump",
+            "method": "delivered_heat_over_cop",
+            "sources": [
+              "https://www.michigan.gov/mpsc/-/media/Project/Websites/mpsc/workgroups/EWR_Collaborative/2023/2021CI-and-Res-CCHP-Initiatives-Comprehensive-Evaluation-20220826.pdf",
+              "https://neep.org/blog/checking-neep-ccashp-product-list",
+              "https://www.energy.gov/sites/default/files/2021-09/2-Tom-ASHP.pdf",
+              "https://data.openei.org/s3_viewer?bucket=oedi-data-lake&prefix=nrel-pds-building-stock%2Fend-use-load-profiles-for-us-building-stock%2F2024%2Fresstock_tmy3_release_2%2F"
+            ],
+            "assumptions": {
+              "seasonal_cop": 2.75,
+              "afue": 0.8,
+              "afue_source": "same-type/vintage ResStock gas-home median",
+              "cop_source": "Michigan Consumers Energy 2021 evaluation, Appendix B Table B-4 (assumption, not field measurement)",
+              "ccf_to_therms": 1.037,
+              "kwh_per_ccf": 30.392731535756155,
+              "scope": "all space heating displaced; no modeled backup, capacity limits, ducts or cooling improvement"
+            }
+          },
+          {
+            "param": "setpoint_delta_f",
+            "method": "degree_day_setback_scenario",
+            "sources": [
+              "https://www.who.int/publications/i/item/9789241550376",
+              "https://content.govdelivery.com/accounts/USEERE/bulletins/3883189"
+            ],
+            "assumptions": {
+              "baseline_indoor_f": 68,
+              "setback_indoor_f": 66.0,
+              "effective_delta_f": -2.0,
+              "minimum_indoor_f": 64,
+              "setback_hours_per_day": 8,
+              "method_note": "Linear interpolation between monthly HDD55/HDD60; eight-hour load-share approximation, no rebound or backup-heat model."
+            },
+            "heating_factor": 0.9718374317495073
+          }
+        ],
+        "not_modeled": [],
+        "basis": "monotone log-linear surrogate of ResStock MI baseline; simulation only, not measured retrofit savings",
+        "validation": {
+          "simulation_holdout": {
+            "n": 2676,
+            "r2_log": 0.6773649284009102,
+            "median_abs_pct_error": 21.513570660396592
+          },
+          "real_retrofit_validation": null
+        },
+        "baseline_envelope": {
+          "ach50": 20.0,
+          "wall_r": 0.0,
+          "ceiling_r": 13.0,
+          "heating_afue": 80.0,
+          "n": 5006,
+          "vintage_band": "1940"
+        },
+        "assumptions": [
+          "Envelope values are Michigan stock medians, not measurements of this home.",
+          "Cooling and non-heating gas savings are not modeled.",
+          "Effects are scenarios, not verified impact or new baseline grades.",
+          "A gas-to-heat-pump scenario may increase the bill at Michigan EIA rates; do not label a negative dollar delta as savings."
+        ],
+        "heating_fuel_after": "electric",
+        "composition": "Joint multiplicative remaining-load factors, then one delivered-heat fuel conversion; no sum of separate dollar deltas.",
+        "sum_of_parts_condition": "Subadditive for beneficial independent load reductions; a fuel switch that raises energy prices can violate dollar subadditivity, so no universal dollar cap is claimed."
+      }
+    }
+  }
+}

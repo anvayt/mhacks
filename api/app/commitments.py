@@ -20,7 +20,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app import accounts, db, estimate, fixes, sessions
+from app import accounts, db, estimate, fixes, model_capabilities, sessions
 from app.co2 import co2_kg
 from app.score import score_for
 
@@ -73,6 +73,34 @@ CATALOG = {
 }
 FIX_IDS = {fixes.WINDOWS["item"]: "window_upgrade", fixes.HEAT_PUMP["item"]: "heat_pump"}
 ENVELOPE = ("window_upgrade", "air_sealing", "attic_insulation", "wall_insulation")
+# Only negotiated inputs may turn old placeholders into modeled actions. P1 owns
+# the effects, source citations and the 68°F baseline / 64°F thermostat floor.
+OPTIONAL_CHANGES = {"air_sealing": {"air_sealing": True}, "attic_insulation": {"attic_r": 50},
+                    "wall_insulation": {"wall_insulated": 1}, "heat_pump": {"heat_pump": True},
+                    "thermostat_setback": {"setpoint_delta_f": -2}}
+
+
+def _optional_changes(s: dict, params: dict, caps: dict) -> dict:
+    method = s["heating_cooling"]["method"]
+    fuel = params.get("heating_fuel") or s["heating_cooling"]["building"].get("heating_fuel")
+    # These counterfactuals model gas heat, not a metered property's unchanged fit.
+    # Preserve today's electric heat-pump mapping until P1 advertises that path.
+    if method not in {"resstock", "meter_model+resstock"} or fuel != "gas":
+        return {}
+    details = caps.get("details", {}).get("estimate_params", {})
+    if not isinstance(details, dict):
+        return {}
+    out = {}
+    for cid, change in OPTIONAL_CHANGES.items():
+        param = next(iter(change))
+        detail = details.get(param, {})
+        if (isinstance(detail, dict) and param in caps.get("estimate_params", [])
+                and detail.get("supported", True) is True
+                and isinstance(detail.get("paths", []), list) and isinstance(detail.get("fuels", []), list)
+                and method in detail.get("paths", [method]) and fuel in detail.get("fuels", [fuel])
+                and ("building_types" not in detail or params.get("building_type", s.get("building", {}).get("type")) in detail["building_types"])):
+            out[cid] = change
+    return out
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS commitments (
@@ -141,8 +169,8 @@ def _effect(s: dict, new: dict) -> tuple[dict, int, int]:
 
 def _at_home(s: dict, property_id: str, only: set | None = None) -> tuple[dict, dict, dict]:
     """(catalog entries that apply to this home, {catalog_id: model change} for the ones P1 prices here, {catalog_id:
-    its single re-run}). /fixes' rules: windows only below double-pane; heat pump priced only for electric heat
-    (skipped if it's already there); nothing priced on a metered building (answers don't enter its own meter fit); a
+    its single re-run}). Keep /fixes' existing window/electric-heat rules. New gas effects require advertised
+    capabilities and a supported path; nothing is priced on a metered building (its own meter fit is unchanged). A
     change the model says doesn't cut CO₂ here is shown without numbers (noise: double-pane on 912 Mary St's electric
     path came out +$102/yr). landlord_request stands for the top envelope fix and inherits its effect once a
     commitment for that fix here is completed. `only`: re-run just these catalog ids."""
@@ -151,10 +179,20 @@ def _at_home(s: dict, property_id: str, only: set | None = None) -> tuple[dict, 
                for cid, e in CATALOG.items() if cid not in FIX_IDS.values() or cid in cands}
     method, params = s["heating_cooling"]["method"], estimate.session_params(s)
     priced = {cid: f["change"] for cid, f in cands.items() if method in f["methods"] and (only is None or cid in only)}
+    optional = _optional_changes(s, params, model_capabilities.capabilities())
+    if "air_sealing" in optional:
+        entries["air_sealing"] = {**entries["air_sealing"], "title": "Professional whole-home air sealing",
+            "note": "The modeled change is professional whole-home air sealing; weatherstripping alone does not imply this effect."}
+    if "thermostat_setback" in optional:
+        entries["thermostat_setback"] = {**entries["thermostat_setback"],
+            "grh_item": None, "grh_points": 0, "rebate_usd": None, "cost_usd": None,
+            "cost_note": "Behavior-only setback scenario; no smart-thermostat purchase, GRH device points or equipment rebate is implied."}
+    priced.update({cid: change for cid, change in optional.items()
+                   if cid in entries and (only is None or cid in only)})
     with ThreadPoolExecutor(max(len(priced), 1)) as ex:  # estimate.MODEL_SLOTS caps P1 calls at 4 process-wide
         runs = dict(zip(priced, ex.map(lambda c: estimate._hc_ac({**params, **priced[c]}), priced)))
     changes = {c: ch for c, ch in priced.items() if _effect(s, runs[c])[2] > 0}
-    # ponytail: windows are the only envelope fix P1 prices; rank by CO₂ per net $ once more are modeled (NC-01)
+    # The landlord action inherits one concrete envelope action, never a sum of effects.
     target = next((c for c in ENVELOPE if c in changes), next(c for c in ENVELOPE if c in entries))
     t = entries[target]
     entries["landlord_request"] = {**entries["landlord_request"], **{k: t[k] for k in CITED},
@@ -176,6 +214,7 @@ def _item(cid: str, e: dict, s: dict, changes: dict, runs: dict) -> dict:
     return {"catalog_id": cid, **{k: v for k, v in e.items() if k != "model_mapping"},
             "projected": proj, "pending_model": proj is None,
             "co2_per_net_usd": round(proj["co2_kg_saved_yr"] / net, 4) if proj and net else None,
+            **({"model_effects": runs[cid]["effects"]} if cid in runs and "effects" in runs[cid] else {}),
             "method": f"model_rerun: P1's /hc/estimate for this home with {changes[cid]}, minus its current estimate"
                       if proj else NO_CUT if cid in runs else PENDING}
 
@@ -304,10 +343,12 @@ def what_if(s: dict, cids: list[str], property_id: str | None = None) -> dict:
                "bill_annual": ref, "co2_kg_yr": _band(co2_kg(a["gas_ccf"], a["electric_kwh"]), ref),
                "building_annual_usd": a["total_usd"]}
     projected, delta = {**current, "label": LABEL}, {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0}
+    model_effects = None
     if modeled:
         change = {k: v for c in modeled for k, v in changes[c].items()}  # effects don't add: one composed run
         new = next((runs[c] for c in modeled if changes[c] == change), None) \
             or estimate._hc_ac({**estimate.session_params(s), **change})  # one action: its single run is the answer
+        model_effects = new.get("effects")
         sc, usd, kg = _effect(s, new)
         n = new["annual"]
         projected = {"score": sc["score"], "grade": sc["grade"], "percentile_city": sc["percentile_city"],
@@ -317,6 +358,7 @@ def what_if(s: dict, cids: list[str], property_id: str | None = None) -> dict:
         delta = {"score": sc["score"] - s["score"], "usd_saved_yr": usd, "co2_kg_saved_yr": kg}
     return {"current": current, "projected": projected, "delta": {**delta, "label": LABEL}, "label": LABEL,
             "modeled": modeled, "not_modeled": [c for c in cids if c not in changes],
+            **({"model_effects": model_effects} if model_effects is not None else {}),
             "method": "model_rerun", "model_version": f"P1 /hc/estimate ({hc['method']} path)", "created_at": _now()}
 
 
