@@ -9,6 +9,7 @@ Python environments (api: uv, py3.12; model: root .venv with xgboost/lightgbm/ra
 import os
 import re
 import secrets
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from math import prod
 
@@ -23,6 +24,9 @@ from app.links import resolve_link
 from app.score import GRADES, score_for
 
 MODEL_BASE_URL = os.environ.get("MODEL_BASE_URL", "http://localhost:8001")
+# ponytail: one process-wide cap on calls to P1's shared server (/compare runs two estimates of 4 calls each, /fixes
+# and concurrent users add more); per-endpoint pools stay as they are. Raise if P1's server idles.
+MODEL_SLOTS = threading.BoundedSemaphore(4)
 SEASONS = ("winter", "spring", "summer", "fall")
 MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 NOT_A_HOME = "That doesn't look like a home. Send a residential address or listing."  # team decision (P2-04)
@@ -53,8 +57,9 @@ def _fail(status: int, code: str, message: str, **extra) -> HTTPException:
 def _hc(params: dict) -> dict:
     """GET /hc/estimate on P1's server; errors become friendly 422/503s."""
     try:
-        r = httpx.get(f"{MODEL_BASE_URL}/hc/estimate", params={k: v for k, v in params.items() if v is not None},
-                      timeout=180)  # a never-seen weather cell downloads its 1991+ history once
+        with MODEL_SLOTS:
+            r = httpx.get(f"{MODEL_BASE_URL}/hc/estimate", params={k: v for k, v in params.items() if v is not None},
+                          timeout=180)  # a never-seen weather cell downloads its 1991+ history once
     except httpx.HTTPError as e:
         raise _fail(503, "model_unavailable", f"The heating/cooling model isn't reachable at {MODEL_BASE_URL} "
                     f"(start it: make -C model dashboard). {type(e).__name__}")
