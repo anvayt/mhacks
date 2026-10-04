@@ -14,7 +14,7 @@ B. SIMULATION ONLY (ResStock; not validated against real data):
    B2. How much of the variance in heating intensity left after public features is due to ACH50 vs insulation
        vs windows vs furnace efficiency?
 
-Run: python -m model.hc.leakage_analysis  → results/leakage_analysis.json
+Run: python -m model.heating_cooling.leakage_analysis  → results/leakage_analysis.json
 """
 from __future__ import annotations
 
@@ -25,10 +25,10 @@ import pandas as pd
 from sklearn.model_selection import cross_val_predict
 from xgboost import XGBRegressor
 
-from model.hc import changepoint
-from model.hc.building_model import normal_weather_cache
-from model.hc.resstock_model import HIDDEN, PUBLIC
-from model.hc.train import building_table
+from model.heating_cooling import changepoint
+from model.heating_cooling.building_model import normal_weather_cache
+from model.heating_cooling.resstock_model import HIDDEN, PUBLIC
+from model.heating_cooling.train import building_table
 from model.paths import PROCESSED, RESULTS
 
 

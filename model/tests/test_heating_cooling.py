@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 
 from model import climate
-from model.hc import changepoint
-from model.hc.service import bill_check, estimate_hc
+from model.heating_cooling import changepoint
+from model.heating_cooling.service import bill_check, estimate_hc
 
 AA = (42.2808, -83.7430)
 
