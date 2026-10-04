@@ -10,7 +10,7 @@ const registered: string[] = [];
 const register: Register = async (phone) => {
   if (phone === "+17345550000") throw new Error("maxSharedUsers");
   registered.push(phone);
-  return { id: "user-123", phoneNumber: phone };
+  return { id: "user-123", phoneNumber: phone, assignedPhoneNumber: "+15550001111" };
 };
 
 before(async () => {
@@ -58,4 +58,13 @@ test("GET /qr.svg returns an SVG QR code", async () => {
   const res = await fetch(`${base}/qr.svg`);
   assert.equal(res.headers.get("content-type"), "image/svg+xml");
   assert.match(await res.text(), /^<svg/);
+});
+
+test("GET /card is a printable page with the QR inline", async () => {
+  const res = await fetch(`${base}/card`);
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  assert.match(body, /hidden rent\?/);
+  assert.match(body, /<svg/);
+  assert.match(body, /hiddenrent\.example/);
 });

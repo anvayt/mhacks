@@ -6,22 +6,25 @@ A Photon Spectrum (`spectrum-ts` 12.10.1) agent that answers iMessages, plus a Q
 1. Create a free Photon account + project at <https://app.photon.codes>. Copy the **Project ID** and **Secret** from project Settings.
 2. `cp .env.example .env` and fill in `PHOTON_PROJECT_ID` / `PHOTON_PROJECT_SECRET`. Never commit `.env`.
 3. `npm install` (Node 20+).
-4. Allowlist each teammate's phone: `npm run add-user -- +17345550123 Ada`.
+4. `npm run doctor`: checks the credentials and lists allowlisted phones.
+5. Allowlist each teammate's phone: `npm run add-user -- +17345550123 Ada`. It prints the Photon number that phone should text.
    If a phone still gets no reply, text <https://debug.photon.codes> from it and allowlist the handle it reports.
 
 ## Run
 | Command | What it does |
 |---|---|
 | `npm run agent` | Agent loop on iMessage. Replies to every inbound DM. |
-| `npm run onboard` | Onboarding page on `:8787`: `GET /` form, `POST /join`, `GET /qr.svg` |
+| `npm run onboard` | Onboarding page on `:8787`: `GET /` form, `POST /join`, `GET /qr.svg`, `GET /card` (printable table card) |
+| `npm run doctor` | Preflight: credentials OK? who is allowlisted, and which line each texts |
 | `npm test` / `npm run typecheck` | Unit tests (Photon mocked) / types |
 
 Judges' phones can't reach `localhost`, so expose the onboarding page with a tunnel and set `PUBLIC_URL` to it before printing the QR:
 ```bash
 brew install cloudflared
 cloudflared tunnel --url http://localhost:8787   # prints https://<random>.trycloudflare.com
-# put that URL in PUBLIC_URL, restart `npm run onboard`, open /qr.svg and print it
+# put that URL in PUBLIC_URL, restart `npm run onboard`, open /card and print it
 ```
+No tunnel? `npm run onboard` also prints the laptop's Wi-Fi address. It works for phones on the same network if the venue Wi-Fi lets devices see each other (many don't).
 
 ## Judge flow
 Scan QR → enter number → server calls Photon `POST /projects/{id}/users` (`type: "shared"`) → 302 to Photon's `GET /users/{id}/redirect` → Messages opens with "Hi Hidden Rent! What's my apartment's hidden rent?" pre-filled → judge taps Send → agent replies.
