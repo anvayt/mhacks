@@ -10,6 +10,7 @@ import logging
 import os
 import sqlite3
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
@@ -40,9 +41,14 @@ VISION_DOWN = ("Reading bill photos isn't working right now. Type the numbers in
 MODEL_DOWN = "The bill check isn't reachable right now. Try again in a bit."
 NOTE = "Gas only: electricity (kWh) isn't compared with the weather yet."
 
+# The yes/no and evidence fields come first so the model commits to "is it there?" before giving numbers: on a blank
+# image Grok made up gas_usage = 43 when only the numbers were asked for.
 BILL_SCHEMA = {
     "type": "object",
     "properties": {
+        "is_utility_bill": {"type": "boolean"},
+        "gas_usage_visible": {"type": "boolean"},
+        "gas_usage_evidence": {"type": ["string", "null"]},
         "gas_usage": {"type": ["number", "null"]},
         "gas_unit": {"anyOf": [{"type": "string", "enum": ["ccf", "therms"]}, {"type": "null"}]},
         "electricity_kwh": {"type": ["number", "null"]},
@@ -50,11 +56,20 @@ BILL_SCHEMA = {
         "end": {"type": ["string", "null"], "format": "date"},
         "utility": {"type": ["string", "null"]},
     },
-    "required": ["gas_usage", "gas_unit", "electricity_kwh", "start", "end", "utility"],
+    "required": ["is_utility_bill", "gas_usage_visible", "gas_usage_evidence", "gas_usage", "gas_unit", "electricity_kwh",
+                 "start", "end", "utility"],
 }
-PROMPT = ("Read this utility bill. Return the natural gas used in this billing period (gas_usage, the number of units, "
-          "and gas_unit, ccf or therms), electricity used in kWh, the billing period start and end dates (YYYY-MM-DD), "
-          "and the utility's name. Usage amounts only, never dollar amounts. Use null for anything not on the bill.")
+PROMPT = ("Read this image. is_utility_bill: true only if it is a gas or electric utility bill. gas_usage_visible: true "
+          "only if a natural gas usage amount for the billing period is printed and legible. gas_usage_evidence: copy that "
+          "printed usage line word for word, else null. Then gas_usage (the number) and gas_unit (ccf or therms), "
+          "electricity used in kWh, the billing period start and end dates (YYYY-MM-DD), and the utility's name. "
+          "Usage amounts only, never dollar amounts or meter readings. Return null for anything not printed on the "
+          "image. Never estimate, infer or guess a value.")
+# Most gas a home can use per 1,000 ft² per day: the leakiest gas-heated ResStock 2024.2 MI home (0.550 ccf/1000 ft²
+# per HDD60, model/data/processed/resstock_frame.parquet) x Ann Arbor's coldest month on P1's meter weather 2021-23
+# (Jan 2022, 41.0 HDD60/day, meters_weather.parquet) + the highest non-heating baseload on Ann Arbor meters
+# (0.81 ccf/1000 ft²/day, building_targets.parquet). Catches misreads (meter readings, dollars), not small errors.
+GAS_MAX_CCF_PER_1000FT2_DAY = 0.550 * 41.0 + 0.81
 
 
 class CalibrateRequest(BaseModel):
@@ -67,7 +82,8 @@ class CalibrateRequest(BaseModel):
 
 
 def read_bill(image_b64: str) -> dict:
-    """Grok vision -> {gas_usage, gas_unit, electricity_kwh, start, end, utility} (nulls for what it can't read)."""
+    """Grok vision -> {is_utility_bill, gas_usage_visible, gas_usage_evidence, gas_usage, gas_unit, electricity_kwh,
+    start, end, utility} (nulls for what it can't read)."""
     key = os.environ.get("XAI_API_KEY")
     if not key:
         raise _fail(503, "vision_unavailable", VISION_DOWN)
@@ -80,6 +96,17 @@ def read_bill(image_b64: str) -> dict:
                 {"type": "text", "text": PROMPT}]}],
             "response_format": {"type": "json_schema",
                                 "json_schema": {"name": "bill", "schema": BILL_SCHEMA, "strict": True}}}
+    with ThreadPoolExecutor(2) as pool:
+        a, b = pool.map(lambda _: _ask_xai(body, key), range(2))
+    # Read twice, in parallel: Grok sometimes invents a whole bill (a blank 64 px image came back as "Usage: 111 CCF",
+    # then 147 therms, then 64 therms), and invented numbers differ between reads while printed ones don't.
+    if any(a[k] != b[k] for k in ("gas_usage", "gas_unit", "start", "end")):
+        log.warning("xAI reads disagree: %s vs %s", a, b)
+        raise _fail(422, "unreadable_bill", UNREADABLE, extracted=a)
+    return a
+
+
+def _ask_xai(body: dict, key: str) -> dict:
     try:
         r = httpx.post(XAI_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=90)
     except httpx.HTTPError as e:
@@ -97,13 +124,16 @@ def read_bill(image_b64: str) -> dict:
         raise _fail(422, "unreadable_bill", UNREADABLE)
 
 
-def month_usage(gas_ccf: float, start: date, end: date) -> tuple[int, int, float]:
+def month_usage(gas_ccf: float, start: date, end: date, unit_sqft: float) -> tuple[int, int, float]:
     """(year, month, gas ccf) for the calendar month holding most of the billing period. Raises ValueError (renter text)."""
     days = (end - start).days + 1  # billing days count both ends, so Jan 1-31 is a whole 31-day month
     if gas_ccf <= 0:
         raise ValueError("Gas used should be more than 0.")
     if not 1 <= days <= 62:
         raise ValueError("Those billing dates don't look right. A monthly bill starts before it ends, about a month apart.")
+    if gas_ccf / days > GAS_MAX_CCF_PER_1000FT2_DAY * unit_sqft / 1000:
+        raise ValueError(f"{gas_ccf:,.0f} CCF in {days} days is more gas than a {unit_sqft:,.0f} sq ft home uses even in "
+                         "the coldest month. Check the gas usage number (not the meter reading or the dollar amount).")
     (year, month), _ = Counter((d.year, d.month) for d in (start + timedelta(i) for i in range(days))).most_common(1)[0]
     if (year, month) >= (date.today().year, date.today().month):  # P1's weather for that month isn't complete yet
         raise ValueError(f"That bill is mostly {calendar.month_name[month]} {year}, which isn't over yet. "
@@ -148,21 +178,22 @@ def calibrate(req: CalibrateRequest) -> dict:
         raise _fail(422, "missing_input", "Send a photo of the bill, or the gas therms and the billing start and end dates.")
 
     gas = bill["gas_usage"]
-    if photo and not (isinstance(gas, (int, float)) and gas > 0 and bill["gas_unit"] in ("ccf", "therms")):
-        raise _fail(422, "unreadable_bill", UNREADABLE, extracted=bill)
+    if photo and not (bill["is_utility_bill"] is True and bill["gas_usage_visible"] is True and bill["gas_usage_evidence"]
+                      and isinstance(gas, (int, float)) and gas > 0 and bill["gas_unit"] in ("ccf", "therms")):
+        raise _fail(422, "unreadable_bill", UNREADABLE, extracted=bill)  # missing dates fail just below
     try:
         start, end = date.fromisoformat(bill["start"]), date.fromisoformat(bill["end"])
     except (TypeError, ValueError):  # photo only: no dates read (typed dates were parsed by pydantic)
         raise _fail(422, "unreadable_bill", UNREADABLE, extracted=bill)
     ccf = gas / THERMS_PER_CCF if bill["gas_unit"] == "therms" else gas
+    mp = sess["model_params"]
+    sqft = mp.get("unit_sqft") or sess["building"]["sqft"]
     try:
-        year, month, gas_ccf = month_usage(ccf, start, end)
+        year, month, gas_ccf = month_usage(ccf, start, end, sqft)
     except ValueError as e:
         raise _fail(422, "unreadable_bill" if photo else "bad_bill", str(e), extracted=bill)
 
-    mp = sess["model_params"]
-    params = {"year": year, "month": month, "gas_ccf": gas_ccf, "lat": mp["lat"], "lon": mp["lon"],
-              "unit_sqft": mp.get("unit_sqft") or sess["building"]["sqft"]}
+    params = {"year": year, "month": month, "gas_ccf": gas_ccf, "lat": mp["lat"], "lon": mp["lon"], "unit_sqft": sqft}
     try:
         r = httpx.get(f"{MODEL_BASE_URL}/hc/bill_check", params=params, timeout=180)
     except httpx.HTTPError as e:

@@ -45,8 +45,10 @@ def fakes(monkeypatch, tmp_path):
     """Fresh streak DB, a fake key, and fake model/xAI calls. Returns the recorded calls; set `vision` to change the read."""
     monkeypatch.setattr(calibrate, "DB", tmp_path / "calibrate.sqlite")
     monkeypatch.setenv("XAI_API_KEY", "test-key")
-    calls = {"model": [], "xai": [], "vision": {"gas_usage": 95, "gas_unit": "ccf", "electricity_kwh": 412,
-                                               "start": "2026-01-05", "end": "2026-02-04", "utility": "DTE Energy"}}
+    calls = {"model": [], "xai": [], "vision": {
+        "is_utility_bill": True, "gas_usage_visible": True, "gas_usage_evidence": "Gas Usage 95 CCF",
+        "gas_usage": 95, "gas_unit": "ccf", "electricity_kwh": 412, "start": "2026-01-05", "end": "2026-02-04",
+        "utility": "DTE Energy"}}
 
     def get(url, params=None, timeout=None):
         assert url.endswith("/hc/bill_check")
@@ -106,13 +108,16 @@ def test_proration_to_the_month_with_most_days(fakes):
 
 
 def test_month_usage():
-    assert calibrate.month_usage(100, date(2025, 12, 1), date(2025, 12, 31)) == (2025, 12, 100.0)  # whole month as is
-    assert calibrate.month_usage(62, date(2025, 11, 20), date(2025, 12, 20)) == (2025, 12, 62.0)  # 31 days, 20 in Dec
-    assert calibrate.month_usage(60, date(2025, 11, 1), date(2025, 11, 15)) == (2025, 11, 120.0)  # half month doubled
+    assert calibrate.month_usage(100, date(2025, 12, 1), date(2025, 12, 31), 850) == (2025, 12, 100.0)  # whole month
+    assert calibrate.month_usage(62, date(2025, 11, 20), date(2025, 12, 20), 850) == (2025, 12, 62.0)  # 20 of 31 in Dec
+    assert calibrate.month_usage(60, date(2025, 11, 1), date(2025, 11, 15), 850) == (2025, 11, 120.0)  # half month x2
+    # cap: 23.36 ccf/1000 ft²/day -> 850 ft² x 31 days = 615.6 ccf
+    assert calibrate.month_usage(615, date(2026, 1, 1), date(2026, 1, 31), 850)[2] == 615.0
     for bad in [(10, date(2026, 2, 1), date(2026, 1, 1)), (10, date(2025, 1, 1), date(2025, 6, 1)),
-                (0, date(2026, 1, 1), date(2026, 1, 31)), (10, date.today().replace(day=1), date.today())]:
+                (0, date(2026, 1, 1), date(2026, 1, 31)), (10, date.today().replace(day=1), date.today()),
+                (617, date(2026, 1, 1), date(2026, 1, 31)), (48213, date(2026, 1, 1), date(2026, 1, 31))]:
         with pytest.raises(ValueError):
-            calibrate.month_usage(*bad)
+            calibrate.month_usage(*bad, 850)
 
 
 def test_photo_path(fakes):
@@ -161,14 +166,28 @@ def test_missing_input():
 
 def test_bad_manual_bill():
     assert _err(_manual(_session(), 50, "2026-02-01", "2026-01-01"), 422) == "bad_bill"
+    r = _manual(_session(), 2000, "2026-01-01", "2026-01-31")  # more than any 850 sq ft home uses
+    assert _err(r, 422) == "bad_bill" and "850 sq ft" in r.json()["detail"]["message"]
 
 
-@pytest.mark.parametrize("read", [{"gas_usage": None, "gas_unit": None}, {"gas_unit": None},
-                                  {"start": None}, {"start": "2026-03-01"}])
+@pytest.mark.parametrize("read", [{"gas_usage": None, "gas_unit": None}, {"gas_unit": None}, {"start": None},
+                                  {"start": "2026-03-01"}, {"is_utility_bill": False}, {"gas_usage_visible": False},
+                                  {"gas_usage_evidence": None}, {"gas_usage": 48213}])  # last: meter reading, not usage
 def test_photo_without_gas_or_dates_is_unreadable(fakes, read):
     fakes["vision"] = {**fakes["vision"], **read}
     r = client.post("/calibrate", json={"session_id": _session(), "bill_image_base64": "aGk="})
     assert _err(r, 422) == "unreadable_bill" and "extracted" in r.json()["detail"] and not fakes["model"]
+
+
+def test_photo_reads_that_disagree_are_unreadable(monkeypatch, fakes):  # an invented number changes between reads
+    reads = iter([95, 147])
+
+    def post(url, **kw):
+        content = json.dumps({**fakes["vision"], "gas_usage": next(reads)})
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]}, request=httpx.Request("POST", url))
+    monkeypatch.setattr(calibrate.httpx, "post", post)
+    r = client.post("/calibrate", json={"session_id": _session(), "bill_image_base64": "aGk="})
+    assert _err(r, 422) == "unreadable_bill" and not fakes["model"]
 
 
 @pytest.mark.parametrize("status, content, code", [
@@ -224,9 +243,10 @@ LIVE_KEY, REAL_POST = os.environ.get("XAI_API_KEY"), httpx.post  # before the au
 
 
 @pytest.mark.skipif(not LIVE_KEY, reason="set XAI_API_KEY to run the live xAI vision check")
-def test_live_xai_accepts_request(monkeypatch):
-    """The real API takes our model name, image part and JSON schema; a blank image reads as no gas."""
+def test_live_xai_blank_image_is_unreadable(monkeypatch, fakes):
+    """The real API takes our model name, image part and JSON schema, and a blank image doesn't pass as a bill."""
     monkeypatch.setenv("XAI_API_KEY", LIVE_KEY)
     monkeypatch.setattr(calibrate.httpx, "post", REAL_POST)
-    bill = calibrate.read_bill(_blank_png())
-    assert set(bill) == set(calibrate.BILL_SCHEMA["required"]) and not bill["gas_usage"]
+    r = client.post("/calibrate", json={"session_id": _session(), "bill_image_base64": _blank_png()})
+    assert _err(r, 422) == "unreadable_bill", r.json()
+    assert set(r.json()["detail"]["extracted"]) == set(calibrate.BILL_SCHEMA["required"]) and not fakes["model"]
