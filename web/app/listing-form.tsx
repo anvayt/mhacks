@@ -2,26 +2,19 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
-import { estimate, needsUnitSize, type Estimate } from "./flow-api";
-import { ApiError } from "./lib/api";
+import { errorText, estimate, listingInput, needsUnitSize, type Estimate } from "./flow-api";
+import { apiFetch } from "./lib/api";
 import { LoadingSheet } from "./survey-fields";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"; // /api (PLAN.md §10)
 const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787"; // P4's iMessage onboarding page
-
-function errorText(err: ApiError): string {
-  if (err.code === "needs_address") {
-    return err.hint ? `${err.message} The listing only says: ${err.hint}.` : err.message;
-  }
-  return err.message;
-}
 
 export function ListingForm({
   onPicked,
   submitLabel = "Find my hidden rent",
   backHref,
 }: {
-  onPicked?: (listing: string) => void;
+  /** Called once /estimate has answered (and the unit size was asked); `estimate` is that body, already the session. */
+  onPicked?: (listing: string, estimate: Estimate) => void;
   submitLabel?: string;
   backHref?: string;
 }) {
@@ -32,7 +25,7 @@ export function ListingForm({
   const [sqft, setSqft] = useState("");
   const [waiting, setWaiting] = useState<"no" | "busy" | "done">("no");
   const outcome = useRef<{ next: "pick" | "unit" | "stay"; estimate?: Estimate }>({ next: "stay" });
-  const listingInput = useRef<HTMLInputElement>(null);
+  const listingField = useRef<HTMLInputElement>(null);
 
   async function lookUp(unitSqft?: number) {
     setWaiting("busy");
@@ -42,7 +35,7 @@ export function ListingForm({
       outcome.current = { next: unitSqft === undefined && needsUnitSize(e) ? "unit" : "pick", estimate: e };
     } catch (err) {
       outcome.current = { next: "stay" };
-      setResult(errorText(err as ApiError));
+      setResult(errorText(err));
     }
     setWaiting("done");
   }
@@ -50,9 +43,9 @@ export function ListingForm({
   function afterSheet() {
     setWaiting("no");
     const { next, estimate: e } = outcome.current;
-    if (next === "pick") onPicked?.(listing);
+    if (next === "pick" && e) onPicked?.(listing, e);
     else if (next === "unit") setUnit(e ?? null);
-    else listingInput.current?.select();
+    else listingField.current?.select();
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -60,30 +53,23 @@ export function ListingForm({
     if (onPicked) {
       if (!unit) return lookUp();
       const n = Number(sqft.replace(/[,\s]/g, ""));
-      if (!sqft.trim()) return onPicked(listing); // optional: keep the first estimate
+      if (!sqft.trim()) return onPicked(listing, unit); // optional: keep the first estimate
       if (!Number.isFinite(n) || n < 100 || n > 10000) {
         setResult("Unit size should be the unit's floor area in square feet (100 to 10,000).");
         return;
       }
       return lookUp(n);
     }
-    // ponytail: the about page's inline check, unchanged.
+    // The about page's inline check: a quick answer, not the flow's session.
     setResult("Looking it up…");
-    const input = /https?:\/\//i.test(listing) ? { url: listing } : { address: listing };
     try {
-      const res = await fetch(`${API}/estimate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      const e = await res.json();
+      const e = await apiFetch<Estimate>("/estimate", { body: listingInput(listing) });
+      const p50 = e.bill.annual.p50;
       setResult(
-        res.ok
-          ? `${e.building.address}: heating + cooling about $${Math.round(e.bill.annual.p50).toLocaleString("en-US")} a year (typical weather, predicted)`
-          : e.detail?.message ?? "Something went wrong. Try again.",
+        `${e.building.address}${p50 != null ? `: heating + cooling about $${Math.round(p50).toLocaleString("en-US")} a year (typical weather, predicted)` : ""}`,
       );
-    } catch {
-      setResult("The Hidden Rent API isn't reachable right now.");
+    } catch (err) {
+      setResult(errorText(err));
     }
   }
 
@@ -117,7 +103,7 @@ export function ListingForm({
           <div className="control">
             <img src="/hero/map-pin.svg" alt="" width={20} height={20} />
             <input
-              ref={listingInput}
+              ref={listingField}
               id="listing"
               name="listing"
               type="text"
@@ -134,7 +120,7 @@ export function ListingForm({
       <div className="actions">
         <div className="action-row">
           {unit ? (
-            <button className="back-action" type="button" onClick={() => onPicked?.(listing)}>
+            <button className="back-action" type="button" onClick={() => onPicked?.(listing, unit)}>
               Skip
             </button>
           ) : backHref ? (
