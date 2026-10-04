@@ -98,6 +98,8 @@ def test_verified_period_stores_same_property_baseline_factors_and_real_price(st
     assert impact["therms_avoided"] == 51.85 and impact["kwh_avoided"] == 0
     assert impact["co2_kg_avoided"] == pytest.approx(51.85 * 5.306, abs=.0001)
     assert impact["usd_saved"] == 75 and impact["pricing"]["gas_usd_per_ccf"] == 1.5
+    assert "rounded" in impact["pricing"]["source"]
+    assert impact["pricing"]["method"] == "ratio_of_rounded_model_monthly_cost_and_use"
     assert impact["emission_factors"] == bills.FACTORS
     assert impact["emission_factors"]["egrid_year"] == 2023 and impact["emission_factors"]["ccf_to_therm"] == 1.037
     assert impact["commitment_ids"] == ["commitment1"]
