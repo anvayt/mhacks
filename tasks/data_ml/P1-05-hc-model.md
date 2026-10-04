@@ -37,6 +37,7 @@ For any building location, return **point estimates of heating and cooling energ
 ## Handoff
 - Code: `model/heating_cooling/changepoint.py`, `train.py` (monthly panel, for comparison), `building_model.py` (served), `validate.py`.
 - Metered: gas median R² 0.961 (n=108). Out-of-year annual error 4.2%; seasonal 7.4%.
-- Unmetered ≥10k ft²: blend of the ridge/MLR heating model + calibrated ResStock = **28.3%** seasonal median error on held-out real buildings (null 35.4%). Cooling is weak (features ≈ median).
+- Model selection (`model/heating_cooling/modelsel.py`): 10 families incl. lasso / elastic net / median regression, nested CV (inner 5-fold tuning on median abs % error, outer 5×5 measuring), one-SE rule. Heating: tuned random forest 31.0% ± 1.6 (baseline 41.4%). Cooling: no model beats the baseline median (34.7%), so the median is served.
+- Unmetered ≥10k ft²: weighted geometric blend (gas w=0.3, elec w=0.5, fitted out-of-fold) of the meter-trained model + calibrated ResStock = **28.7%** seasonal gas error on held-out real buildings (null 36.2%); electricity ≈ 30% for every path. Validation is leakage-free (calibration/base/null/weights estimated in-fold).
 - Prices: EIA MI marginal gas $/ccf by month (R² 0.99); EIA-861M average electricity $/kWh by month.
 - Results: `model/results/{building_model_validation,hc_validation,validation_real,leakage_analysis}.json`.
