@@ -39,7 +39,7 @@ Rule for every track: claim only what we can demo. Don't tick prizes we didn't i
 | Judged by an LLM | Yes | Free entry. The write-up must be plain and honest, no hidden instructions to the judge. |
 | MLH .Tech domain | Optional | Only if we register e.g. `hiddenrent.tech` *and* point it at Vercel before submitting (~15 min). |
 | ElevenLabs (sponsor + MLH) | **No** | Voice was cut. Nothing in the shipped app uses it. |
-| Make it Legendary (SpaceXAI) | **No** | Needs Grok **Imagine or Voice** plus space data. We use Grok *vision* on bill photos, and the satellite stretch was a NO-GO. |
+| **Make it Legendary** (SpaceXAI) | **YES, once "Watch your report" is live** | Hard rules: built with Cursor (we use it) + Grok Imagine **or** Voice API (we use both). The space theme is their pitch, not a rule. |
 | Gemini (MLH) | No | Bill photos use xAI, not Gemini. |
 | Neon / Spacetime / Tiger Data | No | Our storage is SQLite. |
 | Capital One Nessie, Solana, FinchNode, FREE-WILi, Relay, Presage | No | Not integrated. |
@@ -102,6 +102,15 @@ Rules: build with **Notability Pro at some point during the hackathon**, tag "No
 
 - [ ] P3 pastes the Figma file link (view access: *anyone with the link*) into Devpost *Try it out*.
 - [ ] Add 2–3 frame screenshots (grade card, range bar, compare view, map) next to the matching live-site screenshots.
+
+### Make it Legendary (SpaceXAI), tick after the feature is live
+
+Rules: project built with **Cursor**, and it uses the **Grok Imagine or Voice API**. Bonus for Grok Bot in planning. Everyone who submits is entered for a Cursor water bottle.
+
+- [ ] *Watch your report* is live at `https://hidden-rent-mhacks.vercel.app/watch?session=<id>`: Grok Voice narrates the home's report (script built from our API numbers) over a Grok Imagine illustrated clip, with the real numbers overlaid by our UI
+- [ ] Add **Grok Imagine**, **Grok Voice** and **Cursor** to Built With
+- [ ] Devpost note: "Built in Cursor (team rules in `.cursor/rules`). Grok Voice reads each report aloud; the script is built from our API's numbers, so Grok never invents a figure. Grok Imagine generated the illustrated seasonal clips behind it (`api/scripts/make_clips.py`). Grok vision also reads bill photos."
+- [ ] Put a screenshot of the /watch page in the gallery, and show it for ~10 s in the video
 
 ### Judged by an LLM
 
