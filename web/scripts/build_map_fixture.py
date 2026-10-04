@@ -3,8 +3,9 @@
 Every number in the fixture comes from data or P1's model; nothing is typed in by hand. When P2 serves the same
 shape from /api, the widget switches from this file to the endpoint (see components/hidden-rent-map/data.ts).
 
-Run from a built P1 heating-cooling checkout (model artifacts present) with P1's environment. The block-group
-outline is fetched once from Census TIGERweb (public, no key):
+Run from a built P1 heating-cooling checkout (model artifacts present) with P1's environment. Missing caches
+(city footprints, mailing addresses) are downloaded on first run; the block-group outline is fetched from Census
+TIGERweb each run. Sources, caches and the footprint↔address pairing are written up in web/HOUSE_SCHEMA.md.
 
     cd ../mhacks-heating-cooling && PYTHONPATH=. .venv/bin/python ../mhacks-map-widget/web/scripts/build_map_fixture.py
 """
