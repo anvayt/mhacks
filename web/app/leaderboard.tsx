@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { usageHue } from "./flow-api";
 import { ListingForm } from "./listing-form";
 import { apiFetch, ApiError, load, save } from "./lib/api";
 import { BillCheck } from "./board/bill-check";
@@ -11,10 +12,6 @@ import { ReminderSettings } from "./reminder-settings";
 import { billRange, errorText, gradeSpan, kg, money, type Calibration, type Commitment, type Estimate, type Position, type Projection, type PublicBoard, type Snapshot, type Suggestion, type VerifiedBoard } from "./board/api";
 import styles from "./board/board.module.css";
 
-function gradientStops(position: number): CSSProperties {
-  const blueEnd = Math.round((75 - position * 60) * 100) / 100;
-  return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` };
-}
 function backgroundColorAt(position: number) {
   const mix = Math.min(1, Math.max(0, position));
   return `rgb(${[0x17, 0x3b, 0xfa].map((v, i) => Math.round(v + ([0xf2, 0x38, 0x33][i] - v) * mix)).join(", ")})`;
@@ -189,7 +186,7 @@ export function Leaderboard() {
   // Fast-forward simulates the toggled choices, plus the saved home's accepted ones when signed in.
   const ffIds = [...new Set([...(context?.propertyId ? accepted.filter(c => c.status !== "dismissed").map(c => c.catalog_id) : []), ...chosen])];
   const ffModeled = ffIds.some(id => suggestions.some(s => s.catalog_id === id && !s.pending_model && s.projected));
-  return <main className={`hero ranking board-screen ${styles.screen}`} style={gradientStops(1 - percentile)}>
+  return <main className={`hero ranking board-screen ${styles.screen}`} style={usageHue(percentile)}>
     <div className="hero-decor" aria-hidden="true"><img className="halo" src="/hero/halo.svg" alt="" /><img className="orbit" src="/hero/orbit.svg" alt="" /><img className="texture" src="/hero/texture.svg" alt="" /></div>
     <div className="ranking-inner">
       <p className="ranking-notice">Predicted heating + cooling · Ann Arbor city data</p>

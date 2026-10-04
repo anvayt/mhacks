@@ -103,6 +103,8 @@ export interface Projection {
 export interface Reminder { reminder_id: string; user_id: string; handle: string; kind: "checkin" | "task" | "weather"; text_hint: string; property_id: string; commitment_id?: string; demo?: boolean }
 /** POST /reminders/inbound: the reminder this text answers (delivered since the last inbound, today or yesterday). */
 export interface ReplyingTo { reminder_id: string; kind: Reminder["kind"]; local_date: string; commitment_id?: string }
+/** A web sign-in code for the agent to text (GET /auth/web/outbox, agent-only). */
+export interface LoginText { login_id: string; handle: string; text: string }
 export interface ReminderState { user_id?: string; stopped: boolean; paused: boolean; unanswered?: number; reminder_prefs?: Me["reminder_prefs"]; replying_to?: ReplyingTo | null }
 /** POST /habits/{user_id}/checkin and GET /habits/{user_id} (+ checkins): the daily habit streak. */
 /** POST /simulate/fast-forward: a simulation (never usage) of savings adding up if the commitments are kept. */
@@ -151,6 +153,9 @@ export interface Api {
   fixes(sessionId: string): Promise<ApiResult<Fixes>>;
   authPhone(req: { phone: string; photon_user_id?: string; session_id?: string }): Promise<ApiResult<Account>>;
   confirmLogin(req: { code: string; phone: string }): Promise<ApiResult<{ user_id: string }>>;
+  /** Web sign-in codes waiting to be texted (Duo-style login), and the ack after each is sent. */
+  loginOutbox(): Promise<ApiResult<LoginText[]>>;
+  loginSent(loginId: string): Promise<ApiResult<{ login_id: string; sent: boolean }>>;
   me(id: string): Promise<ApiResult<Me>>;
   patchMe(id: string, req: { pending_checkin?: null; reminder_prefs?: Partial<Me["reminder_prefs"]> }): Promise<ApiResult<Me>>;
   property(req: PropertyRequest): Promise<ApiResult<{ property_id: string; estimate: Estimate; active: boolean }>>;
@@ -300,6 +305,9 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     fixes: (id) => call<Fixes>("GET", `/fixes/${encodeURIComponent(id)}`, undefined, 60_000, checkFixes),
     authPhone: (req) => accountCall("POST", "/auth/phone", req),
     confirmLogin: (req) => accountCall("POST", "/auth/web/confirm", req),
+    // polled every few seconds: a short timeout so one slow call never stalls the next code
+    loginOutbox: () => call<LoginText[]>("GET", "/auth/web/outbox", undefined, 10_000, generic),
+    loginSent: (id) => call("POST", `/auth/web/outbox/${encodeURIComponent(id)}/sent`, undefined, 10_000, generic),
     me: (id) => accountCall("GET", `/me/${encodeURIComponent(id)}`),
     patchMe: (id, req) => accountCall("PATCH", `/me/${encodeURIComponent(id)}`, req),
     property: (req) => accountCall("POST", "/properties", req),

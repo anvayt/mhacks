@@ -94,7 +94,7 @@ def test_web_login_by_text_then_token_on_me():
     code = start["code"]
     assert len(code) == 6 and start["text_body"] == f"login {code}"
     assert start["redirect_url"] == f"sms:&body=login%20{code}" and start["assigned_number_masked"] is None
-    assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "pending"}
+    assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "pending", "sent": False}
     assert client.post("/auth/web/confirm", json={"code": code, "phone": PHONE}).status_code == 401  # agent only
 
     ok = client.post("/auth/web/confirm", json={"code": f"login {code}", "phone": "7345550100"}, headers=AGENT).json()
@@ -126,7 +126,7 @@ def test_web_login_wrong_phone_and_expired():
         con.execute("UPDATE web_logins SET expires_at = '2000-01-01T00:00:00+00:00'")
     late = client.post("/auth/web/confirm", json={"code": start["code"], "phone": PHONE}, headers=AGENT)
     assert late.status_code == 410 and late.json()["detail"]["code"] == "code_expired"
-    assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "expired"}
+    assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "expired", "sent": False}
     assert accounts.list_users() == []
 
 
@@ -146,6 +146,53 @@ def test_web_login_rate_limits(monkeypatch):
     monkeypatch.setattr(accounts, "PER_IP_10MIN", 5)  # 5 codes from this IP so far
     assert client.post("/auth/web/start", json={"phone": "+17345550103"}).json()["detail"]["code"] == "too_many_codes"
     assert client.post("/auth/web/start", json={"phone": "12"}).json()["detail"]["code"] == "bad_phone"
+
+
+def test_texted_code_outbox_then_verify_on_the_site():  # Duo-style: we text the code, the renter types it
+    start = client.post("/auth/web/start", json={"phone": "(734) 555-0100"}).json()
+    sent = start["dev_sent_code"]  # dev mode only: no Photon, so nothing could text it
+    assert start["delivery"] == "dev" and start["phone_masked"] == "•••-•••-0100" and sent != start["code"]
+    assert client.get("/auth/web/outbox").status_code == 401  # agent only
+    box = client.get("/auth/web/outbox", headers=AGENT).json()
+    assert box == [{"login_id": start["login_id"], "handle": PHONE, "text": accounts._sent_text(sent)}]
+    assert sent in box[0]["text"]
+    assert client.post(f"/auth/web/outbox/{start['login_id']}/sent", headers=AGENT).json()["sent"]
+    assert client.get("/auth/web/outbox", headers=AGENT).json() == []  # sent once
+    assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "pending", "sent": True}
+
+    wrong = client.post("/auth/web/verify", json={"login_id": start["login_id"], "code": "000000" if sent != "000000" else "111111"})
+    assert wrong.status_code == 401 and "4 tries left" in wrong.json()["detail"]["message"]
+    ok = client.post("/auth/web/verify", json={"login_id": start["login_id"], "code": f"{sent[:3]} {sent[3:]}"}).json()
+    assert ok["status"] == "verified" and ok["created"] and ok["token"]
+    assert client.get(f"/me/{ok['user_id']}", headers={"Authorization": f"Bearer {ok['token']}"}).status_code == 200
+    assert "token" not in client.get(f"/auth/web/{start['login_id']}").json()  # token handed out once
+    again = client.post("/auth/web/verify", json={"login_id": start["login_id"], "code": sent})
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "already_used"
+
+
+def test_texted_code_tries_and_expiry():
+    start = client.post("/auth/web/start", json={"phone": PHONE}).json()
+    bad = "000000" if start["dev_sent_code"] != "000000" else "111111"
+    codes = [client.post("/auth/web/verify", json={"login_id": start["login_id"], "code": bad}).status_code for _ in range(6)]
+    assert codes == [401] * 5 + [429]
+    right = client.post("/auth/web/verify", json={"login_id": start["login_id"], "code": start["dev_sent_code"]})
+    assert right.status_code == 429 and accounts.list_users() == []
+    late = client.post("/auth/web/start", json={"phone": "+17345550101"}).json()
+    with accounts._con() as con:
+        con.execute("UPDATE web_logins SET expires_at = '2000-01-01T00:00:00+00:00'")
+    assert client.get("/auth/web/outbox", headers=AGENT).json() == []  # expired codes aren't texted
+    r = client.post("/auth/web/verify", json={"login_id": late["login_id"], "code": late["dev_sent_code"]})
+    assert r.status_code == 410
+    assert client.post("/auth/web/verify", json={"login_id": "nope", "code": "123456"}).status_code == 404
+
+
+def test_old_databases_get_the_new_columns(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "old.sqlite")
+    with sqlite3.connect(tmp_path / "old.sqlite") as con:
+        con.execute("CREATE TABLE web_logins (id TEXT PRIMARY KEY, phone_number TEXT NOT NULL, code TEXT NOT NULL, ip TEXT, "
+                    "new_number INTEGER NOT NULL, photon_user_id TEXT, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, "
+                    "user_id TEXT, token_issued INTEGER NOT NULL DEFAULT 0)")
+    assert client.post("/auth/web/start", json={"phone": PHONE}).status_code == 200
 
 
 @pytest.fixture
@@ -277,3 +324,11 @@ def test_me_calendar_connected_from_gcal(monkeypatch):  # merge wave 5b: mock Ca
     url = client.post("/calendar/connect", json={"user_id": uid}, headers=AGENT).json()["auth_url"]
     assert client.get("/calendar/callback?" + url.split("?", 1)[1], follow_redirects=False).status_code == 303
     assert client.get(f"/me/{uid}", headers=AGENT).json()["calendar_connected"] is True
+
+
+def test_texted_code_never_returned_with_photon(photon):
+    s = client.post("/auth/web/start", json={"phone": PHONE}).json()
+    assert s["delivery"] == "imessage" and "dev_sent_code" not in s
+    box = client.get("/auth/web/outbox", headers=AGENT).json()
+    assert len(box) == 1 and s["code"] not in box[0]["text"]  # the texted code isn't the fallback code
+

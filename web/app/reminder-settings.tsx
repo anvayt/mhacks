@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { ApiError, apiFetch, load } from "./lib/api";
 import styles from "./board/board.module.css";
 
-type Cadence = "daily" | "weekly" | "monthly" | "off";
+export type Cadence = "daily" | "weekly" | "monthly" | "off";
 type Channel = "imessage" | "calendar" | "none";
 export type ReminderPrefs = { channel: Channel; cadence: Cadence; hour_local: number; paused: boolean };
 type Me = { reminder_prefs: ReminderPrefs; timezone?: string | null; habit_streak?: { current: number; best: number } };
@@ -37,6 +37,13 @@ async function saveMe(userId: string, prefs: Partial<ReminderPrefs>): Promise<Me
     body: { reminder_prefs: prefs, ...(timezone ? { timezone } : {}) },
   });
 }
+
+/** Save a sign-up reminder choice ("off" = no texts). */
+export const saveReminderChoice = (userId: string, cadence: Cadence) =>
+  saveMe(userId, { cadence, channel: cadence === "off" ? "none" : "imessage", paused: false });
+
+export const REMINDER_CHOICES = CADENCES;
+export const REMINDER_RULES = RULES;
 
 /** Right after sign-up: one explicit question. Nothing is preselected; "No thanks" turns texts off. */
 export function ReminderOptIn({ onDone }: { onDone: () => void }) {
