@@ -8,18 +8,24 @@
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
 in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
 
+model-data.zip: https://drive.google.com/file/d/1vPeqWjf1fGszt8odAUCstQ1Z1lUcO6ZS/view?usp=sharing
+
+## Make commands
+
+Everything runs from the `dev` branch, at the repo root.
+
+| Command | What it does |
+|---|---|
+| `make install` | One-time setup: Python/Node deps, city GIS, trained models. Put `model-data.zip` (from the team share) in the repo root first, or it downloads data and trains (~8 min). |
+| `make demo` | Start model, API, web, onboarding and the chat agent. |
+| `make demo-warm` | Pre-warm demo estimates and maps (second terminal). |
+| `make demo-warm-city` | Pre-warm whole-city caches (~2 min, once). |
+| `make demo-public` | Public HTTPS tunnels for the demo (needs `brew install cloudflared`). |
+| `make demo-check` | Offline check of API + model. |
+| `make data-bundle` | Write `model-data.zip` (data + the trained models in `model/artifacts/`) to share with the team. |
+| `make -C model build` | Retrain the models on this machine. |
+
 ## Run the demo
-
-The launcher needs the existing Python/Node dependencies and city cache. Prepare these once while online:
-
-```bash
-(cd api && uv sync && uv run python scripts/fetch_footprints.py)
-(cd web && npm ci)
-(cd agent && npm ci)
-```
-
-Point `MODEL_DIR` at the checkout with P1's **already-built** artifacts and matching processed data; it defaults to
-`../mhacks-integration`. The launcher never builds or retrains the model.
 
 ```bash
 AGENT_TERMINAL=1 make demo       # terminal chat, real API estimates, no iMessages
@@ -186,22 +192,22 @@ onboarding abuse cap remain required before the final public phone rehearsal.
 
 ## Run the whole thing
 
-Needs Python 3.12, Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm). `make install` does all setup in one step
-(Python/Node deps, city GIS data, model build), skipping anything already done; [uv](https://docs.astral.sh/uv/) is optional (used for `api/` if present).
+Needs Python 3.12, Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm). [uv](https://docs.astral.sh/uv/) is optional.
+
+Setup is `make install` (see [Make commands](#make-commands)).
 Secrets go only in git-ignored `.env` files; every variable name is in [`.env.example`](.env.example).
 
 | Piece | Port | Set up once | Start |
 |---|---|---|---|
-| `/model` heating + cooling (P1) | 8001 | `make install` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`; PRISM allows each grid twice a day per IP, so copy `model/data/raw/prism/` from a teammate instead of re-downloading) | `make -C model dashboard` |
-| `/api` FastAPI (P2) | 8000 | `make install` (also downloads city GIS into `/data/` if missing) | `cd api && uv run uvicorn app.main:app --port 8000` |
+| `/model` heating + cooling (P1) | 8001 | `make install` | `make -C model dashboard` |
+| `/api` FastAPI (P2) | 8000 | `make install` | `cd api && uv run uvicorn app.main:app --port 8000` |
 | `/agent` iMessage agent (P4) | | `make install` (Photon creds for real iMessage go in `agent/.env`) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
 | onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
 | `/web` Next.js (P3) | 3000 | `make install` | `cd web && npm run dev` |
 
-`make -C model build` rewrites committed files under `model/data/processed/` and `model/results/`
-with this machine's retrain. Don't commit them (P1 owns them), but keep them while you serve from this machine: the
-server reads them together with the git-ignored models in `model/artifacts/` trained in the same build, so dropping
-only one side mixes two trainings.
+Model build outputs (`model/artifacts/`, `model/data/processed/`, the generated files in `model/results/`) are
+git-ignored and travel in `model-data.zip` as one set: the server reads them together, so never mix files from two
+trainings. To retrain them on this machine: `make -C model build`.
 
 Start order: model, then api, then agent / web. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
 `http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` and the web form at `NEXT_PUBLIC_API_BASE_URL`

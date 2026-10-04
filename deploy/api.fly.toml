@@ -1,0 +1,42 @@
+# Hidden Rent API: deploy with `bash deploy/stage.sh api` (stages the trained model + data, then fly deploy).
+app = "hidden-rent-api-mhacks"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  MODEL_BASE_URL = "http://127.0.0.1:8001"
+  RATE_LIMIT_PER_MIN = "600"
+  USE_MOCKS = "0"
+  PUBLIC_TUNNEL = "0"
+  SESSIONS_DB = "/data/sessions.sqlite"
+  APP_DB = "/data/app.sqlite"
+  CALIBRATE_DB = "/data/calibrate.sqlite"
+  WEB_ORIGINS = "https://hidden-rent-mhacks.vercel.app"
+  WEB_ORIGIN = "https://hidden-rent-mhacks.vercel.app"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "90s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2048mb"
+
+[[restart]]
+  policy = "always"

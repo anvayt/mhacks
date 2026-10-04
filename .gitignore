@@ -8,3 +8,5 @@ __pycache__/
 /data/
 /models/
 .env*.local
+model-data.zip
+.vercel/

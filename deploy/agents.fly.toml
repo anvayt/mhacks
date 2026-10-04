@@ -1,0 +1,43 @@
+# Hidden Rent agents: deploy with `bash deploy/stage.sh agents`.
+app = "hidden-rent-agents-mhacks"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  API_BASE_URL = "https://hidden-rent-api-mhacks.fly.dev"
+  PUBLIC_URL = "https://hidden-rent-agents-mhacks.fly.dev"
+  ONBOARD_URL = "https://hidden-rent-agents-mhacks.fly.dev"
+  WEB_BASE_URL = "https://hidden-rent-mhacks.vercel.app"
+  ONBOARD_PORT = "8787"
+  USE_MOCKS = "0"
+  AGENT_TERMINAL = "0"
+  USE_MOCK_API = "0"
+  REMINDER_RECEIPTS = "/data/agent-reminder-receipts.json"
+  ASI_RUNTIME_DIR = "/data/asi-runtime"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+    method = "GET"
+    path = "/"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1024mb"
+
+[[restart]]
+  policy = "always"
