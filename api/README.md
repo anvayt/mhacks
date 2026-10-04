@@ -16,8 +16,9 @@ uv run uvicorn app.main:app --reload --port 8000
   (`app/estimate.py`): link → `resolve_link` → `get_features` → P1's model over HTTP (`GET $MODEL_BASE_URL/hc/estimate`,
   default `http://localhost:8001`; start it with `make -C model dashboard`). Real: `session_id` (SQLite at `SESSIONS_DB`,
   default `../data/sessions.sqlite`), `building` (+ P2-01 `warnings`), `bill.annual` / `seasonal` / `monthly` p10/p50/p90
-  (heating + cooling only; how the band is made is in `bill.band_method`), score / grade / grade_span / locked /
-  percentiles / hidden rent (`app/score.py`, vs P1's 591 scored apartment buildings), `questions` (`{id, text,
+  (heating + cooling only; how the band is made is in `bill.band_method`; "No AC" sets cooling to $0, `bill.note`),
+  score / grade / grade_span / locked (grade range = only what the answers can change: `grade_band_usd`,
+  `grade_span_method`) / percentiles / hidden rent (`app/score.py`, vs P1's 591 scored apartment buildings), `questions` (`{id, text,
   options: [{value, label}]}`), `heating_cooling` (P1's full answer), `answers`, `model_params`. Null/empty until
   merged: `co2_t` (P2-03), `badges`. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
   `hint`, `not_found`, `not_a_home`, `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is
