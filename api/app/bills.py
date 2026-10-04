@@ -20,6 +20,7 @@ from app.score import GRADES, score_for
 
 SOURCES = {"initial_estimate", "questionnaire", "bill_regrade", "manual_refresh"}
 LABEL = "from your bill, adjusted for weather"
+PROVISIONAL = ("early signal from one bill: inside normal month-to-month variation, so your grade doesn't change")
 MODEL_VERSION = "P1 heating_cooling + P2 bill regrade v1"  # algorithm identifier; upstream artifact version not exposed
 FACTORS = {"gas_kg_per_therm": co2.KG_PER_THERM, "elec_kg_per_kwh": co2.KG_PER_KWH,
            "egrid_year": 2023, "ccf_to_therm": co2.THERMS_PER_CCF,
@@ -126,8 +127,13 @@ def duplicate(property_id: str, start: str | None = None, end: str | None = None
 
 
 def _regrade(session: dict, pct: float) -> dict:
-    factor = 1 + pct / 100
-    annual = session["bill"]["annual"]
+    """The year implied by one weather-normalized bill, damped: the change is clamped to the model's own p10–p90 for
+    this home, so one bill never moves the grade outside the predicted range. The building's $ (heat included in the
+    rent or not), since the grade rates the building."""
+    annual = session["bill"].get("building_annual") or session["bill"]["annual"]
+    lo, mid, hi = annual.get("p10"), annual["p50"], annual.get("p90")
+    implied = mid * (1 + pct / 100)
+    factor = min(max(implied, lo if lo is not None else implied), hi if hi is not None else implied) / mid if mid else 1
     bill = {q: round(annual[q] * factor, 2) if annual.get(q) is not None else None for q in ("p10", "p50", "p90")}
     scores = score_for(bill["p50"], session["building"]["sqft"], session["building"]["type"])
     # One gas bill cannot demonstrate lower electricity use; carbon adjusts gas only, with unknown bands.
@@ -198,6 +204,9 @@ def save_bill(prop: dict, session: dict, extracted: dict, start: date, end: date
         if not snapshots:
             _insert_snapshot(con, baseline)
         snapshot = _snapshot(pid, "bill_regrade", _regrade(session, response["pct_vs_expected_for_weather"]))
+        # Only a bill P1 calls meaningful (beyond its month-to-month noise) becomes the home's current grade.
+        provisional = check.get("meaningful") is not True
+        snapshot.update(provisional=provisional, label=PROVISIONAL if provisional else LABEL)
         _insert_snapshot(con, snapshot)
         commitment_ids = verify_bill(check, start, end, candidates, property_id=pid,
                                      user_id=prop["user_id"], today=date.today())
@@ -234,7 +243,11 @@ def save_bill(prop: dict, session: dict, extracted: dict, start: date, end: date
         response = {**response, "bill_id": bill_id, "verified": verified,
                     "impact": {**impact, "factors": impact["emission_factors"]} if impact else None, "snapshot": snapshot,
                     "verified_commitment_ids": commitment_ids if verified else [], "verification_rule": VERIFY_RULE,
-                    "verification_status": reason, "model_version": session.get("model_version") or MODEL_VERSION}
+                    "verification_status": reason, "model_version": session.get("model_version") or MODEL_VERSION,
+                    "bill_signal": {"grade": snapshot["grade"], "score": snapshot["score"],
+                                    "annual_usd": snapshot["bill_annual"]["p50"],
+                                    "pct_vs_expected_for_weather": response["pct_vs_expected_for_weather"],
+                                    "label": snapshot["label"]}}
         con.execute("INSERT INTO bill_submissions VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (bill_id, pid, start.isoformat(), end.isoformat(), sha, json.dumps(body), json.dumps(response)))
         if impact:

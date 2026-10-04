@@ -224,9 +224,31 @@ def position(property_id: str, request: Request) -> dict:
     session = sessions.get(prop["session_id"]) if prop.get("session_id") else None
     if not session:
         raise _fail(404, "not_found", "That home's estimate expired. Send the listing again.")
+    projection = commitments.latest_projection(property_id)
+    if projection and (projection.get("property_id") != property_id or projection.get("pending_model")):
+        projection = None
+    return _position(session, bills.list_snapshots(property_id), projection, property_id)
+
+
+@router.get("/leaderboard/position")
+def position_for_session(session_id: str, catalog_ids: str | None = None) -> dict:
+    """The web before sign-in: current placement of a session, plus the ghost marker for `catalog_ids` (a,b) from the
+    same what-if as POST /projection {session_id} (nothing stored)."""
+    session = sessions.get(session_id)
+    if not session:
+        raise _fail(404, "not_found", "That home's estimate expired. Send the listing again.")
+    ids = [i for i in (catalog_ids or "").split(",") if i]
+    if any(i not in commitments.CATALOG for i in ids):
+        raise _fail(422, "unknown_action", "We don't have that action. Pick one from your suggested list.")
+    return _position(session, [], commitments.what_if(session, list(dict.fromkeys(ids))) if ids else None, None)
+
+
+def _position(session: dict, snapshots: list[dict], projection: dict | None, property_id: str | None) -> dict:
     building = session.get("building") or {}
-    sqft, annual = _number(building.get("sqft")), _number(session.get("bill", {}).get("annual", {}).get("p50"))
-    snapshots = [s for s in bills.list_snapshots(property_id) if s.get("property_id") == property_id
+    bill = session.get("bill") or {}
+    # the building's $ behind the grade (bill.building_annual when heat is included in the rent)
+    sqft, annual = _number(building.get("sqft")), _number((bill.get("building_annual") or bill.get("annual") or {}).get("p50"))
+    snapshots = [s for s in snapshots if s.get("property_id") == property_id and not s.get("provisional")
                  and s.get("source") in {"initial_estimate", "questionnaire", "bill_regrade", "manual_refresh"}
                  and _number((s.get("bill_annual") or {}).get("p50")) is not None]
     latest = max(snapshots, key=lambda s: (s.get("created_at", ""), s["id"]), default=None)
@@ -238,12 +260,12 @@ def position(property_id: str, request: Request) -> dict:
     if not peers:
         raise _fail(503, "position_unavailable", "There are no scored city homes of this type to compare yet.")
     current = _placement(annual / sqft, peers)
-    projection = commitments.latest_projection(property_id)
     projected = None
-    if projection and projection.get("property_id") == property_id and not projection.get("pending_model"):
-        p50 = _number((projection.get("projected") or {}).get("bill_annual", {}).get("p50"))
+    if projection:
+        mine = projection.get("projected") or {}
+        p50 = _number(mine.get("building_annual_usd", (mine.get("bill_annual") or {}).get("p50")))
         if p50 is not None and p50 >= 0:
-            marker, mine = _placement(p50 / sqft, peers), projection.get("projected") or {}
+            marker = _placement(p50 / sqft, peers)
             # the ghost marker is /projection's own projected.score / percentile_city; rank is placed here
             projected = {"rank": marker["rank"], "score": mine.get("score", marker["score"]),
                          "percentile_city": mine.get("percentile_city", marker["percentile_city"]),

@@ -284,6 +284,21 @@ def test_model_down_503(monkeypatch):
     assert r.status_code == 503 and r.json()["detail"]["code"] == "model_unavailable"
 
 
+def test_anonymous_by_session_is_a_what_if(calls):  # wave 6: the web before sign-in, no auth, nothing stored
+    pid = home(window_panes=1)
+    sid = f"s-{pid}"
+    sug = client.get("/commitments/suggested", params={"session_id": sid}).json()
+    assert sug["session_id"] == sid and [c["catalog_id"] for c in sug["commitments"]] == suggested(pid)[1]
+    r = client.post("/projection", json={"session_id": sid, "commitment_ids": ["window_upgrade"]}).json()
+    assert r["id"] is None and r["modeled"] == ["window_upgrade"] and r["delta"]["usd_saved_yr"] == 80
+    assert commitments.latest_projection(pid) is None  # not stored
+    pos = client.get("/leaderboard/position", params={"session_id": sid, "catalog_ids": "window_upgrade"}).json()
+    assert pos["projected"]["score"] == r["projected"]["score"] and pos["current"]["score"] is not None
+    assert client.get("/leaderboard/position", params={"session_id": sid}).json()["projected"] is None
+    assert client.post("/projection", json={"session_id": sid, "commitment_ids": ["cmt_x"]}).status_code == 422
+    assert client.get("/commitments/suggested", params={"session_id": "gone"}).status_code == 404
+
+
 def test_joined_with_real_accounts():  # merge wave 5a: accounts' property, prefs and history + commitments
     pid = home()
     p = accounts.get_property(pid)
