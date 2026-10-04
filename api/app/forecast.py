@@ -11,7 +11,10 @@ the month in the first place (energy = intensity x degree-days x floor area; mod
 import datetime as dt
 import json
 from functools import lru_cache
+from math import isfinite
 from statistics import mean, quantiles
+from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import APIRouter
@@ -35,14 +38,15 @@ METHOD = (
     "(model/climate.py). Daily $ = P1's forecast-month $ (GET /hc/estimate?mode=forecast, this unit, EIA Michigan "
     "monthly prices) x the day's degree-days / P1's forecast-month degree-days (GET /hc/weather?mode=forecast), at "
     "P1's base temperatures: heating HDD60 (gas) or HDD55 (electric), cooling CDD65, or the building's own "
-    "change-point balance points on the metered path. week = sum of the days. normal_total_usd = the same 7 calendar "
+    "change-point balance points on the metered path. week = sum of the returned days. normal_total_usd = the same returned calendar "
     "dates priced the same way in each year 1991-2020 (Open-Meteo ERA5 archive, same shift), averaged; "
     "vs_normal_pct = week / normal - 1, in percent. Alerts: cold_snap = the day's mean temperature is below the 10th "
     "percentile of daily means within 7 days of that date in 1991-2020 (colder than 9 in 10 such days) and the day "
     "has a heating cost; heat_wave = above the 90th percentile and the day has a cooling cost; costly_week = the "
     "week's total is above the 90th percentile of the same dates' totals in 1991-2020 (costliest 1 week in 10). "
-    "Only 7 days: P1 notes that beyond ~2 weeks the weather is not a skilful forecast, and daily forecasts lose "
-    "skill with each day ahead."
+    "Up to 7 days: P1 notes that beyond ~2 weeks the weather is not a skilful forecast, and daily forecasts lose "
+    "skill with each day ahead. On a network outage, a last-good daily forecast is used only if at least 3 "
+    "complete days remain; stale_as_of is its original UTC fetch time."
 )
 SOURCE = ("P1 heating + cooling model (GET /hc/estimate?mode=forecast, /hc/weather?mode=forecast); Open-Meteo "
           "forecast API and historical weather API (ERA5), open-meteo.com; PRISM Climate Group 800 m normals via P1")
@@ -55,6 +59,54 @@ def _get(url: str, params: dict, code: str, message: str) -> dict:
         return r.json()
     except httpx.HTTPError:
         raise _fail(503, code, message)
+
+
+def _now() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def _daily(raw: dict) -> dict:
+    """Validate the fields we consume before replacing or trusting the last-good response."""
+    daily = raw["daily"]
+    columns = [daily[k] for k in ("time", "temperature_2m_mean", "temperature_2m_min", "temperature_2m_max")]
+    if not all(isinstance(c, list) for c in columns) or not columns[0] or len({len(c) for c in columns}) != 1:
+        raise ValueError("incomplete daily forecast")
+    for date in columns[0]:
+        dt.date.fromisoformat(date)
+    if any(v is not None and (type(v) not in (int, float) or not isfinite(v)) for c in columns[1:] for v in c):
+        raise ValueError("invalid daily temperature")
+    return daily
+
+
+def _daily_forecast(lat: float, lon: float) -> tuple[dict, str | None]:
+    """Live Open-Meteo response per P1 grid cell; on network failure use its last successful fetch.
+
+    Raw response and UTC fetch timestamp live under git-ignored /data. A fallback never refreshes
+    that timestamp. The endpoint drops elapsed America/New_York dates and requires 3 usable days.
+    """
+    path = DATA_DIR / f"openmeteo_forecast_{lat:.2f}_{lon:.2f}.json"
+    try:
+        r = httpx.get(FORECAST, params={"latitude": lat, "longitude": lon, "forecast_days": 7,
+                      "timezone": "America/New_York",
+                      "daily": "temperature_2m_mean,temperature_2m_min,temperature_2m_max"}, timeout=180)
+        r.raise_for_status()
+        raw = r.json()
+        daily = _daily(raw)
+    except (httpx.TimeoutException, httpx.NetworkError):
+        try:
+            saved = json.loads(path.read_text())
+            if dt.datetime.fromisoformat(saved["fetched_at"]).tzinfo is None:
+                raise ValueError("cache timestamp has no timezone")
+            return _daily(saved["response"]), saved["fetched_at"]
+        except (OSError, ValueError, KeyError, TypeError):
+            raise _fail(503, "forecast_unavailable", FORECAST_DOWN)
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        raise _fail(503, "forecast_unavailable", FORECAST_DOWN)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(f".{uuid4().hex}.tmp")  # distinct concurrent requests cannot truncate each other's cache
+    tmp.write_text(json.dumps({"fetched_at": _now().isoformat(), "response": raw}))
+    tmp.replace(path)
+    return daily, None
 
 
 def _grid(x: float) -> float:  # Open-Meteo cell as P1 snaps it (model/data_sources/openmeteo.py _r)
@@ -98,7 +150,7 @@ def _bases(hc: dict) -> tuple[int | None, int | None]:
 
 @router.get("/forecast/{session_id}")
 def forecast(session_id: str) -> dict:
-    """Next 7 days of heating + cooling $ vs a typical year, plus alerts. 404 not_found, 503 model/forecast down."""
+    """Up to 7 days of heating + cooling $ vs a typical year, plus alerts. 404 not_found, 503 model/forecast down."""
     s = sessions.get(session_id)
     if s is None:
         raise _fail(404, "not_found", "That session expired. Send the listing again.")
@@ -109,9 +161,8 @@ def forecast(session_id: str) -> dict:
     wx = _get(f"{MODEL_BASE_URL}/hc/weather", {"lat": p["lat"], "lon": p["lon"], "mode": "forecast"},
               "model_unavailable", MODEL_DOWN)
     lat, lon = _grid(p["lat"]), _grid(p["lon"])
-    fc = _get(FORECAST, {"latitude": lat, "longitude": lon, "forecast_days": 7, "timezone": "America/New_York",
-                         "daily": "temperature_2m_mean,temperature_2m_min,temperature_2m_max"},
-              "forecast_unavailable", FORECAST_DOWN)["daily"]
+    fc, stale_as_of = _daily_forecast(lat, lon)
+    today = _now().astimezone(ZoneInfo("America/New_York")).date()
     hist = _history(lat, lon)
 
     hb, cb = _bases(hc)
@@ -136,6 +187,8 @@ def forecast(session_id: str) -> dict:
         if None in (tmean, tmin, tmax):  # Open-Meteo leaves the last day blank sometimes
             continue
         d = dt.date.fromisoformat(date)
+        if stale_as_of is not None and d < today:
+            continue
         off = rate[d.month][2]
         h, c = cost(tmean, d.month)
         day = {"date": date, "low_f": round(_f(tmin + off)), "high_f": round(_f(tmax + off)),
@@ -153,7 +206,7 @@ def forecast(session_id: str) -> dict:
                 f"High of {day['high_f']}°F, hotter than 9 in 10 days around this date (1991-2020). "
                 f"Cooling that day: about ${c:.2f}.")})
 
-    if not days:
+    if len(days) < (3 if stale_as_of is not None else 1):  # last-good fallback must still cover at least 3 days
         raise _fail(503, "forecast_unavailable", FORECAST_DOWN)
     dates = [dt.date.fromisoformat(x["date"]) for x in days]
     past = [sum(sum(cost(hist[_same_day(d, y)], d.month)) for d in dates) for y in YEARS]
@@ -164,5 +217,6 @@ def forecast(session_id: str) -> dict:
     if total > quantiles(past, n=10)[-1]:
         alerts.append({"type": "costly_week", "date": days[0]["date"], "detail": (
             f"Heating and cooling this week: about ${total:.0f}, vs ${normal:.0f} in a typical year for these dates.")})
-    return {"session_id": session_id, "days": days, "week": week, "alerts": alerts, "source": SOURCE, "method": METHOD}
+    return {"session_id": session_id, "days": days, "week": week, "alerts": alerts, "source": SOURCE, "method": METHOD,
+            **({"stale_as_of": stale_as_of} if stale_as_of is not None else {})}
 
