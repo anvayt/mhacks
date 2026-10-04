@@ -35,6 +35,22 @@ while IFS= read -r pid; do
 done < "$TMP/logs/nested.log"
 printf 'PASS cleanup: nested child group stopped; unrelated sentinel survived.\n'
 
+# Restart one known group while retaining another; also exercise removal of the
+# final group under macOS Bash 3.2 nounset before the EXIT trap runs.
+/bin/bash -c '
+    source "$1/scripts/demo-common.sh"
+    process_tracking
+    start_owned first "$1" sleep 60; first=$LAST_PID
+    start_owned second "$1" sleep 60; second=$LAST_PID
+    stop_owned "$first"
+    ! kill -0 "$first" 2>/dev/null
+    kill -0 "$second"
+    stop_owned "$second"
+    ! kill -0 "$second" 2>/dev/null
+' _ "$ROOT" > "$TMP/restart.log" 2>&1
+kill -0 "$sentinel"
+printf 'PASS selective restart: only owned target stopped, peer and unrelated sentinel survived.\n'
+
 # A local HTTP stub exercises the future session/forecast contract. It is only a
 # test; demo-warm/check themselves always call real servers and never replay JSON.
 "$ROOT/api/.venv/bin/python" - "$TMP" <<'PYTEST' &
@@ -49,6 +65,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type','application/json'); self.end_headers();self.wfile.write(raw)
     def do_GET(self):
         if self.path == '/health': return self.reply({'status':'ok'})
+        if self.path.startswith('/map/'):
+            with (root/'map-calls').open('a') as f:f.write(self.path+'\n')
+            return self.reply({'building':{'id':1},'block_group':{},'steps':[]})
+        if self.path == '/city': return self.reply({'type':'FeatureCollection','features':[{'type':'Feature'}]})
         with (root/'forecast-calls').open('a') as f:f.write(self.path+'\n')
         self.reply({'days':[{'date':'2026-10-04'}],'week':{'total_usd':3}})
     def do_POST(self):
@@ -71,5 +91,6 @@ API_BASE_URL="http://127.0.0.1:$(cat "$TMP/port")" DEMO_ADDRESSES="$TMP/addresse
 from pathlib import Path
 import sys
 assert Path(sys.argv[1]).read_text().splitlines() == ['/forecast/test-1','/forecast/test-3']
+assert Path(sys.argv[1]).with_name('map-calls').read_text().splitlines() == ['/map/test-1','/map/test-2','/map/test-3']
 PYTEST
-printf 'PASS warm: one forecast per model cell; model_params wins over model location, which wins over building geocode.\n'
+printf 'PASS warm: map for every session, city once, one forecast per model cell; model_params wins over model location, which wins over building geocode.\n'
