@@ -1,0 +1,337 @@
+{
+  "weather_vs_noaa_normals": {
+    "USC00200230": {
+      "name": "ANN ARBOR U OF MICH",
+      "lat": 42.2981,
+      "lon": -83.6639,
+      "compare": {
+        "ANN-HTDD-NORMAL": {
+          "noaa": 6500.6,
+          "ours": 6453.2,
+          "pct_diff": -0.007
+        },
+        "ANN-CLDD-NORMAL": {
+          "noaa": 653.1,
+          "ours": 656.5,
+          "pct_diff": 0.005
+        },
+        "DJF-HTDD-NORMAL": {
+          "noaa": 3455.6,
+          "ours": 3448.2,
+          "pct_diff": -0.002
+        },
+        "MAM-HTDD-NORMAL": {
+          "noaa": 1660.8,
+          "ours": 1662.2,
+          "pct_diff": 0.001
+        },
+        "SON-HTDD-NORMAL": {
+          "noaa": 1317.4,
+          "ours": 1293.0,
+          "pct_diff": -0.019
+        },
+        "JJA-CLDD-NORMAL": {
+          "noaa": 533.3,
+          "ours": 546.8,
+          "pct_diff": 0.025
+        },
+        "ANN-TAVG-NORMAL": {
+          "noaa": 48.8,
+          "ours": 49.1,
+          "pct_diff": 0.007
+        }
+      }
+    },
+    "USW00094889": {
+      "name": "ANN ARBOR MUNI AP",
+      "lat": 42.2228,
+      "lon": -83.7444,
+      "compare": {
+        "ANN-HTDD-NORMAL": {
+          "noaa": 6741.6,
+          "ours": 6470.9,
+          "pct_diff": -0.04
+        },
+        "ANN-CLDD-NORMAL": {
+          "noaa": 519.6,
+          "ours": 644.4,
+          "pct_diff": 0.24
+        },
+        "DJF-HTDD-NORMAL": {
+          "noaa": 3515.3,
+          "ours": 3451.8,
+          "pct_diff": -0.018
+        },
+        "MAM-HTDD-NORMAL": {
+          "noaa": 1710.6,
+          "ours": 1667.3,
+          "pct_diff": -0.025
+        },
+        "SON-HTDD-NORMAL": {
+          "noaa": 1420.1,
+          "ours": 1300.3,
+          "pct_diff": -0.084
+        },
+        "JJA-CLDD-NORMAL": {
+          "noaa": 437.9,
+          "ours": 537.1,
+          "pct_diff": 0.226
+        },
+        "ANN-TAVG-NORMAL": {
+          "noaa": 47.8,
+          "ours": 49.1,
+          "pct_diff": 0.026
+        }
+      }
+    }
+  },
+  "seasonal_gas_vs_real_meters": {
+    "n_building_season_years": 800,
+    "n_buildings": 101,
+    "median_abs_pct_error": {
+      "metered": {
+        "all": 0.074,
+        "winter": 0.065,
+        "spring": 0.055,
+        "summer": 0.152,
+        "fall": 0.066
+      },
+      "meter_model": {
+        "all": 0.284,
+        "winter": 0.285,
+        "spring": 0.299,
+        "summer": 0.299,
+        "fall": 0.267
+      },
+      "resstock": {
+        "all": 0.299,
+        "winter": 0.302,
+        "spring": 0.306,
+        "summer": 0.299,
+        "fall": 0.29
+      },
+      "blend": {
+        "all": 0.287,
+        "winter": 0.278,
+        "spring": 0.3,
+        "summer": 0.299,
+        "fall": 0.274
+      },
+      "null": {
+        "all": 0.362,
+        "winter": 0.366,
+        "spring": 0.383,
+        "summer": 0.304,
+        "fall": 0.381
+      }
+    },
+    "p90_abs_pct_error_winter": {
+      "metered": 0.164,
+      "meter_model": 1.027,
+      "resstock": 1.183,
+      "blend": 1.053,
+      "null": 1.445
+    },
+    "p90_abs_pct_error_summer": {
+      "metered": 0.514,
+      "meter_model": 1.648,
+      "resstock": 1.651,
+      "blend": 1.65,
+      "null": 1.622
+    },
+    "median_signed_error": {
+      "metered": 0.005,
+      "meter_model": -0.041,
+      "resstock": 0.039,
+      "blend": -0.019,
+      "null": 0.022
+    },
+    "r2_log": {
+      "metered": 0.975,
+      "meter_model": 0.722,
+      "resstock": 0.693,
+      "blend": 0.714,
+      "null": 0.656
+    }
+  },
+  "seasonal_elec_vs_real_meters": {
+    "n_building_season_years": 764,
+    "n_buildings": 87,
+    "median_abs_pct_error": {
+      "metered": {
+        "all": 0.045,
+        "winter": 0.038,
+        "spring": 0.043,
+        "summer": 0.047,
+        "fall": 0.05
+      },
+      "meter_model": {
+        "all": 0.306,
+        "winter": 0.326,
+        "spring": 0.34,
+        "summer": 0.281,
+        "fall": 0.316
+      },
+      "resstock": {
+        "all": 0.303,
+        "winter": 0.326,
+        "spring": 0.332,
+        "summer": 0.272,
+        "fall": 0.316
+      },
+      "blend": {
+        "all": 0.304,
+        "winter": 0.326,
+        "spring": 0.336,
+        "summer": 0.28,
+        "fall": 0.314
+      },
+      "null": {
+        "all": 0.308,
+        "winter": 0.326,
+        "spring": 0.335,
+        "summer": 0.29,
+        "fall": 0.319
+      }
+    },
+    "p90_abs_pct_error_winter": {
+      "metered": 0.104,
+      "meter_model": 0.688,
+      "resstock": 0.688,
+      "blend": 0.688,
+      "null": 0.688
+    },
+    "p90_abs_pct_error_summer": {
+      "metered": 0.146,
+      "meter_model": 0.573,
+      "resstock": 0.556,
+      "blend": 0.552,
+      "null": 0.572
+    },
+    "median_signed_error": {
+      "metered": 0.001,
+      "meter_model": -0.048,
+      "resstock": -0.065,
+      "blend": -0.049,
+      "null": -0.05
+    },
+    "r2_log": {
+      "metered": 0.988,
+      "meter_model": 0.693,
+      "resstock": 0.692,
+      "blend": 0.693,
+      "null": 0.693
+    }
+  },
+  "in_fold_parameters": {
+    "gas": [
+      {
+        "fold": 0,
+        "n_train": 80,
+        "n_test": 21,
+        "resstock_calibration": 1.15,
+        "blend_weight_meter_model": 0.6000000000000001,
+        "null_intensity": 0.06221886826620679,
+        "base_per_1000ft2_day": 0.27318828690074376
+      },
+      {
+        "fold": 1,
+        "n_train": 81,
+        "n_test": 20,
+        "resstock_calibration": 1.141,
+        "blend_weight_meter_model": 0.6000000000000001,
+        "null_intensity": 0.06175312829469525,
+        "base_per_1000ft2_day": 0.27464240035052007
+      },
+      {
+        "fold": 2,
+        "n_train": 81,
+        "n_test": 20,
+        "resstock_calibration": 1.105,
+        "blend_weight_meter_model": 0.4,
+        "null_intensity": 0.05975766646498967,
+        "base_per_1000ft2_day": 0.2693393225340496
+      },
+      {
+        "fold": 3,
+        "n_train": 81,
+        "n_test": 20,
+        "resstock_calibration": 1.141,
+        "blend_weight_meter_model": 0.2,
+        "null_intensity": 0.06175312829469525,
+        "base_per_1000ft2_day": 0.28215646936973915
+      },
+      {
+        "fold": 4,
+        "n_train": 81,
+        "n_test": 20,
+        "resstock_calibration": 1.221,
+        "blend_weight_meter_model": 0.6000000000000001,
+        "null_intensity": 0.0660681563997273,
+        "base_per_1000ft2_day": 0.2693393225340496
+      }
+    ],
+    "elec": [
+      {
+        "fold": 0,
+        "n_train": 69,
+        "n_test": 18,
+        "resstock_calibration": 0.667,
+        "blend_weight_meter_model": 0.8,
+        "null_intensity": 0.865696278107069,
+        "base_per_1000ft2_day": 11.952684113483906
+      },
+      {
+        "fold": 1,
+        "n_train": 69,
+        "n_test": 18,
+        "resstock_calibration": 0.642,
+        "blend_weight_meter_model": 0.6000000000000001,
+        "null_intensity": 0.8331329946197291,
+        "base_per_1000ft2_day": 11.675783534163939
+      },
+      {
+        "fold": 2,
+        "n_train": 70,
+        "n_test": 17,
+        "resstock_calibration": 0.683,
+        "blend_weight_meter_model": 0.5,
+        "null_intensity": 0.8869566707371763,
+        "base_per_1000ft2_day": 11.958796185891181
+      },
+      {
+        "fold": 3,
+        "n_train": 70,
+        "n_test": 17,
+        "resstock_calibration": 0.71,
+        "blend_weight_meter_model": 0.4,
+        "null_intensity": 0.9216574390653678,
+        "base_per_1000ft2_day": 12.091001399051546
+      },
+      {
+        "fold": 4,
+        "n_train": 70,
+        "n_test": 17,
+        "resstock_calibration": 0.717,
+        "blend_weight_meter_model": 0.4,
+        "null_intensity": 0.9303868640759229,
+        "base_per_1000ft2_day": 11.71244470067715
+      }
+    ]
+  },
+  "serving_blend": {
+    "gas": {
+      "blend_weight_meter_model": 0.30000000000000004,
+      "resstock_calibration": 1.1414626302161783,
+      "meter_model_family": "random_forest",
+      "rule": "weight w on log(meter model) and 1\u2212w on log(calibrated ResStock), chosen on out-of-fold predictions to minimize median abs % error"
+    },
+    "elec": {
+      "blend_weight_meter_model": 0.5,
+      "resstock_calibration": 0.7001023818326592,
+      "meter_model_family": "baseline_median",
+      "rule": "weight w on log(meter model) and 1\u2212w on log(calibrated ResStock), chosen on out-of-fold predictions to minimize median abs % error"
+    }
+  },
+  "scheme": "Unmetered paths: 5-fold split over buildings; ResStock calibration, null intensity, base load and blend weight are estimated on the training buildings of each fold; meter-model predictions are the nested-CV out-of-fold predictions. Metered path: the building's own change-point fit on its other years."
+}
