@@ -63,6 +63,24 @@ uv run uvicorn app.main:app --reload --port 8000
   (percent), streak_months, badges, estimate}` + additive `year, month, actual_gas_ccf, expected_gas_ccf, noise_floor,
   meaningful, extracted, note` (P1's `/hc/bill_check`, gas only; streaks in `CALIBRATE_DB`). Errors: 404 `not_found`,
   422 `missing_input` / `unreadable_bill` / `bad_bill`, 503 `vision_unavailable` / `model_unavailable`.
+- Accounts (`app/accounts.py`, SQLite `APP_DB`, default `../data/app.sqlite`; NEW_CHANGES.md NC-01/02/07). The phone
+  (iMessage handle, normalized like `agent/src/photon.ts`) is the account. **Agent-only** (header `X-Agent-Key` =
+  `AGENT_API_KEY`; open with a warning while unset): `POST /auth/phone {phone, photon_user_id?, session_id?}` →
+  `{user_id, created, current_property_id}` (idempotent; a web `session_id` becomes the home if there's none),
+  `POST /auth/web/confirm {code, phone}` (on an inbound "login <code>"), `POST /checkins/trigger {user_id}` →
+  `{message_hint: "still_at_address", property_id, address, created_at}`. **Web login:** `POST /auth/web/start {phone}`
+  allowlists the phone with Photon (`PHOTON_PROJECT_ID`/`SECRET`; `USE_MOCKS=1` or no creds = `sms:` link) →
+  `{login_id, code, text_body, redirect_url, assigned_number_masked, expires_at}` (10 min; 3 per phone and 20 per IP
+  per 10 min, 5 new numbers an hour); `GET /auth/web/{login_id}` → `{status: pending|verified|expired, user_id?,
+  token?}` (token once). **Agent key or `Authorization: Bearer <token>`:** `GET /me/{user_id}` → `{user_id,
+  phone_masked, alias, leaderboard_opt_in, timezone, reminder_prefs, current_property_id, properties[],
+  current_estimate, pending_checkin}`; `PATCH /me/{user_id} {alias?, leaderboard_opt_in?, timezone?, reminder_prefs?,
+  pending_checkin: null?}`; `POST /properties {user_id, address|url, unit_sqft?}` → `{property_id, building_id (= /map
+  building.id), estimate, active}` (archives the old home); `POST /properties/{id}/activate`;
+  `GET /properties/{id}/history` → `{property_id, snapshots, bills, impact, commitments}`. Errors: 401 `agent_only` /
+  `login_required` / `login_expired`, 403 `forbidden`, 404 `not_found` / `bad_code`, 409 `no_property`, 410
+  `code_expired`, 422 `bad_phone` / `alias_required` / `bad_alias` / `bad_hour` / `bad_prefs` / `bad_timezone`, 429
+  `too_many_codes` / `signups_full`, 503 `photon_unavailable`.
 
 ## CO₂ and fix sources (checked Oct 4, 2026)
 
