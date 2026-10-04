@@ -50,3 +50,7 @@
     width: 100%;
   }
 }
+
+/* Grade screen: slower, eased barrier move (overrides .board-screen's 0.9s), off for reduced motion. */
+.barrier { transition: --blue-end 1.6s cubic-bezier(.65,0,.35,1), --red-start 1.6s cubic-bezier(.65,0,.35,1); }
+@media (prefers-reduced-motion: reduce) { .barrier { transition: none; } }

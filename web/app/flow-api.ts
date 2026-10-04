@@ -127,6 +127,14 @@ export function usageHue(percentile: number | null | undefined): CSSProperties {
   return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` };
 }
 
+/** Grade screen: the blue→red barrier follows the score (0–100). Lower score → barrier further right,
+ *  higher score → further left (per the team's spec). The gradient keeps a 25-point soft blend. */
+export function scoreHue(score: number | null | undefined): CSSProperties {
+  const s = Math.min(100, Math.max(0, score ?? 50));
+  const blueEnd = Math.round((70 - s * 0.6) * 100) / 100; // score 0 → 70%, 50 → 40%, 100 → 10%
+  return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` };
+}
+
 /** Make the current session the signed-in user's home (wave 6: POST /properties {user_id, session_id}).
  *  This archives their previous home, so it runs only right after a fresh sign-in or on "Save this as my home". */
 export async function adoptSession(): Promise<void> {

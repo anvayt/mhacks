@@ -12,7 +12,7 @@ import {
   imessageUrl,
   sessionIsHome,
   usd,
-  usageHue,
+  scoreHue,
   usdRange,
   type Estimate,
 } from "./flow-api";
@@ -22,11 +22,13 @@ import { ScoreBoost } from "./score-boost";
 
 const pct = (x: number) => Math.round(x * 100);
 
-/** P3's bands on percentile_city (the share of scored Ann Arbor homes this one beats). */
-function cityRank(p: number): { head: string; sub: string } {
-  if (p >= 0.75) return { head: `Top ${Math.max(1, 100 - pct(p))}%`, sub: "Most efficient in Ann Arbor." };
-  if (p < 0.25) return { head: `Bottom ${Math.max(1, pct(p))}%`, sub: "Least efficient in Ann Arbor." };
-  return { head: "Middle 50%", sub: "Right in the middle of the spectrum." };
+/** Headline copy for the predicted score's band (A ≥ 80, B 60–79, C 40–59, D 20–39, F < 20; PLAN.md §5). */
+export function scoreBand(score: number): { head: string; sub: string } {
+  if (score >= 80) return { head: "Top of the class", sub: "One of the most efficient homes of its type in Ann Arbor." };
+  if (score >= 60) return { head: "Better than most", sub: "Cheaper to heat and cool than most homes like it." };
+  if (score >= 40) return { head: "Middle of the pack", sub: "About average for its type. A few fixes could move it up." };
+  if (score >= 20) return { head: "Running hot", sub: "Costs more to heat and cool than most homes like it." };
+  return { head: "Leaking money", sub: "Among the least efficient homes of its type in Ann Arbor." };
 }
 
 /** "built 1970 (Ann Arbor benchmarking)", or "built around 1964 (neighborhood median)" for a census median. */
@@ -75,15 +77,23 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
     }
   }
 
+  // The barrier starts centered and eases to the score once it's on screen, so the move is visible.
+  const [hue, setHue] = useState(scoreHue(50));
+  useEffect(() => {
+    if (e?.score == null) return;
+    const id = window.setTimeout(() => setHue(scoreHue(e.score)), 350);
+    return () => window.clearTimeout(id);
+  }, [e?.score]);
+
   const b = e?.building;
-  const rank = e?.percentile_city != null ? cityRank(e.percentile_city) : null;
+  const rank = e?.score != null ? scoreBand(e.score) : null;
   const range = e ? usdRange(e.bill.annual) : null;
   const co2 = e?.co2_t?.p50 != null ? e.co2_t : null;
   const hidden = e?.hidden_rent_usd_mo;
   const session = encodeURIComponent(e?.session_id ?? "");
 
   return (
-    <main className={`hero ranking reveal board-screen ${styles.screen}`} style={usageHue(e?.percentile_city)}>
+    <main className={`hero ranking reveal board-screen ${styles.screen} ${styles.barrier}`} style={hue}>
       <div className="hero-decor" aria-hidden="true">
         <img className="halo" src="/hero/halo.svg" alt="" />
         <img className="orbit" src="/hero/orbit.svg" alt="" />
