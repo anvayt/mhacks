@@ -44,7 +44,7 @@ test("bill photo → POST /calibrate (base64) → GET /fixes → three messages,
   assert.deepEqual(seen[2].slice(0, 2), ["GET", "/fixes/s1"]);
   assert.equal(msgs.length, 3);
   assert.equal(msgs[0], "📄 Your bill is 18% above normal for this weather.");
-  assert.match(msgs[1], /1\) Air sealing: saves \$310\/yr, costs \$700 \(\$350 rebate\) → grade B, \+18 GRH pts/);
+  assert.match(msgs[1], /1\) Air sealing: saves \$310\/yr, 300 kg CO₂\/yr less, costs \$700 \(\$350 rebate\), \+18 GRH pts → grade B/);
   assert.match(msgs[1], /Green Rental Housing points: 45 → 72 \(Ann Arbor requires 70\)/);
   assert.equal(msgs[2], FIXES.landlord_email);
 });
@@ -100,12 +100,67 @@ test("billImageBase64: JPEG passes through; a broken HEIC falls back to the orig
   }
 });
 
-test("mid-interview: 'fixes' runs the fixes command, 'skip' moves to the next question without calling /answer", async () => {
+test("mid-interview: 'fixes' runs the fixes command; 'skip' is sent to /answer and moves on", async () => {
   const chat = new Conversations(mockApi());
   await chat.reply("c", "Hi (ref web9)");
-  assert.match(await chat.reply("c", "skip"), /Skipped\.\n\nIs the unit on the top, middle or ground floor\?/);
+  assert.match(await chat.reply("c", "skip"), /Skipped\.[\s\S]*Are the windows single-, double- or triple-pane\?/);
   const fixes = await chat.reply("c", "fixes");
   assert.match(fixes, /Top fixes:/);
-  assert.match(fixes, /Back to your question:\nIs the unit on the top, middle or ground floor\?/);
-  assert.match(await chat.reply("c", "top"), /Grade B–C/); // the open question still works after the detour
+  assert.match(fixes, /Back to your question:\nAre the windows single-, double- or triple-pane\?/);
+  assert.match(await chat.reply("c", "double"), /Grade B–C/); // the open question still works after the detour
+});
+
+import { calibrationText, fixesText, parseTypedBill } from "../src/replies.ts";
+
+test("calibrationText follows P1: inside the noise → 'within normal'; outside winter → rough read; no 🎉 unless meaningful", () => {
+  const base = { streak_months: 0, badges: [], estimate: EST as any };
+  assert.equal(calibrationText({ ...base, pct_vs_expected_for_weather: -6, meaningful: false, noise_floor: 9.5 }),
+    "📄 Your bill is within the normal range for this weather (-6% vs expected, inside our typical ±10% error).");
+  assert.match(calibrationText({ ...base, pct_vs_expected_for_weather: -12, meaningful: null }), /12% below what this month's weather predicts\. Outside Dec–Feb/);
+  assert.doesNotMatch(calibrationText({ ...base, pct_vs_expected_for_weather: -12, meaningful: null }), /🎉/);
+  assert.match(calibrationText({ ...base, pct_vs_expected_for_weather: -18.4, meaningful: true }), /18% below normal for this weather 🎉/);
+});
+
+test("fixesText never prints a number the API left null; negative savings read as 'costs more to run'", () => {
+  const text = fixesText({
+    fixes: [
+      { item: "Air sealing", grh_points: 9, co2_kg_saved: 410, usd_saved_yr: 160, cost_usd: null, rebate_usd: 500, new_grade: "B" },
+      { item: "Heat pump", grh_points: 35, co2_kg_saved: 900, usd_saved_yr: -120, cost_usd: 15400, rebate_usd: 4000, new_grade: "B" },
+      { item: "Storm windows", grh_points: 4, co2_kg_saved: null, usd_saved_yr: null, cost_usd: null, rebate_usd: null, new_grade: null, unpriced: true },
+    ],
+    grh_points_now: 0, grh_points_after: 48, grh_points_required: 70, landlord_email: "x",
+  });
+  assert.doesNotMatch(text, /\$0\b|null|NaN|undefined/);
+  assert.match(text, /1\) Air sealing: saves \$160\/yr, 410 kg CO₂\/yr less, \$500 rebate, \+9 GRH pts → grade B/);
+  assert.match(text, /2\) Heat pump: costs \$120\/yr more to run, 900 kg CO₂\/yr less, costs \$15,400 \(\$4,000 rebate\)/);
+  assert.match(text, /3\) Storm windows: \+4 GRH pts/);
+  assert.match(text, /0 → 48 \(Ann Arbor requires 70\)/);
+});
+
+test("parseTypedBill: therms or CCF (×1.037, EIA), m/d dates with year inference, ISO dates, kWh optional", () => {
+  const today = new Date(2026, 9, 4); // Oct 4, 2026
+  assert.deepEqual(parseTypedBill("52 therms 9/3 to 10/2", today), { therms: 52, start: "2026-09-03", end: "2026-10-02" });
+  assert.deepEqual(parseTypedBill("gas 100 CCF, 12/5 - 1/6", today), { therms: 103.7, start: "2025-12-05", end: "2026-01-06" });
+  assert.deepEqual(parseTypedBill("40 therms 320 kWh 2026-08-01 to 2026-08-31", today), { therms: 40, kwh: 320, start: "2026-08-01", end: "2026-08-31" });
+  assert.deepEqual(parseTypedBill("52 therms", today), { error: "Send the billing dates too, like: 52 therms 9/3 to 10/2" });
+  assert.equal(parseTypedBill("912 Mary St, Ann Arbor", today), null);
+});
+
+test("typed bill → POST /calibrate {therms, start, end} → reply + fixes; before a listing → asks for it", async () => {
+  const seen: [string, string, any][] = [];
+  const chat = fakeApi({ "/estimate": [200, EST], "/calibrate": [200, { ...CAL, meaningful: true }], "/fixes/": [200, FIXES] }, seen);
+  assert.equal(await chat.reply("c", "52 therms 9/3 to 10/2"), NEED_LISTING_FOR_BILL);
+  await chat.reply("c", "912 Mary St, Ann Arbor, MI");
+  const r = await chat.reply("c", "52 therms 9/3 to 10/2");
+  const call = seen.find(([, p]) => p === "/calibrate")!;
+  assert.equal(call[2].therms, 52);
+  assert.match(call[2].start, /-09-03$/);
+  assert.match(r, /18% above normal for this weather\.[\s\S]*Top fixes/);
+});
+
+test("vision down: the API's 'type the numbers instead' message is passed on, and a typed bill then works", async () => {
+  const VISION_DOWN = "Reading bill photos isn't working right now. Type the numbers instead: gas used (therms or CCF), and the billing start and end dates.";
+  const chat = fakeApi({ "/estimate": [200, EST], "/calibrate": [503, { detail: { code: "vision_unavailable", message: VISION_DOWN } }] });
+  await chat.reply("c", "912 Mary St, Ann Arbor, MI");
+  assert.deepEqual(await chat.respond("c", photo()), [VISION_DOWN]);
 });
