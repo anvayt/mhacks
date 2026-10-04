@@ -104,5 +104,8 @@ test("mid-interview: 'fixes' runs the fixes command, 'skip' moves to the next qu
   const chat = new Conversations(mockApi());
   await chat.reply("c", "Hi (ref web9)");
   assert.match(await chat.reply("c", "skip"), /Skipped\.\n\nIs the unit on the top, middle or ground floor\?/);
-  assert.match(await chat.reply("c", "fixes"), /Top fixes:/);
+  const fixes = await chat.reply("c", "fixes");
+  assert.match(fixes, /Top fixes:/);
+  assert.match(fixes, /Back to your question:\nIs the unit on the top, middle or ground floor\?/);
+  assert.match(await chat.reply("c", "top"), /Grade B–C/); // the open question still works after the detour
 });
