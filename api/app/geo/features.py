@@ -101,13 +101,20 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         units = b.street_units
     if units == 0 and p["Struc_Type"] == "Residential":
         units, units_src = 1, "no mailing address inside the footprint; Residential footprint assumed 1 unit"
-    if townhouse_row(p["Struc_Type"], b.addresses, b.street_units, stories):
+    row = townhouse_row(p["Struc_Type"], b.addresses, b.street_units, stories)
+    # Guard (team decision Oct 3): above the ResStock 2024.2 MI single-family max per address it's a co-op or
+    # sorority (1500 Gilbert Ct Escher, 1205 Hill St AEPhi), not townhouses; fall through to the unit-count rule.
+    per_addr = round(building_sqft / len(b.addresses)) if row else 0
+    if row and per_addr <= SQFT_MAX[SFD]:
         btype = SFA
         type_src = (f"townhouse rule: {units} residential addresses in one Residential footprint, each its own "
                     f"house number, no UNIT rows, {stories} stories (<= 3) -> {SFA}")
     else:
         btype = building_type(p["Struc_Type"], units)
         type_src = f"unit-count rule: {units} unit(s) -> ResStock category (see building_type())"
+        if row:
+            type_src += (f"; townhouse rule skipped by guard: {per_addr} sq ft floor area per address > "
+                         f"{SQFT_MAX[SFD]} (ResStock 2024.2 MI single-family max)")
     if btype is None:
         warnings.append(f"Footprint Struc_Type is {p['Struc_Type']!r} with no residential address: not a known home")
     is_multi = units >= 2
