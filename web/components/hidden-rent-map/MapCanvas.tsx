@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ExpressionSpecification, LngLatBoundsLike, Map as MLMap, Marker, Popup } from "maplibre-gl";
+import type { ExpressionSpecification, FilterSpecification, IControl, LngLatBoundsLike, Map as MLMap, Marker, Popup } from "maplibre-gl";
 import type { FeatureCollection, Geometry, Position } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { GRADE_COLORS } from "./grade-colors";
@@ -48,6 +48,29 @@ function centroid(g: Geometry): [number, number] {
 
 const hovered: ExpressionSpecification = ["boolean", ["feature-state", "hover"], false];
 const gradeColor: ExpressionSpecification = ["match", ["get", "grade"], "A", GRADE_COLORS.A, "B", GRADE_COLORS.B, "C", GRADE_COLORS.C, "D", GRADE_COLORS.D, "F", GRADE_COLORS.F, OTHER];
+
+/** A MapLibre control: a row of buttons where one is selected (first by default) and `pick` runs on change. */
+function buttonGroup<T extends string>(options: readonly (readonly [T, string])[], pick: (value: T) => void): IControl {
+  const group = document.createElement("div");
+  group.className = "maplibregl-ctrl maplibregl-ctrl-group";
+  group.style.display = "flex";
+  options.forEach(([value, label], i) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    Object.assign(button.style, { width: "auto", padding: "0 10px", fontWeight: i === 0 ? "700" : "400" });
+    button.setAttribute("aria-pressed", String(i === 0));
+    button.onclick = () => {
+      pick(value);
+      for (const b of group.querySelectorAll("button")) {
+        b.setAttribute("aria-pressed", String(b === button));
+        b.style.fontWeight = b === button ? "700" : "400";
+      }
+    };
+    group.appendChild(button);
+  });
+  return { onAdd: () => group, onRemove: () => group.remove() };
+}
 
 export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding, reducedMotion }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -107,24 +130,8 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
         // Added first so it sits above the street basemap but under every Hidden Rent layer.
         map.addSource("satellite", { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_ATTRIBUTION });
         map.addLayer({ id: "satellite", type: "raster", source: "satellite", layout: { visibility: "none" } });
-        const views = document.createElement("div");
-        views.className = "maplibregl-ctrl maplibregl-ctrl-group";
-        for (const [view, label] of [["map", "Map"], ["satellite", "Satellite"]] as const) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.textContent = label;
-          Object.assign(button.style, { width: "auto", padding: "0 10px", fontWeight: view === "map" ? "700" : "400" });
-          button.setAttribute("aria-pressed", String(view === "map"));
-          button.onclick = () => {
-            map?.setLayoutProperty("satellite", "visibility", view === "satellite" ? "visible" : "none");
-            for (const b of views.querySelectorAll("button")) {
-              b.setAttribute("aria-pressed", String(b === button));
-              b.style.fontWeight = b === button ? "700" : "400";
-            }
-          };
-          views.appendChild(button);
-        }
-        map.addControl({ onAdd: () => views, onRemove: () => views.remove() }, "top-left");
+        map.addControl(buttonGroup([["map", "Map"], ["satellite", "Satellite"]], (view) =>
+          map?.setLayoutProperty("satellite", "visibility", view === "satellite" ? "visible" : "none")), "top-left");
 
         map.addSource("block-group", {
           type: "geojson",
@@ -155,6 +162,12 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
             "fill-extrusion-opacity": 0.92,
           },
         });
+        // Neighbors: every building (graded + gray unscored), only graded ones, or just this home.
+        const others: FilterSpecification = ["!=", ["get", "id"], sel];
+        map.addControl(buttonGroup([["all", "All homes"], ["graded", "Graded only"], ["mine", "Just mine"]], (show) => {
+          map?.setLayoutProperty("city-3d", "visibility", show === "mine" ? "none" : "visible");
+          map?.setFilter("city-3d", show === "graded" ? ["all", others, ["in", ["get", "grade"], ["literal", ["A", "B", "C", "D", "F"]]]] : others);
+        }), "top-left");
 
         map.addSource("home", {
           type: "geojson",
