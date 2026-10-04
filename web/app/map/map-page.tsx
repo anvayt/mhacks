@@ -19,7 +19,7 @@ export default function MapPage() {
   const [focus, setFocus] = useState<Focus>("building");
   const [retrieved, setRetrieved] = useState("");
   const [place, setPlace] = useState<{ grade: string; percentile_city: number | null } | null>(null);
-  // Where this home sits among every scored Ann Arbor building (same number the board ranks by).
+  // Where this home sits among Ann Arbor buildings: percentile_city, the number behind the grade screen and board colour split.
   useEffect(() => {
     setPlace(null);
     if (session) apiFetch<{ grade: string; percentile_city: number | null }>(`/session/${encodeURIComponent(session)}`).then(setPlace).catch(() => {});
