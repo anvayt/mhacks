@@ -1,0 +1,17 @@
+{
+  "footprints": 35007,
+  "scored_city_rows": 25704,
+  "bbox_wgs84": [
+    -83.79921577570228,
+    42.21731180293874,
+    -83.66121946691725,
+    42.32354630572873
+  ],
+  "roof_area_ge_1500": 622,
+  "nonempty_20m_inset": 194,
+  "scored_home_area_ge_1500": 143,
+  "invalid_source_footprints_repaired": 1,
+  "invalid_unique_benchmark_polygons_repaired": 2,
+  "unique_property_polygons": 418,
+  "footprint_property_match_rule": ">50% area inside exactly one benchmark polygon"
+}
