@@ -22,12 +22,9 @@ export const mockPeers: PeerEntry[] = Array.from({ length: COUNT }, (_, index) =
   };
 });
 
-/** Same stops as the page background: blue through 35%, red from 65%. */
+/** Even blend from brand blue at the low bill to brand red at the high bill. */
 export function backgroundColorAt(position: number) {
-  const t = Math.min(1, Math.max(0, position));
-  let mix = 0;
-  if (t >= 0.65) mix = 1;
-  else if (t > 0.35) mix = (t - 0.35) / 0.3;
+  const mix = Math.min(1, Math.max(0, position));
   const from = [0x17, 0x3b, 0xfa];
   const to = [0xf2, 0x38, 0x33];
   const channel = from.map((value, index) => Math.round(value + (to[index] - value) * mix));
