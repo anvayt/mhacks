@@ -25,7 +25,7 @@ uv run uvicorn app.main:app --reload --port 8000
   (`cooling_code=0`) is never sent to P1's model (outside its training data); cooling is zeroed instead, in /estimate,
   /answer, /fixes and /forecast alike. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
   `hint`, `not_found`, `not_a_home`, `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is
-  down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS`, comma-separated (default `http://localhost:3000`,
+  down or errors, `lookup_unavailable`; user-safe messages, the detail is logged server-side only). CORS allows `WEB_ORIGINS`, comma-separated (default `http://localhost:3000`,
   for `/web`); the web integration dev servers on 3001–3003 must be listed, e.g.
   `WEB_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003`.
 - `POST /answer` `{"session_id", "question_id", "answer"}` → same shape, re-run with every answer so far (narrower band,
@@ -47,9 +47,12 @@ uv run uvicorn app.main:app --reload --port 8000
   cooling_usd}], week: {heating_usd, cooling_usd, total_usd, normal_total_usd, vs_normal_pct}, alerts: [{type:
   cold_snap|heat_wave|costly_week, date, detail}], source, method}`: next 7 days (Open-Meteo) priced with P1's
   forecast-month $ per degree-day. 404 `not_found`, 503 `model_unavailable` / `forecast_unavailable`.
-- `POST /compare` `{"listings": [{url|address, unit_sqft?}, {…}]}` (`app/compare.py`) → `{a, b, winner, diff_usd_yr,
-  confident}` (`a`/`b` are full /estimate bodies; winner gets `battle-winner`; `confident` = the p10–p90 ranges don't
-  overlap). 422 `missing_input` (not exactly two), `estimate_failed` + `listing: "a"|"b"` + the estimate's error.
+- `POST /compare` `{"listings": [{url|address, unit_sqft?} | {session_id}, {…}]}` (`app/compare.py`) → `{a, b, winner,
+  diff_usd_yr, confident}` (`a`/`b` are full /estimate bodies; a `{session_id}` listing is that session's current body,
+  answers included, not re-estimated; winner gets `battle-winner`; `confident` = the p10–p90 ranges don't overlap).
+  422 `missing_input` (not exactly two). A listing that fails keeps its own status and code:
+  `{"detail": {"code", "listing": "a"|"b", "message", "hint"?}}` (e.g. 422 `needs_address` + `hint`, 404 `not_found`
+  for an unknown session, 503 `model_unavailable`).
 - `GET /city` (`app/city.py`) → GeoJSON FeatureCollection of every city footprint (35,007; `properties: {id`
   (= OBJECTID, same as `/map` `building.id`), `h` (height ft), `r` (1 = Residential), `a` (street label, P3 HOUSE_SCHEMA
   §3, `mailing_assignment` in `app/geo/footprints.py`), and for the 25,704 scored homes `score, grade,

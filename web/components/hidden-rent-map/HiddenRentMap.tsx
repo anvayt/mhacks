@@ -96,7 +96,7 @@ export function HiddenRentMap({
       </div>
 
       <div className={styles.legend} aria-label="City predicted grades">
-        <span>Predicted</span>
+        <span>Predicted · colored by public-record city grade</span>
         {Object.entries(GRADE_COLORS).map(([grade, color]) => <span key={grade} className={styles.legendItem}><i style={{background:color, width:10, height:10}} />{grade}</span>)}
         <span className={styles.legendItem}><i style={{background:"#bdbab0", width:10, height:10}} />Unscored</span>
       </div>

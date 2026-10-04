@@ -77,9 +77,28 @@ def test_listing_error_preserves_details_and_identifies_side(monkeypatch, side, 
 
     monkeypatch.setattr("app.estimate.estimate", estimate)
     r = client.post("/compare", json={"listings": LISTINGS})
-    assert r.status_code == 422
-    assert r.json() == {"detail": {**detail, "listing": side}}
+    assert r.status_code == status  # the listing's own status and code; extra fields (source) are dropped
+    assert r.json() == {"detail": {"code": "needs_address", "listing": side, "message": "What's the address?",
+                                   "hint": "Mary St"}}
     assert "listing" not in detail
+
+
+def test_session_listing_uses_saved_answered_body(monkeypatch):
+    saved = _estimate(900, session_id="answered", answers={"heating_fuel": "gas", "window_panes": "1"})
+    monkeypatch.setattr("app.sessions.get", lambda sid: deepcopy(saved) if sid == "answered" else None)
+    monkeypatch.setattr("app.estimate.estimate", lambda url, address, unit_sqft: _estimate(1500))
+    r = client.post("/compare", json={"listings": [{"session_id": "answered"}, LISTINGS[0]]})
+    assert r.status_code == 200, r.text
+    assert r.json()["a"]["answers"] == saved["answers"] and r.json()["a"]["bill"] == saved["bill"]
+    assert r.json()["winner"] == "a"
+
+
+def test_unknown_session_listing_is_404(monkeypatch):
+    monkeypatch.setattr("app.sessions.get", lambda sid: None)
+    monkeypatch.setattr("app.estimate.estimate", lambda url, address, unit_sqft: _estimate(1500))
+    r = client.post("/compare", json={"listings": [LISTINGS[0], {"session_id": "gone"}]})
+    assert r.status_code == 404
+    assert r.json()["detail"]["code"] == "not_found" and r.json()["detail"]["listing"] == "b"
 
 
 @pytest.mark.parametrize("body", [{}, {"listings": None}, {"listings": []}, {"listings": LISTINGS[:1]},
