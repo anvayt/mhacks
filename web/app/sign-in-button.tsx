@@ -57,10 +57,14 @@ export function PhoneSignIn() {
         const s = await loginStatus(login.login_id);
         if (s.status === "pending") return;
         window.clearInterval(poll);
-        if (s.status === "verified" && s.token && s.user_id) {
-          save("token", s.token);
-          save("user", s.user_id);
-          void finish();
+        if (s.status === "verified") {
+          if (s.token && s.user_id) {
+            save("token", s.token);
+            save("user", s.user_id);
+          }
+          if (load("token")) return void finish();
+          setLogin(null); // the token is handed out once; another tab took it
+          setMessage("That sign-in was already used. Start again for a new code.");
         } else {
           setLogin(null);
           setMessage("That login code expired. Start again for a new one.");
@@ -98,14 +102,16 @@ export function PhoneSignIn() {
   if (login) {
     return (
       <>
+        <p className="eyebrow">Text this to Hidden Rent</p>
+        <p className="board-title" style={{ textTransform: "none" }}>{login.text_body}</p>
         <p className="board-note">
-          Text <strong>{login.text_body}</strong> to Hidden Rent
-          {login.assigned_number_masked ? ` at ${login.assigned_number_masked}` : ""} from {phone}. On your phone, the
-          button opens Messages with it typed in.
+          Send it from {phone}
+          {login.assigned_number_masked ? ` to ${login.assigned_number_masked}` : ""}. On your phone, the button opens
+          Messages with it typed in.
         </p>
-        <div className="action-row">
+        <div className="action-row" style={{ flexWrap: "wrap" }}>
           {skip}
-          <a className="action" href={login.redirect_url}>
+          <a className="action" href={login.redirect_url} style={{ textDecoration: "none" }}>
             Open Messages
             <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
           </a>
@@ -135,7 +141,7 @@ export function PhoneSignIn() {
           required
         />
       </div>
-      <div className="action-row">
+      <div className="action-row" style={{ flexWrap: "wrap" }}>
         {skip}
         <button className="action" type="submit" disabled={busy}>
           Text me a code
