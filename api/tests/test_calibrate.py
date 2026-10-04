@@ -95,6 +95,18 @@ def test_manual_whole_month_percent_and_therms(fakes):
     assert not fakes["xai"]  # manual path never calls vision
 
 
+def test_amount_usd_and_ccf_unit(fakes):  # wave 6: "$ amount" and "ccf" options on the typed path
+    jan = {"session_id": _session(), "start": "2026-01-01", "end": "2026-01-31"}
+    r = client.post("/calibrate", json={**jan, "amount_usd": calibrate.DTE_GAS_CUSTOMER_CHARGE + 0.8854 * 100})
+    assert r.status_code == 200, r.text  # January marginal $0.8854/ccf (model/data/processed/prices_mi.json)
+    e = r.json()["extracted"]
+    assert fakes["model"][-1]["gas_ccf"] == 100.0 and e["estimated_from_amount"] is True
+    assert e["note"].startswith("estimated from your bill amount") and e["gas_unit"] == "ccf"
+    assert _err(client.post("/calibrate", json={**jan, "amount_usd": 10}), 422) == "bad_bill"
+    r = client.post("/calibrate", json={**jan, "therms": 100, "gas_unit": "ccf"})
+    assert fakes["model"][-1]["gas_ccf"] == 100.0 and "estimated_from_amount" not in r.json()["extracted"]
+
+
 def test_above_normal_no_badge_and_summer_noise_null():
     c = _manual(_session(), 150, "2025-07-01", "2025-07-31").json()
     assert c["pct_vs_expected_for_weather"] == 20.0 and c["badges"] == ["double-pane-club"] and c["streak_months"] == 0
