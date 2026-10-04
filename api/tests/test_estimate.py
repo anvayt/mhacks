@@ -64,5 +64,7 @@ def test_real_estimate(body):
     b, bill = e["building"], e["bill"]
     assert b["type"] and b["sqft"] > 0 and b["footprint_geojson"] and 42.2 < b["lat"] < 42.33
     assert list(bill["seasonal"]) == ["winter", "spring", "summer", "fall"]
+    assert list(bill["monthly"]) == ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+    assert abs(sum(m["p50"] for m in bill["monthly"].values()) - bill["annual"]["p50"]) <= 12  # P1 rounds per month
     assert bill["annual"]["p50"] > 0 and bill["seasonal"]["winter"]["p50"] > bill["seasonal"]["summer"]["p50"]
     assert e["heating_cooling"]["method"] in {"metered", "meter_model+resstock", "resstock"}
