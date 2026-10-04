@@ -36,7 +36,7 @@ The opener is text-only and the judge texts first (inbound-first), which avoids 
 |---|---|
 | `AGENT_TERMINAL=1` (or no Photon creds) | iMessage → Spectrum's terminal chat provider |
 | `USE_MOCKS=1` (or no Photon creds) | Photon user API → fake user + plain `sms:` link |
-| `USE_MOCK_API=1` | `/estimate` + `/answer` → `src/mockApi.ts` (sessions, grade span, questions, lock-in). Every reply starts with "[demo data, not a real estimate]". Turn off once P2-04 serves `/answer`. |
+| `USE_MOCK_API=1` | The whole /api → `src/mockApi.ts`: `/estimate`, `/answer`, `GET /session/{id}`, `/calibrate`, `/fixes` in the PLAN.md §10 shapes. Every reply starts with "[demo data, not a real estimate]". Turn off once P2 serves them. |
 
 ## Limits (Photon free plan)
 - 10 allowlisted users total (team phones included). Delete old users in the dashboard to free slots.
@@ -44,3 +44,19 @@ The opener is text-only and the judge texts first (inbound-first), which avoids 
 - Android numbers get SMS/RCS fallback.
 - Links and addresses go to the real `POST /estimate` at `API_BASE_URL` (default `http://localhost:8000`); replies only repeat numbers from API responses (PLAN.md §0 rule 4). API down → a "try again" text, no numbers.
 - **Interview loop** (`src/conversation.ts`, one state per chat): estimate card → if the unit size is estimated, "How big is the unit in sq ft?" (re-runs `/estimate` with `unit_sqft`, works on the real API today) → the API's `questions`, one at a time (reply with a number or the answer) → `POST /answer` → short update ("Grade B–C · $980–$1,740 (was …)") → "Grade B 🔒" when the API sets `locked`. A link without an address makes the next text the address. Until P2-04 serves `/answer`, real answers get an honest "can't refine yet" text.
+
+## Conversation reference (src/conversation.ts)
+| User sends | Agent does |
+|---|---|
+| Listing link or Ann Arbor address | `POST /estimate` → card (grade/span, percentile, range, hidden rent, CO₂ when the API has them) → unit-size question if `sqft_estimated`, else the API's first question |
+| A number / option text | Answer to the pending question → `POST /answer` → short update (grade, range "was …", badges) → next question, or "Grade B 🔒" |
+| `skip` | Skips the pending question (not sent to the API) |
+| First text with `(ref <id>)` | Website handoff: `GET /session/{id}` → "Picking up your report from the website" + next question |
+| Bill photo | `POST /calibrate {session_id, bill_image_base64}` (HEIC converted to JPEG) → "% above/below normal for this weather", streak, badges → `GET /fixes/{id}` → top fixes + Green Rental Housing points → landlord email as its own message |
+| `fixes` / `landlord` | `GET /fixes/{id}` → fixes + landlord email |
+| Anything else | Welcome text |
+
+API down → "try again" text. A 200 that breaks the §10 contract is logged as `[contract] …` and answered without numbers.
+
+## Website → iMessage handoff
+Link to `PUBLIC_URL/?session=<session_id>`. The form carries it into the pre-filled first text as `(ref <session_id>)`; the agent resumes that session with `GET /session/{id}`.

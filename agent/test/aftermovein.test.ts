@@ -99,3 +99,10 @@ test("billImageBase64: JPEG passes through; a broken HEIC falls back to the orig
     console.warn = warn;
   }
 });
+
+test("mid-interview: 'fixes' runs the fixes command, 'skip' moves to the next question without calling /answer", async () => {
+  const chat = new Conversations(mockApi());
+  await chat.reply("c", "Hi (ref web9)");
+  assert.match(await chat.reply("c", "skip"), /Skipped\.\n\nIs the unit on the top, middle or ground floor\?/);
+  assert.match(await chat.reply("c", "fixes"), /Top fixes:/);
+});
