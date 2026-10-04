@@ -14,13 +14,16 @@ URL shapes, checked against public listing URLs on Oct 3, 2026 (web search resul
   Apartments.com  /willowtree-apartments-towers-ann-arbor-mi/jlbtfv5/   (property name)
                   /1218-washtenaw-ct-ann-arbor-mi-unit-1/9r3c5n5/       (unit comes after the state)
   Trulia          /home/520-n-main-st-ann-arbor-mi-48104-24700899
+                  /home/321-s-division-st-6-ann-arbor-mi-48104-2123211348  ('#6': Trulia drops the '#')
                   /building/618-south-main-apartments-618-s-main-st-ann-arbor-mi-48104-1089090199
                   /p/mi/ann-arbor/<street>-<city>-<st>-<zip>--<id>          (older listing pages)
   Realtor.com     /realestateandhomes-detail/555-E-William-St-Apt-17H_Ann-Arbor_MI_48104_M41741-03633
                   /rentals/details/<street>_<City>_<ST>_<ZIP>_M<id>
   Homes.com       /property/1324-forest-ct-ann-arbor-mi/3ge3zs10x9bdn/
+                  /property/6-parkview-place-ann-arbor-mi-unit-4/1ppkhgzjh32zs/  (unit after the state)
                   /property/1850-washtenaw-ave-ann-arbor-mi-48104/id-600020997889/
   HotPads         /420-hill-st-ann-arbor-mi-48104-w1agra/building, /traver-ridge-ann-arbor-mi-48105-smwbqc/pad
+                  /1115-willard-st-ann-arbor-mi-48104-w1aj91/101/pad       (unit 101)
                   /3-bed-10-bath-2850-ann-arbor-mi-48104-w1ajnr/pad       (listing title, not an address)
   Zumper          /apartment-buildings/p23039/715-arbor-st-ann-arbor-mi   (slug can disagree with the
                   listing's real address, e.g. p238, so it is only ever a hint)
@@ -34,7 +37,8 @@ URL shapes, checked against public listing URLs on Oct 3, 2026 (web search resul
                   lat,lon&name=..&place-id=.., /search?query=, /directions?destination=; iMessage location
                   shares are CL.loc.vcf vCards holding maps.apple.com/?ll=lat\\,lon (vCard escapes ','); iOS 26
                   short maps.apple/p/<id> (301 -> /place?address=..&coordinate=.. on GET, 404 on HEAD)
-Street suffix abbreviations follow USPS Publication 28, Appendix C1.
+Street suffix abbreviations follow USPS Publication 28, Appendix C1. Every site's unit marker ('#4',
+APT-4, STE-4, unit-4, a bare Trulia number) comes out as one format, "Unit 4", so all sites match.
 """
 
 import re
@@ -51,7 +55,7 @@ SUFFIXES = {  # USPS Pub 28 abbreviations for common street suffixes
     "ter": "Ter", "terrace": "Ter", "pkwy": "Pkwy", "parkway": "Pkwy", "hwy": "Hwy",
     "highway": "Hwy", "trl": "Trl", "trail": "Trl", "way": "Way", "sq": "Sq", "square": "Sq",
 }
-UNITS = {"apt": "Apt", "apartment": "Apt", "unit": "Unit", "ste": "Ste", "suite": "Ste", "#": "#"}
+UNITS = {"apt", "apartment", "unit", "ste", "suite", "#"}  # all become "Unit <x>"
 DIRECTIONS = {"n", "s", "e", "w", "ne", "nw", "se", "sw"}
 SMALL_WORDS = {"and", "of", "at", "on", "the", "in"}
 # Multi-word city names can't be told apart from a property name in a slug, so we only split off
@@ -74,9 +78,9 @@ HOUSE_NO = re.compile(r"\d+[a-z]?", re.I)  # '1100', '12b'; not '1st'
 def parse_listing_url(url: str) -> dict:
     """Pasted listing link -> {"address", "unit", "zip", "source", "needs_address", "hint"}.
 
-    address is e.g. "123 Main St Apt 4, Ann Arbor, MI 48104" (unit included), or None when the URL
-    holds no address; then needs_address is True and hint is a best-effort place string to confirm
-    (e.g. "The Courtyards, Ann Arbor, MI"), or None. Also accepts a URL inside a sentence.
+    address is e.g. "123 Main St Unit 4, Ann Arbor, MI 48104" (unit included, always "Unit <x>"), or
+    None when the URL holds no address; then needs_address is True and hint is a best-effort place
+    string to confirm (e.g. "The Courtyards, Ann Arbor, MI"), or None. Also accepts a URL inside a sentence.
 
     Map links (Google/Apple) add "lat", "lon" and "coords_only" when they carry coordinates; without
     coordinates these keys are absent. coords_only is True when there are coordinates but no address.
@@ -156,22 +160,24 @@ def _redfin(segs: list[str]) -> dict:
     state, city, t = segs[0].upper(), _title(_tokens(segs[1])), _tokens(segs[2])
     zip_ = t.pop() if t and ZIP.fullmatch(t[-1]) else None
     if len(t) >= 2 and t[0][0].isdigit():
-        unit = None
-        if k == 4 and segs[3].lower().startswith("unit-"):
-            unit = "Unit " + segs[3][5:].upper()
+        unit = _unit(segs[3][5:]) if k == 4 and segs[3].lower().startswith("unit-") else None
         return _found("redfin", _fmt_street(t), unit, city, state, zip_)
     return _needs("redfin", _name_hint(t, city, state))
 
 
 def _apartments(segs: list[str]) -> dict:
-    """/<slug>/<id>/. Unit listings put 'unit-<x>' after the state: 1218-washtenaw-ct-ann-arbor-mi-unit-1."""
-    t = _tokens(segs[0]) if segs else []
-    r = _from_tokens("apartments", t)
+    """/<slug>/<id>/"""
+    return _unit_after_state("apartments", _tokens(segs[0]) if segs else [])
+
+
+def _unit_after_state(source: str, t: list[str]) -> dict:
+    """Apartments.com/Homes.com unit listings put 'unit-<x>' after the state: 1218-washtenaw-ct-ann-arbor-mi-unit-1."""
+    r = _from_tokens(source, t)
     k = next((i for i in range(len(t) - 1, 0, -1) if t[i].lower() == "unit" and t[i - 1].upper() in STATES), None)
     if not r["needs_address"] or k is None:
         return r
     # One token after 'unit' is the unit; more is free text ('unit-3-bedroom-15-bath'), so drop it.
-    return _from_tokens("apartments", t[:k], "Unit " + t[k + 1].upper() if len(t) == k + 2 else None)
+    return _from_tokens(source, t[:k], _unit(t[k + 1]) if len(t) == k + 2 else None)
 
 
 def _trulia(segs: list[str]) -> dict:
@@ -208,14 +214,14 @@ def _realtor(segs: list[str]) -> dict:
 def _homes(segs: list[str]) -> dict:
     """/property/<street>-<city>-<st>[-<zip>]/<id>/"""
     if len(segs) >= 2 and segs[0].lower() == "property":
-        return _from_tokens("homes", _tokens(segs[1]))
+        return _unit_after_state("homes", _tokens(segs[1]))
     return _needs("homes")
 
 
 def _hotpads(segs: list[str]) -> dict:
-    """/<address or name or listing title>-<city>-<st>-<zip>-<id>/pad (or /building)."""
+    """/<address or name or listing title>-<city>-<st>-<zip>-<id>[/<unit>]/pad (or /building)."""
     if len(segs) >= 2 and segs[-1].lower() in ("pad", "building"):
-        return _from_tokens("hotpads", _tokens(segs[0])[:-1])
+        return _from_tokens("hotpads", _tokens(segs[0])[:-1], _unit(segs[1]) if len(segs) == 3 else None)
     return _needs("hotpads")
 
 
@@ -320,19 +326,30 @@ def _from_tokens(source: str, tokens: list[str], unit: str | None = None) -> dic
 def _street_unit_city(t: list[str]) -> tuple[list[str], str | None, list[str]] | None:
     """Split '[street.. (unit marker + value) city..]' tokens; None if no split is found."""
     low = [x.lower() for x in t]
+    n = _city_len(t, KNOWN_CITIES)
     for i in range(2, len(t) - 1):
         if low[i] in UNITS:
-            return t[:i], _unit(t[i], t[i + 1]), t[i + 2:]
-    n = _city_len(t, KNOWN_CITIES)
+            # Before a known city the unit may span tokens ('APT-1104-1B-Ann-Arbor'); else it's one token.
+            end = len(t) - n if n and len(t) - n > i + 1 else i + 2
+            return t[:i], _unit("-".join(t[i + 1:end])), t[end:]
     if n and len(t) - n >= 2:
-        return t[:-n], None, t[-n:]
-    # ponytail: last suffix wins, so "St Clair Ave" works but city "St Clair Shores" needs KNOWN_CITIES
-    for j in range(len(t) - 2, 0, -1):
-        if low[j] in SUFFIXES:
-            if low[j + 1] in DIRECTIONS and j + 2 < len(t):
-                j += 1  # "Main St NE"
-            return t[: j + 1], None, t[j + 1:]
-    return None
+        street, city = t[:-n], t[-n:]
+    else:
+        # ponytail: last suffix wins, so "St Clair Ave" works but city "St Clair Shores" needs KNOWN_CITIES
+        j = next((j for j in range(len(t) - 2, 0, -1) if low[j] in SUFFIXES), None)
+        if j is None:
+            return None
+        if low[j + 1] in DIRECTIONS and j + 2 < len(t):
+            j += 1  # "Main St NE"
+        street, city = t[: j + 1], t[j + 1:]
+        if len(city) > 1 and HOUSE_NO.fullmatch(city[0]):
+            street, city = street + city[:1], city[1:]  # bare unit number, handled below
+    # Trulia drops the '#': '336-s-division-st-1-ann-arbor' is 336 S Division St #1. A number right
+    # after the suffix is a unit. ponytail: 'County Road 12' would read as a unit; highways are kept.
+    if len(street) >= 4 and HOUSE_NO.fullmatch(street[-1]) and street[-2].lower() in SUFFIXES \
+            and street[-2].lower() not in ("hwy", "highway"):
+        return street[:-1], _unit(street[-1]), city
+    return street, None, city
 
 
 def _name_hint(tokens: list[str], city: str | None = None, state: str | None = None) -> str | None:
@@ -357,14 +374,14 @@ def _name_hint(tokens: list[str], city: str | None = None, state: str | None = N
 
 
 def _split_unit(t: list[str]) -> tuple[list[str], str | None]:
-    """['555', 'E', 'William', 'St', 'Apt', '17H'] -> (['555', 'E', 'William', 'St'], 'Apt 17H')."""
+    """['555', 'E', 'William', 'St', 'Apt', '17H'] -> (['555', 'E', 'William', 'St'], 'Unit 17H')."""
     i = next((i for i in range(2, len(t) - 1) if t[i].lower() in UNITS), None)
-    return (t, None) if i is None else (t[:i], _unit(t[i], t[i + 1]))
+    return (t, None) if i is None else (t[:i], _unit("-".join(t[i + 1:])))
 
 
-def _unit(marker: str, value: str) -> str:
-    label = UNITS[marker.lower()]
-    return f"#{value.upper()}" if label == "#" else f"{label} {value.upper()}"
+def _unit(value: str) -> str:
+    """One unit format for every site: '17h' -> 'Unit 17H'."""
+    return f"Unit {value.upper()}"
 
 
 def _city_len(t: list[str], cities: list[list[str]]) -> int:

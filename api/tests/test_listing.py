@@ -7,23 +7,23 @@ import pytest
 from app.listing import find_url, parse_listing_url
 
 FOUND = [
-    # Zillow homedetails: APT / UNIT / '#' units, plain houses
+    # Zillow homedetails: APT / UNIT / '#' units (all become 'Unit <x>'), plain houses
     ("https://www.zillow.com/homedetails/549-Longshore-Dr-APT-A-Ann-Arbor-MI-48105/51177689_zpid/",
-     "549 Longshore Dr Apt A, Ann Arbor, MI 48105", "Apt A", "48105"),
+     "549 Longshore Dr Unit A, Ann Arbor, MI 48105", "Unit A", "48105"),
     ("https://www.zillow.com/homedetails/123-Main-St-APT-4-Ann-Arbor-MI-48104/12345_zpid/",
-     "123 Main St Apt 4, Ann Arbor, MI 48104", "Apt 4", "48104"),
+     "123 Main St Unit 4, Ann Arbor, MI 48104", "Unit 4", "48104"),
     ("https://www.zillow.com/homedetails/223-E-Ann-St-UNIT-7-Ann-Arbor-MI-48104/54793340_zpid/",
      "223 E Ann St Unit 7, Ann Arbor, MI 48104", "Unit 7", "48104"),
     ("https://www.zillow.com/homedetails/123-Main-St-#4-Ann-Arbor-MI-48104/12345_zpid/",
-     "123 Main St #4, Ann Arbor, MI 48104", "#4", "48104"),
+     "123 Main St Unit 4, Ann Arbor, MI 48104", "Unit 4", "48104"),
     ("https://www.zillow.com/homedetails/123-Main-St-%234B-Ann-Arbor-MI-48104/12345_zpid/",
-     "123 Main St #4B, Ann Arbor, MI 48104", "#4B", "48104"),
+     "123 Main St Unit 4B, Ann Arbor, MI 48104", "Unit 4B", "48104"),
     # no scheme, no www, share query string
     ("zillow.com/homedetails/3518-Carolyn-St-Ann-Arbor-MI-48104/60548563_zpid/?utm_source=share&utm_medium=ios",
      "3518 Carolyn St, Ann Arbor, MI 48104", None, "48104"),
     # mobile domain, uppercase scheme/host, photo fragment, no trailing slash before it
     ("HTTPS://M.ZILLOW.COM/homedetails/2125-Nature-Cove-Ct-APT-108-Ann-Arbor-MI-48104/24717147_zpid/#photo-3",
-     "2125 Nature Cove Ct Apt 108, Ann Arbor, MI 48104", "Apt 108", "48104"),
+     "2125 Nature Cove Ct Unit 108, Ann Arbor, MI 48104", "Unit 108", "48104"),
     # city not in KNOWN_CITIES: split after the street suffix
     ("https://www.zillow.com/homedetails/22266-Civic-Center-Dr-Southfield-MI-48033/111_zpid/",
      "22266 Civic Center Dr, Southfield, MI 48033", None, "48033"),
@@ -55,7 +55,7 @@ FOUND = [
      "2110 Washtenaw Ave, Ann Arbor, MI", None, None),
     # URL pasted inside a text message
     ("is this one any good? https://www.zillow.com/homedetails/1261-Island-Dr-APT-204-Ann-Arbor-MI-48105/24698469_zpid/ thx",
-     "1261 Island Dr Apt 204, Ann Arbor, MI 48105", "Apt 204", "48105"),
+     "1261 Island Dr Unit 204, Ann Arbor, MI 48105", "Unit 204", "48105"),
 ]
 
 
@@ -142,7 +142,7 @@ SITES_FOUND = [
      "trulia", "520 N Main St, Ann Arbor, MI 48104", None, "48104"),
     # Realtor.com detail shape, seen on its sister site highrises.com (same /realestateandhomes-detail/ path)
     ("https://www.realtor.com/realestateandhomes-detail/555-E-William-St-Apt-17H_Ann-Arbor_MI_48104_M41741-03633",
-     "realtor", "555 E William St Apt 17H, Ann Arbor, MI 48104", "Apt 17H", "48104"),
+     "realtor", "555 E William St Unit 17H, Ann Arbor, MI 48104", "Unit 17H", "48104"),
     ("https://www.realtor.com/rentals/details/3531-Windemere-Dr_Ann-Arbor_MI_48105_M12345-67890",
      "realtor", "3531 Windemere Dr, Ann Arbor, MI 48105", None, "48105"),
     ("https://www.homes.com/property/1324-forest-ct-ann-arbor-mi/3ge3zs10x9bdn/",
@@ -209,7 +209,7 @@ MAPS = [
     (f"https://www.google.com/maps/place/520+N+Main+St,+Ann+Arbor,+MI+48104/@42.2866,-83.7495,17z/{PIN}?entry=ttu",
      "google_maps", "520 N Main St, Ann Arbor, MI 48104", None, "48104", (42.2866021, -83.7469224)),
     ("https://www.google.com/maps/place/555+E+William+St+%2317H,+Ann+Arbor,+MI+48104/",
-     "google_maps", "555 E William St #17H, Ann Arbor, MI 48104", "#17H", "48104", None),
+     "google_maps", "555 E William St Unit 17H, Ann Arbor, MI 48104", "Unit 17H", "48104", None),
     ("https://maps.google.com/?q=1100+Rabbit+Run+Cir,+Ann+Arbor,+MI+48103",
      "google_maps", "1100 Rabbit Run Cir, Ann Arbor, MI 48103", None, "48103", None),
     ("https://www.google.com/maps/search/?api=1&query=1100%20Rabbit%20Run%20Cir%2C%20Ann%20Arbor%2C%20MI",
@@ -300,6 +300,48 @@ def test_not_maps():
     assert "lat" not in parse_listing_url("https://maps.apple.com/?ll=142.28,-83.74")
 
 
+# One unit format for every site (team decision, Oct 3): '#4', APT-4, UNIT-4, STE-4, unit-4, Apt-17H and
+# Trulia's bare number all become "Unit <x>"; the identifier itself is kept. Trulia, Homes.com and HotPads
+# URLs below are real (web search, Oct 3, 2026).
+UNITS = [
+    ("https://www.zillow.com/homedetails/301-E-Liberty-St-STE-4-Ann-Arbor-MI-48104/1_zpid/",
+     "301 E Liberty St Unit 4, Ann Arbor, MI 48104", "Unit 4"),
+    ("https://www.zillow.com/homedetails/555-E-William-St-APT-1104-1B-Ann-Arbor-MI-48104/1_zpid/",
+     "555 E William St Unit 1104-1B, Ann Arbor, MI 48104", "Unit 1104-1B"),
+    ("https://www.redfin.com/MI/Ann-Arbor/555-E-William-St-48104/unit-1104-1B/home/1",
+     "555 E William St Unit 1104-1B, Ann Arbor, MI 48104", "Unit 1104-1B"),
+    ("https://www.realtor.com/realestateandhomes-detail/555-E-William-St-Unit-B1_Ann-Arbor_MI_48104_M1-2",
+     "555 E William St Unit B1, Ann Arbor, MI 48104", "Unit B1"),
+    ("https://www.trulia.com/p/mi/ann-arbor/336-s-division-st-1-ann-arbor-mi-48104--2543557687",
+     "336 S Division St Unit 1, Ann Arbor, MI 48104", "Unit 1"),
+    ("https://www.trulia.com/home/321-s-division-st-6-ann-arbor-mi-48104-2123211348",
+     "321 S Division St Unit 6, Ann Arbor, MI 48104", "Unit 6"),
+    ("https://www.trulia.com/home/555-e-william-st-apt-17h-ann-arbor-mi-48104-1",
+     "555 E William St Unit 17H, Ann Arbor, MI 48104", "Unit 17H"),
+    ("https://www.trulia.com/home/100-main-st-2-southfield-mi-48075-1",  # bare unit, unknown city
+     "100 Main St Unit 2, Southfield, MI 48075", "Unit 2"),
+    ("https://www.homes.com/property/6-parkview-place-ann-arbor-mi-unit-4/1ppkhgzjh32zs/",
+     "6 Parkview Pl Unit 4, Ann Arbor, MI", "Unit 4"),
+    ("https://hotpads.com/1115-willard-st-ann-arbor-mi-48104-w1aj91/101/pad",
+     "1115 Willard St Unit 101, Ann Arbor, MI 48104", "Unit 101"),
+    ("https://hotpads.com/220-w-ann-st-ann-arbor-mi-48104-1mn4cz3/1/pad",
+     "220 W Ann St Unit 1, Ann Arbor, MI 48104", "Unit 1"),
+    ("https://maps.apple.com/?address=301%20E%20Liberty%20St%20Ste%20200,%20Ann%20Arbor,%20MI%2048104",
+     "301 E Liberty St Unit 200, Ann Arbor, MI 48104", "Unit 200"),
+]
+
+
+@pytest.mark.parametrize("url,address,unit", UNITS)
+def test_one_unit_format(url, address, unit):
+    r = parse_listing_url(url)
+    assert (r["address"], r["unit"], r["needs_address"]) == (address, unit, False)
+
+
+def test_highway_number_is_not_a_unit():
+    assert parse_listing_url("https://www.zillow.com/homedetails/4500-US-Highway-23-Ann-Arbor-MI-48105/1_zpid/")[
+        "unit"] is None
+
+
 def test_new_formats_never_touch_network(monkeypatch):
     def boom(*a, **k):
         raise AssertionError("parse_listing_url must not make network calls")
@@ -307,5 +349,5 @@ def test_new_formats_never_touch_network(monkeypatch):
     monkeypatch.setattr(socket, "socket", boom)
     monkeypatch.setattr(socket, "create_connection", boom)
     monkeypatch.setattr(socket, "getaddrinfo", boom)
-    for url, *_ in SITES_FOUND + SITES_NEEDS + MAPS + COORDS:
+    for url, *_ in SITES_FOUND + SITES_NEEDS + MAPS + COORDS + UNITS:
         parse_listing_url(url)
