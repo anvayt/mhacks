@@ -133,7 +133,7 @@ def test_scope_coverage_and_errors(records):
 
 def test_position_projection_read_only_and_no_pii(records):
     uid,pid,sid=records['add'](1)
-    records['projections'][pid]={'property_id':pid,'projected':{'bill_annual':{'p50':1000},'score':90},'label':'projected_if_completed'}
+    records['projections'][pid]={'property_id':pid,'current':{'bill_annual':{'p50':3000}},'projected':{'bill_annual':{'p50':1000},'score':90},'label':'projected_if_completed'}
     before=copy.deepcopy(records['estimates'][sid])
     r=TestClient(app).get('/leaderboard/position/'+pid,headers={'Authorization':'Bearer '+uid});b=r.json();assert r.status_code==200
     assert b['current']=={'score':50,'grade':'C','percentile_city':.5,'rank':3,'of':5}
@@ -176,3 +176,35 @@ def test_streak_and_commitment_flags_without_impact_do_not_publish(records):
     for kind in ['streak','follow_through']:
         b=boards.board_result(kind)
         assert b['entries']==[] and b['empty_reason']
+
+
+@pytest.mark.parametrize('projection_date,reference', [
+    ('2026-02-28T20:00:00+00:00', {'p50': 2000}),  # same dollars, predates the real snapshot
+    ('2026-03-02T20:00:00+00:00', {'p50': 3000}),  # new projection still uses the old session
+    ('2026-03-02T20:00:00+00:00', {}),  # cannot establish the current bill
+])
+def test_position_hides_projection_stale_after_bill_regrade(records,projection_date,reference):
+    uid,pid,sid=records['add'](1)
+    records['snapshots'][pid].append({'id':'bill','property_id':pid,'source':'bill_regrade',
+        'bill_annual':{'p50':2000},'created_at':'2026-03-01T20:00:00+00:00'})
+    records['projections'][pid]={'property_id':pid,'current':{'bill_annual':reference},
+        'projected':{'bill_annual':{'p50':1000}},'created_at':projection_date}
+    before=copy.deepcopy(records)
+    b=TestClient(app).get('/leaderboard/position/'+pid,headers={'Authorization':'Bearer '+uid}).json()
+    assert b['current']['score']==70 and b['current_source']=='bill_regrade'
+    assert b['projected'] is None
+    assert b['projection_reason']['code']=='projection_current_changed'
+    assert 'Refresh' in b['projection_reason']['message']
+    for key in ['estimates','snapshots','projections']:assert records[key]==before[key]
+
+
+def test_position_accepts_refreshed_projection_matching_latest_snapshot(records):
+    uid,pid,_=records['add'](1)
+    annual={'p10':1500,'p50':2000,'p90':2500}
+    records['snapshots'][pid].append({'id':'bill','property_id':pid,'source':'bill_regrade',
+        'bill_annual':annual,'created_at':'2026-03-01T20:00:00+00:00'})
+    records['projections'][pid]={'property_id':pid,'current':{'bill_annual':annual},
+        'projected':{'bill_annual':{'p50':1000}},'created_at':'2026-03-01T15:00:00-05:00'}
+    b=TestClient(app).get('/leaderboard/position/'+pid,headers={'Authorization':'Bearer '+uid}).json()
+    assert b['projected']=={'rank':1,'percentile':.9,'score':90,'label':'projected_if_completed'}
+    assert b['projection_reason'] is None

@@ -16,7 +16,7 @@ import sqlite3
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from contextlib import closing
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -214,6 +214,24 @@ def _placement(cost: float, peers: list[float]) -> dict:
             "rank": min(n, lo + 1), "of": n}
 
 
+def _projection_matches_current(projection: dict, current_bill: dict, latest: dict | None) -> bool:
+    """A ghost must use this current bill and be at least as recent as its snapshot."""
+    reference = (projection.get("current") or {}).get("bill_annual") or {}
+    if any(_number(reference.get(q)) != _number(current_bill.get(q)) for q in ("p10", "p50", "p90")):
+        return False
+    if latest:
+        try:
+            created, updated = (datetime.fromisoformat(value.replace("Z", "+00:00")) for value in
+                                (projection["created_at"], latest["created_at"]))
+            created = created.replace(tzinfo=created.tzinfo or timezone.utc)
+            updated = updated.replace(tzinfo=updated.tzinfo or timezone.utc)
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return False  # Without both timestamps, recency cannot be established.
+        if created < updated:
+            return False
+    return True
+
+
 @router.get("/leaderboard/position/{property_id}")
 def position(property_id: str, request: Request) -> dict:
     prop = accounts.get_property(property_id)
@@ -229,8 +247,9 @@ def position(property_id: str, request: Request) -> dict:
                  and s.get("source") in {"initial_estimate", "questionnaire", "bill_regrade", "manual_refresh"}
                  and _number((s.get("bill_annual") or {}).get("p50")) is not None]
     latest = max(snapshots, key=lambda s: (s.get("created_at", ""), s["id"]), default=None)
+    current_bill = latest["bill_annual"] if latest else session.get("bill", {}).get("annual", {})
     if latest:
-        annual = _number(latest["bill_annual"]["p50"])
+        annual = _number(current_bill["p50"])
     if sqft is None or sqft <= 0 or annual is None or annual < 0:
         raise _fail(503, "position_unavailable", "We cannot place this home's estimate yet. Refresh its estimate.")
     peers = sorted(v for x in city.city_costs(building.get("type")) if (v := _number(x)) is not None and v >= 0)
@@ -238,18 +257,23 @@ def position(property_id: str, request: Request) -> dict:
         raise _fail(503, "position_unavailable", "There are no scored city homes of this type to compare yet.")
     current = _placement(annual / sqft, peers)
     projection = commitments.latest_projection(property_id)
-    projected = None
+    projected, projection_reason = None, None
     if projection and projection.get("property_id") == property_id and not projection.get("pending_model"):
-        p50 = _number((projection.get("projected") or {}).get("bill_annual", {}).get("p50"))
-        if p50 is not None and p50 >= 0:
-            marker = _placement(p50 / sqft, peers)
-            projected = {"rank": marker["rank"], "percentile": marker["percentile_city"],
-                         "score": marker["score"], "label": "projected_if_completed"}
+        if not _projection_matches_current(projection, current_bill, latest):
+            projection_reason = {"code": "projection_current_changed",
+                                 "message": "This home's current estimate changed. Refresh its projection."}
+        else:
+            p50 = _number((projection.get("projected") or {}).get("bill_annual", {}).get("p50"))
+            if p50 is not None and p50 >= 0:
+                marker = _placement(p50 / sqft, peers)
+                projected = {"rank": marker["rank"], "percentile": marker["percentile_city"],
+                             "score": marker["score"], "label": "projected_if_completed"}
     center = min(len(peers) - 1, bisect_left(peers, annual / sqft))
     nearby = range(max(0, center - 2), min(len(peers), center + 3))
     neighbors = [{"rank": _placement(peers[i], peers)["rank"], "score": _placement(peers[i], peers)["score"],
                   "cost_per_sqft": round(peers[i], 6)} for i in nearby]
     return {"current": current, "projected": projected, "neighbors": neighbors,
+            "projection_reason": projection_reason,
             "percentile_basis": "same_type_city_costs", "label": "current",
             "current_source": latest["source"] if latest else "session",
             "model_version": (latest or {}).get("model_version") or session.get("model_version") or session.get("heating_cooling", {}).get("model_version") or "not_reported"}
