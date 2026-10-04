@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Request
@@ -28,6 +29,12 @@ log = logging.getLogger(__name__)
 # EIA FAQ "What are Ccf, Mcf, Btu, and therms?" (eia.gov/tools/faqs/faq.php?id=45): 1 Ccf = 103,700 Btu = 1.037 therms
 # (2025 US average heat content of gas delivered to consumers, 1,037 Btu per cubic foot).
 THERMS_PER_CCF = 1.037
+# DTE Gas Residential Rate A monthly customer charge: $15.40. DTE "Rates effective for gas service" rate card, October
+# 2026 (MPSC Case No. U-21973, effective Oct 1, 2026), checked Oct 4, 2026:
+# https://www.dteenergy.com/content/dam/dteenergy/deg/website/common/about-us/company-information/dte-gas-company/notices/rateCard.pdf
+DTE_GAS_CUSTOMER_CHARGE = 15.40
+# P1's EIA Michigan residential marginal gas $/ccf by calendar month (fixed charges removed), the prices its model uses
+PRICES = Path(__file__).resolve().parents[2] / "model" / "data" / "processed" / "prices_mi.json"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 XAI_MODEL = os.environ.get("XAI_VISION_MODEL", "grok-4.7")  # image-input model in docs.x.ai image-understanding, Oct 2026
 DB = Path(os.environ.get("CALIBRATE_DB", Path(__file__).resolve().parents[2] / "data" / "calibrate.sqlite"))
@@ -76,7 +83,9 @@ class CalibrateRequest(BaseModel):
     session_id: str
     property_id: str | None = None
     bill_image_base64: str | None = None
-    therms: float | None = None
+    therms: float | None = None  # the typed gas number, in gas_unit
+    gas_unit: Literal["ccf", "therms"] = "therms"
+    amount_usd: float | None = None  # the gas bill's $ total, when the usage isn't known (estimated, see gas_from_amount)
     kwh: float | None = None
     start: date | None = None
     end: date | None = None
@@ -125,6 +134,26 @@ def _ask_xai(body: dict, key: str) -> dict:
         raise _fail(422, "unreadable_bill", UNREADABLE)
 
 
+def _bill_month(start: date, end: date) -> tuple[int, int]:
+    """(year, month) holding most of the billing period's days."""
+    days = max((end - start).days + 1, 1)
+    return Counter((d.year, d.month) for d in (start + timedelta(i) for i in range(days))).most_common(1)[0][0]
+
+
+def gas_from_amount(amount_usd: float, start: date, end: date) -> tuple[float, str]:
+    """(gas ccf, how): (amount − DTE's monthly customer charge) ÷ P1's marginal $/ccf for the bill's month. Taxes and
+    other per-bill items aren't separated, so it's an estimate. Raises ValueError (renter text)."""
+    if amount_usd <= DTE_GAS_CUSTOMER_CHARGE:
+        raise ValueError(f"That amount is no more than DTE's ${DTE_GAS_CUSTOMER_CHARGE:.2f} monthly customer charge, so "
+                         "we can't work out the gas used. Send the gas used (therms or CCF) instead.")
+    _, month = _bill_month(start, end)
+    price = json.loads(PRICES.read_text())["gas_usd_per_ccf"]["marginal"][str(month)]
+    ccf = round((amount_usd - DTE_GAS_CUSTOMER_CHARGE) / price, 1)
+    return ccf, (f"estimated from your bill amount: (${amount_usd:,.2f} − DTE's ${DTE_GAS_CUSTOMER_CHARGE:.2f} monthly "
+                 f"customer charge) ÷ ${price:.4f} per ccf (EIA Michigan marginal gas price for "
+                 f"{calendar.month_name[month]}, as in P1's model) = {ccf} ccf. Taxes aren't separated.")
+
+
 def month_usage(gas_ccf: float, start: date, end: date, unit_sqft: float) -> tuple[int, int, float]:
     """(year, month, gas ccf) for the calendar month holding most of the billing period. Raises ValueError (renter text)."""
     days = (end - start).days + 1  # billing days count both ends, so Jan 1-31 is a whole 31-day month
@@ -135,7 +164,7 @@ def month_usage(gas_ccf: float, start: date, end: date, unit_sqft: float) -> tup
     if gas_ccf / days > GAS_MAX_CCF_PER_1000FT2_DAY * unit_sqft / 1000:
         raise ValueError(f"{gas_ccf:,.0f} CCF in {days} days is more gas than a {unit_sqft:,.0f} sq ft home uses even in "
                          "the coldest month. Check the gas usage number (not the meter reading or the dollar amount).")
-    (year, month), _ = Counter((d.year, d.month) for d in (start + timedelta(i) for i in range(days))).most_common(1)[0]
+    year, month = _bill_month(start, end)
     if (year, month) >= (date.today().year, date.today().month):  # P1's weather for that month isn't complete yet
         raise ValueError(f"That bill is mostly {calendar.month_name[month]} {year}, which isn't over yet. "
                          "Send it again once the month ends.")
@@ -186,8 +215,16 @@ def calibrate(req: CalibrateRequest, request: Request) -> dict:
     if photo:
         bill = read_bill(req.bill_image_base64)
     elif req.therms is not None and req.start and req.end:
-        bill = {"gas_usage": req.therms, "gas_unit": "therms", "electricity_kwh": req.kwh,
+        bill = {"gas_usage": req.therms, "gas_unit": req.gas_unit, "electricity_kwh": req.kwh,
                 "start": req.start.isoformat(), "end": req.end.isoformat(), "utility": None}
+    elif req.amount_usd is not None and req.start and req.end:
+        try:
+            ccf_est, how = gas_from_amount(req.amount_usd, req.start, req.end)
+        except ValueError as e:
+            raise _fail(422, "bad_bill", str(e))
+        bill = {"gas_usage": ccf_est, "gas_unit": "ccf", "electricity_kwh": req.kwh, "start": req.start.isoformat(),
+                "end": req.end.isoformat(), "utility": None, "amount_usd": req.amount_usd,
+                "estimated_from_amount": True, "note": how}
     else:
         raise _fail(422, "missing_input", "Send a photo of the bill, or the gas therms and the billing start and end dates.")
 
