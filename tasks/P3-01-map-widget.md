@@ -48,19 +48,22 @@ answer narrows the comparison against ResStock's simulated Michigan homes. Built
 - [x] No secrets; every displayed number comes from the fixture's cited sources (sources panel in the widget)
 
 ## Handoff (DEV_STRATEGY #1)
-- **What changed (all in /web):** `components/hidden-rent-map/{HiddenRentMap,MapCanvas,LookalikeStrip}.tsx`,
-  `types.ts`, `data.ts`, `format.ts`, `hidden-rent-map.module.css`, `index.ts`; `app/dev/map/page.tsx`;
-  `mocks/map/912-mary-st.json`; `scripts/build_map_fixture.py`. Deps: `maplibre-gl@5`, `@types/geojson` (dev).
-- **Use it:** `import { HiddenRentMap, getMapWidgetData } from "@/components/hidden-rent-map"`, then
-  `<HiddenRentMap data={await getMapWidgetData(sessionId)} />`. For the interview flow, drive it with
-  `step` / `onStepChange` (0 = public record only; step *i* = after *i* answers) and `chapter` / `onChapterChange`.
-  It fills its parent's height (min 640 px; stacks under 860 px wide).
-- **Rebuild the fixture:** see the docstring in `web/scripts/build_map_fixture.py` (runs with P1's venv, ~6 s, offline).
-- **Mocks still to replace:** `data.ts` returns the 912 Mary St fixture while `NEXT_PUBLIC_USE_MOCKS` ≠ `0`. With it
-  set to `0`, it fetches `GET {NEXT_PUBLIC_API_BASE_URL}/map/{session_id}`. That endpoint is a **proposal**
-  (notes/contract-changes.md) and doesn't exist yet.
-- **Known gaps:** the demo plays canned answers (each step's `answer_label`); in the real flow, `steps` should grow
-  from `/answer` responses. The look-alike filter is the PLAN §6.2 question-picker idea, done in the fixture script;
-  P1 should own it (notes/requests.md). The basemap is fetched live from OpenFreeMap, which the offline demo may need cached.
-  Multiset dot-matching across steps needs the step-0 cloud unsampled (≤ 400 homes); otherwise it shows the current step only.
-- **Who acts next:** P2 (serve `MapWidgetData`), P1 (expose the look-alike cloud), P3 (integrate into the report card).
+- **What changed (all in /web, branch `p3/map-widget`):** `components/hidden-rent-map/`: `HiddenRentMap` (map-only
+  widget), `MapStory` (facts, look-alike dots, questions; goes **below** the map), `MapCanvas`, `LookalikeStrip`,
+  `types.ts`, `data.ts`, `format.ts`, CSS module, `index.ts`. `app/dev/map/{page,preview}.tsx` (preview with a
+  hover-test address list). `mocks/map/912-mary-st.json`, `public/data/a2-buildings.geojson` (all 35,007 city
+  footprints with LiDAR height + matched mailing address, 10 MB), `scripts/build_map_fixture.py`, `HOUSE_SCHEMA.md`.
+  Deps: `maplibre-gl@5`, `@types/geojson` (dev).
+- **The map:** opens on all of Ann Arbor; views City / Similar / Block / Building. Every footprint is drawn in 3D at
+  its height; the selected home is always highlighted (cost colour + pin); `similar.items` are shown as dots with
+  links back to the selected home. Hover is two-way: `highlightId` in, `onHoverBuilding(id)` out (address tooltip).
+- **Use it:** `<HiddenRentMap data step focus onFocusChange highlightId onHoverBuilding />` and, under it,
+  `<MapStory data step onStepChange onFocus />` (see `app/dev/map/preview.tsx`). Data: `getMapWidgetData(sessionId)`.
+- **Rebuild data:** `web/HOUSE_SCHEMA.md` §2 (one command from a P1 heating-cooling checkout; missing caches are
+  downloaded). Sources, address↔footprint pairing (degrees) and suggested types are in the same file.
+- **Mocks still to replace:** fixture while `NEXT_PUBLIC_USE_MOCKS` ≠ `0`; otherwise `GET /map/{session_id}`
+  (proposal, notes/contract-changes.md). The citywide layer should move to P2's `/city`.
+- **Known gaps:** `similar.items` is a labelled random test sample, not a ranking. Address matching counts every
+  `TYPE` (P2-01 counts only "General Mailing"); pick one rule. `STORIES` exists for only 38% of residential
+  footprints. The basemap is fetched live from OpenFreeMap. No leakage-model data is used.
+- **Who acts next:** P2 (`/map/{session_id}`, `/city`), P1 (look-alike cloud), P3 (integrate into the report card).
