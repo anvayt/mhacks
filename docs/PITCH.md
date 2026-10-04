@@ -2,7 +2,7 @@
 
 **P4 rehearsal draft, October 4, 2026.** Assign actual names to P1–P4 before rehearsing. Spoken copy is in blockquotes; operator directions and source notes are not spoken. The slots below total **180 seconds**. P4 owns the timer and cuts to the next slot at its boundary; finish at 3:00. Fact-checked against repository sources on October 4 (branch `docs/devpost-factcheck`); items with no repository source are marked **TODO**.
 
-This script preserves historical captures from `demo/DEMO_PICKS.md` and its JSON, originally recorded at `fd8c31c`; captions must retain that provenance. The final web/API integration is now `dev` at `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64`. API 616 passed/2 skipped, agent 70 passed/typecheck, production web build and Phase 2 16/16 passed; final browser smoke: 433 passed, 0 warnings, 0 failures; 0 HTTP 429s; 37 guarded browser requests, peak 25/minute. The real-model terminal run confirms Morton's C/45 current result, modeled window improvement and provisional hypothetical February bill signal. [Final checks and exact transcript](WAVE7_VERIFICATION.md).
+This script preserves historical captures from `demo/DEMO_PICKS.md` and its JSON, originally recorded at `fd8c31c`; captions must retain that provenance. The final web/API integration is now `dev` at `97aec3677e77129baca1b439fd9561e18cb24aa9` (wave 7 `de8ccdb` plus a web-only null-size fix). At `de8ccdb`: API 616 passed/2 skipped, agent 70 passed/typecheck, production web build and Phase 2 16/16 passed. Latest browser smoke at `97aec36`: 444 passed, 0 warnings, 0 failures; 0 HTTP 429s; 38 guarded browser requests, peak 25/minute. The real-model terminal run confirms Morton's C/45 current result, modeled window improvement and provisional hypothetical February bill signal. [Final checks and exact transcript](WAVE7_VERIFICATION.md).
 
 The earlier recorder rehearsal passed six beats at desktop and mobile, but this is not evidence of a final playable recording. Before the table, save and verify that recording, confirm the public URL and phone flow, and have P1 approve the running artifact/result match. Keep the 120-therm bill labeled hypothetical. Read live returned numbers if they differ from a historical capture.
 
@@ -74,7 +74,7 @@ Do not mix the old **150-therm January** capture (−67.6%) with the **120-therm
 
 ## Thirty-second fallback — no Wi-Fi
 
-**Prerequisite:** download the final real-site backup video and screenshots to the demo laptop, then test playback with Wi-Fi disabled. **TODO video owner:** the web is merged (`dev` at `de8ccdb`); record the final merged UI and fill in the local video filename. Dry-run artifacts remain rehearsal evidence. The raw JSON in `demo/picks/` is evidence for replay; it is not a working offline API. If the video is not ready, show the saved comparison capture as explicitly recorded evidence and omit claims about a working offline app.
+**Prerequisite:** download the final real-site backup video and screenshots to the demo laptop, then test playback with Wi-Fi disabled. **TODO video owner:** the web is merged (`dev` at `97aec36`); record the final merged UI and fill in the local video filename. Dry-run artifacts remain rehearsal evidence. The raw JSON in `demo/picks/` is evidence for replay; it is not a working offline API. If the video is not ready, show the saved comparison capture as explicitly recorded evidence and omit claims about a working offline app.
 
 | Time | Speaker / display |
 |---|---|
