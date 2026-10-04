@@ -45,6 +45,14 @@ FOUND = [
     # Apartments.com single-home listing whose slug is an address
     ("https://www.apartments.com/1819-willowtree-ln-ann-arbor-mi/abc1234/",
      "1819 Willowtree Ln, Ann Arbor, MI", None, None),
+    # Apartments.com unit listings put the unit after the state (real URLs, web search Oct 3, 2026);
+    # a single token after 'unit' is kept, free text is dropped
+    ("https://www.apartments.com/1218-washtenaw-ct-ann-arbor-mi-unit-1/9r3c5n5/",
+     "1218 Washtenaw Ct Unit 1, Ann Arbor, MI", "Unit 1", None),
+    ("https://www.apartments.com/120-w-washington-st-ann-arbor-mi-unit-ann-arbor/x71gwkm/",
+     "120 W Washington St, Ann Arbor, MI", None, None),
+    ("https://www.apartments.com/2110-washtenaw-ave-ann-arbor-mi-unit-3-bedroom-15-bath/q5dzgyw/",
+     "2110 Washtenaw Ave, Ann Arbor, MI", None, None),
     # URL pasted inside a text message
     ("is this one any good? https://www.zillow.com/homedetails/1261-Island-Dr-APT-204-Ann-Arbor-MI-48105/24698469_zpid/ thx",
      "1261 Island Dr Apt 204, Ann Arbor, MI 48105", "Apt 204", "48105"),
