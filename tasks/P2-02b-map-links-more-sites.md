@@ -27,6 +27,9 @@ Accept the links people actually share: Google Maps and Apple Maps (full and sho
 - `resolve_link(url)` in `api/app/links.py`: **only** for allowlisted map short-link hosts (e.g. `maps.app.goo.gl`, `goo.gl/maps`, `maps.apple/p`), follows redirects without downloading page bodies, 3 s timeout, on-disk cache; then calls `parse_listing_url` on the final URL. Any other host → never touches the network.
 - Zumper, Rent.com, Craigslist, Facebook Marketplace (no address in URL) → `needs_address: true` with a hint when possible.
 
+## Team decisions (Oct 3)
+- Normalize Zillow `#4` / `APT-4` units to `Unit 4` so all sites match (follow-up after the current build).
+
 ## Done when
 - [ ] Tests for every format using real-shaped URLs (verified against public examples); short-link resolver tested with the network mocked, plus one optional live test (skipped by default)
 - [ ] `parse_listing_url` still makes zero network calls (socket-blocking test stays green)
