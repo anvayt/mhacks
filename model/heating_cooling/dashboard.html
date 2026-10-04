@@ -160,14 +160,14 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
   <section class="card" id="results">
     <h2>Estimate <span class="badge" id="method">–</span></h2>
     <div class="tiles">
-      <div class="tile"><div class="k"><span class="key" style="background:var(--heat)"></span>Est. heating cost / yr</div><div class="v" id="t-heat">–</div><div class="s" id="t-heat-s"></div></div>
-      <div class="tile"><div class="k"><span class="key" style="background:var(--cool)"></span>Est. cooling cost / yr</div><div class="v" id="t-cool">–</div><div class="s" id="t-cool-s"></div></div>
-      <div class="tile"><div class="k">Est. total / yr</div><div class="v" id="t-tot">–</div><div class="s" id="t-acc"></div></div>
+      <div class="tile"><div class="k"><span class="key" style="background:var(--heat)"></span>Heating / yr, ≈ $ at EIA price</div><div class="v" id="t-heat">–</div><div class="s" id="t-heat-s"></div></div>
+      <div class="tile"><div class="k"><span class="key" style="background:var(--cool)"></span>Cooling / yr, ≈ $ at EIA price</div><div class="v" id="t-cool">–</div><div class="s" id="t-cool-s"></div></div>
+      <div class="tile"><div class="k">Total / yr, ≈ $ at EIA price</div><div class="v" id="t-tot">–</div><div class="s" id="t-acc"></div></div>
     </div>
-    <p class="note" style="margin:8px 0 0">Cost is <b>estimated energy × the Michigan statewide residential price</b> (US EIA; gas at the marginal price with fixed monthly charges removed, electricity at the average price). It is not a bill: we have no cost data for any building. Accuracy figures refer to <b>energy</b>, checked against real meters.</p>
+    <p class="note" style="margin:8px 0 0">Dollars are a <b>conversion</b>: estimated energy × the US EIA Michigan statewide residential price for each month (gas: marginal price, fixed monthly charges removed; electricity: average price). They are not a prediction of anyone's bill. The model estimates <b>energy</b>, and that is what is checked against real meters.</p>
     <div style="margin-top:16px">
       <span class="toggle"><button class="ghost" id="tbl-btn" type="button">Table view</button></span>
-      <div class="legend"><span><span class="key" style="background:var(--heat)"></span>Heating</span><span><span class="key" style="background:var(--cool)"></span>Cooling</span></div>
+      <div class="legend"><span><span class="key" style="background:var(--heat)"></span>Heating</span><span><span class="key" style="background:var(--cool)"></span>Cooling</span><span class="muted">($ = energy × EIA Michigan price)</span></div>
       <div id="chart"></div>
       <div id="season-table" hidden></div>
     </div>
@@ -189,7 +189,7 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
       <ul>
         <li><b>Heating energy</b>: the natural gas (ccf; 1 ccf ≈ 1.04 therms) burned for space heating. The building's gas use minus its year-round baseload (hot water, cooking). For electrically heated buildings it is the electricity (kWh) used for heating instead.</li>
         <li><b>Cooling energy</b>: the electricity (kWh) used for air conditioning. The building's electricity minus its baseload (lights, plugs, appliances).</li>
-        <li><b>Cost</b> = estimated energy × that month's Michigan statewide residential price (US EIA), scaled from the whole building to your unit by floor area. <b>Cost is never measured</b>: no building's bills are available, so only energy is validated against real meters.</li>
+        <li><b>Dollars</b> = a conversion of the estimated energy at that month's Michigan statewide residential price (US EIA), after scaling from the whole building to your unit by floor area. No building's bills are available, so dollars are never presented as a measured or validated quantity; energy is what's validated against real meters.</li>
       </ul>
       <p>Heating and cooling can't be read off a meter directly; a meter only records the total. For buildings with real meters, the split comes from a change-point regression: how much the total rises per degree-day of cold (heating) or heat (cooling). So the honest test of the whole pipeline is to <b>predict each building's total monthly gas and electricity for data the model never saw, and compare with what the meter actually recorded</b>. That's what the scatter and the building explorer below show.</p>
       <p><b>Metered</b> = one of the Ann Arbor properties that report monthly utility readings (gas and electricity, 2021–2023) to the city's energy benchmarking program. Everything else is <b>unmetered</b>, and its estimate comes from models trained on the metered ones (and on ResStock).</p>
@@ -247,7 +247,7 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
   </section>
 
   <section class="card span2">
-    <h2>591 Ann Arbor apartment buildings · estimated typical-year heating + cooling cost for an 854 ft² unit (energy × EIA price)</h2>
+    <h2>591 Ann Arbor apartment buildings · typical-year heating + cooling energy for an 854 ft² unit, shown as $ at EIA Michigan prices</h2>
     <div id="map"></div>
     <div class="mapleg"><span id="leg-lo">–</span><span class="ramp"></span><span id="leg-hi">–</span>
       <span class="muted">· ring = metered (real meters) · click a building to estimate it</span></div>
@@ -375,7 +375,7 @@ function render(e) {
   $("t-heat-s").textContent = fuel === "gas" ? `${e.annual.gas_ccf} ccf gas` : `electric heat`;
   $("t-cool-s").textContent = `${Math.round(e.seasons.reduce((s, x) => s + x.cooling.electric_kwh, 0))} kWh`;
   const acc = e.accuracy && e.accuracy.seasonal_gas_median_abs_error;
-  $("t-acc").textContent = acc ? `energy error ±${pct(acc.all)} vs real meters (cost not validated)` : "";
+  $("t-acc").textContent = acc ? `energy error ±${pct(acc.all)} vs real meters` : "";
   renderChart(e); renderTable(e); renderMeta(e); renderWx(e); renderDetail(e);
   if (e.method === "metered" && e.building.benchmarking_id && $("mb-sel").options.length) { $("mb-sel").value = e.building.benchmarking_id; loadMetered(); }
   const ul = $("srcs"); ul.replaceChildren(...e.sources.map((s) => el("li", {}, s)));
