@@ -137,12 +137,12 @@ test("fixesText never prints a number the API left null; negative savings read a
   assert.match(text, /0 → 48 \(Ann Arbor requires 70\)/);
 });
 
-test("parseTypedBill: therms or CCF (×1.037, EIA), m/d dates with year inference, ISO dates, kWh optional", () => {
+test("parseTypedBill: therms or CCF (explicit API unit), m/d dates with year inference, ISO dates, kWh optional", () => {
   const today = new Date(2026, 9, 4); // Oct 4, 2026
   assert.deepEqual(parseTypedBill("52 therms 9/3 to 10/2", today), { therms: 52, start: "2026-09-03", end: "2026-10-02" });
-  assert.deepEqual(parseTypedBill("gas 100 CCF, 12/5 - 1/6", today), { therms: 103.7, start: "2025-12-05", end: "2026-01-06" });
+  assert.deepEqual(parseTypedBill("gas 100 CCF, 12/5 - 1/6", today), { therms: 100, gas_unit: "ccf", start: "2025-12-05", end: "2026-01-06" });
   assert.deepEqual(parseTypedBill("40 therms 320 kWh 2026-08-01 to 2026-08-31", today), { therms: 40, kwh: 320, start: "2026-08-01", end: "2026-08-31" });
-  assert.deepEqual(parseTypedBill("52 therms", today), { error: "Send the billing dates too, like: 52 therms 9/3 to 10/2" });
+  assert.deepEqual(parseTypedBill("52 therms", today), { therms: 52, start: "2026-09-01", end: "2026-09-30" });
   assert.equal(parseTypedBill("912 Mary St, Ann Arbor", today), null);
 });
 

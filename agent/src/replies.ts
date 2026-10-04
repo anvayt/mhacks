@@ -9,7 +9,7 @@ export const UNIT_SIZE_QUESTION = "How big is the unit in sq ft? It's usually on
 
 // Any link goes to the API, which knows every listing and map site (and says when a link has no address).
 export const LINK = /https?:\/\/\S+/i;
-export const ADDRESS = /\d+\s+\S+.*\b(st|street|ave|avenue|rd|road|dr|drive|blvd|ln|lane|ct|court|way|pl|place)\b/i;
+export const ADDRESS = /\d+\s+\S+.*\b(st|street|ave|avenue|rd|road|dr|drive|blvd|ln|lane|ct|court|way|pl|place|trl|trail|cir|circle)\b/i;
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -52,7 +52,7 @@ function annualText(e: Estimate, previous?: Estimate): string {
   const prev = previous && has(previous.bill.annual) ? range(previous.bill.annual) : null;
   const was = prev && prev !== range(annual) ? ` (was ${prev})` : "";
   const most = annual.p10 != null && annual.p90 != null ? `, most likely ${usd(annual.p50)}` : "";
-  return `Heating + cooling a year: ${range(annual)}${most}${was}`;
+  return `${e.bill.building_annual ? "Your cooling bill a year" : "Heating + cooling a year"}: ${range(annual)}${most}${was}${e.bill.note ? `\n${e.bill.note}` : ""}`;
 }
 
 const badgesText = (e: Estimate) => (e.badges?.length ? `🏅 ${e.badges.map((x) => x.replace(/-/g, " ")).join(", ")}` : "");
@@ -160,29 +160,35 @@ export function fixesText(f: Fixes): string {
 }
 
 /** A typed bill ("52 therms 9/3 to 10/2", or CCF), for when the photo reader is down. null if it isn't one. */
-export function parseTypedBill(
-  text: string,
-  today = new Date(),
-): { therms: number; kwh?: number; start: string; end: string } | { error: string } | null {
-  const gas = text.match(/(\d+(?:\.\d+)?)\s*(therms?|ccf)\b/i);
-  if (!gas) return null;
-  // 1 CCF = 1.037 therms (EIA FAQ "What are Ccf, Mcf, Btu, and therms?"; the same factor /api uses)
-  const therms = /ccf/i.test(gas[2]) ? Math.round(Number(gas[1]) * 1.037 * 10) / 10 : Number(gas[1]);
+export function parseTypedBill(text: string, today = new Date()):
+  | { therms: number; gas_unit?: "ccf"; kwh?: number; start: string; end: string }
+  | { amount_usd: number; kwh?: number; start: string; end: string }
+  | { error: string } | null {
+  const gas = text.match(/(-?\d[\d,]*(?:\.\d+)?)\s*(therms?|ccf)\b/i);
+  const dollars = text.match(/^\s*\$\s*(-?\d[\d,]*(?:\.\d+)?)(?:\s|$)/);
+  if (!gas && !dollars) return null;
+  const raw = (gas ?? dollars)![1];
+  if (raw.includes(",") && !/^-?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(raw)) return { error: "Use a number like 1200 or 1,200." };
+  const value = Number(raw.replace(/,/g, ""));
+  const usage = gas ? { therms: value, ...(/ccf/i.test(gas[2]) ? { gas_unit: "ccf" as const } : {}) } : { amount_usd: value };
+  if (value < 0) return { error: "Bill usage and amounts can't be negative. Type the number shown on your bill." };
   const kwh = text.match(/(\d+(?:\.\d+)?)\s*kwh\b/i);
-  const dates = [...text.matchAll(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)].map((m) => {
-    if (m[1]) return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
-    const y = m[6] ? (m[6].length === 2 ? 2000 + Number(m[6]) : Number(m[6])) : undefined;
-    return { y, m: Number(m[4]), d: Number(m[5]) };
-  });
-  if (dates.length < 2) return { error: "Send the billing dates too, like: 52 therms 9/3 to 10/2" };
-  const iso = (x: { y: number; m: number; d: number }) => `${x.y}-${String(x.m).padStart(2, "0")}-${String(x.d).padStart(2, "0")}`;
-  const [a, b] = dates.slice(0, 2);
-  let endY = b.y ?? today.getFullYear();
-  if (b.y == null && new Date(endY, b.m - 1, b.d) > today) endY -= 1; // a bill can't end in the future
-  const startY = a.y ?? (a.m > b.m ? endY - 1 : endY); // Dec → Jan spans a new year
-  const valid = (y: number, m: number, d: number) => m >= 1 && m <= 12 && d >= 1 && d <= 31 && y > 2000;
-  if (!valid(startY, a.m, a.d) || !valid(endY, b.m, b.d)) return { error: "I couldn't read those dates. Try: 52 therms 9/3 to 10/2" };
-  return { therms, ...(kwh ? { kwh: Number(kwh[1]) } : {}), start: iso({ y: startY, m: a.m, d: a.d }), end: iso({ y: endY, m: b.m, d: b.d }) };
+  const dates = [...text.matchAll(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)].map((m) => m[1]
+    ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) }
+    : { y: m[6] ? Number(m[6]) + (m[6].length === 2 ? 2000 : 0) : undefined, m: Number(m[4]), d: Number(m[5]) });
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  let start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  let end = new Date(today.getFullYear(), today.getMonth(), 0);
+  if (dates.length === 1) return { error: "Send both billing dates, like 120 therms 2026-09-01 to 2026-09-30, or omit both for the last full month." };
+  if (dates.length >= 2) {
+    const [a, b] = dates;
+    let ey = b.y ?? today.getFullYear();
+    if (b.y == null && new Date(ey, b.m - 1, b.d) > today) ey--;
+    const sy = a.y ?? (a.m > b.m ? ey - 1 : ey);
+    start = new Date(sy, a.m - 1, a.d); end = new Date(ey, b.m - 1, b.d);
+    if (start.getMonth() !== a.m - 1 || start.getDate() !== a.d || end.getMonth() !== b.m - 1 || end.getDate() !== b.d || start > end || end > today) return { error: "Those billing dates aren't valid. Use the start and end dates on a past bill." };
+  }
+  return { ...usage, ...(kwh ? { kwh: Number(kwh[1]) } : {}), start: iso(start), end: iso(end) };
 }
 
 export type Inbound =
