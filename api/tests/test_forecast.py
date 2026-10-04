@@ -99,6 +99,16 @@ def test_days_apportion_the_months_dollars(monkeypatch):
     assert est["mode"] == "forecast" and est["block_group"] == "261614001001" and "window_panes" not in est
 
 
+def test_no_ac_never_sends_cooling_code_0_and_costs_no_cooling(monkeypatch):
+    sessions.save({**sessions.get(SID), "answers": {"cooling_code": "0"}})
+    hc, wx, fc = _bodies(JUL, 32.0, 7, heat_usd=0, cool_usd=40, hdd60=0, cdd65=300)
+    hc = {**hc, "seasons": [], "annual": {"cooling_usd": 40, "total_usd": 40, "electric_kwh": 0}}
+    calls = _serve(monkeypatch, (hc, wx, fc))
+    out = client.get(f"/forecast/{SID}").json()
+    assert "cooling_code" not in next(p for u, p in calls if u.endswith("/hc/estimate"))  # outside P1's training data
+    assert out["week"]["cooling_usd"] == 0 and "heat_wave" not in {a["type"] for a in out["alerts"]}
+
+
 def test_cold_snap_and_costly_week_fire(monkeypatch):
     _serve(monkeypatch, _bodies(JAN, -15.0, 1, heat_usd=130, cool_usd=0, hdd60=1100, cdd65=0))
     out = client.get(f"/forecast/{SID}").json()
