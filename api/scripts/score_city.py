@@ -1,10 +1,10 @@
 """Score the city's residential footprints through P1's existing model server.
 
-From /api: uv run python scripts/score_city.py [--workers 8]
+From /api: uv run python scripts/score_city.py [--workers 4]
 The first call warms the model, then 200 concurrent calls measure throughput. Stop
 if the projected full run exceeds 90 minutes. JSONL checkpoints are flushed after
 every result; rerun to resume (failed calls retry). --fresh discards the checkpoint
-when model/classification changes. The small CSV is the only runtime API input.
+when model/classification changes. The small CSV holds scores; /city also reads cached footprints and mailing addresses.
 
 Sources: City BuildingFootprints + MailingAddress (app.geo), public city energy
 benchmarking (BENCHMARK_SOURCE), Census 2020 TIGERweb block groups (BG_SOURCE).
@@ -33,7 +33,7 @@ from app.city import BENCHMARK_SOURCE, TABLE_PATH, score_rows
 from app.estimate import MODEL_BASE_URL
 from app.geo import DATA_DIR
 from app.geo import features as geo
-from app.geo.footprints import NEAREST_MAX_M, _addresses_in, _index, street_key
+from app.geo.footprints import _addresses_in, _index, mailing_assignment, street_key
 
 # ResStock 2024.2 MI in.sqft bounds / type medians, read from the baseline
 # parquet by P2 lookup-fixes (2026-10-04); source: model/data_sources/resstock.py
@@ -71,40 +71,33 @@ def fetch_layer(url: str, path: Path, fields: str, where: str = "1=1") -> list[d
     return rows
 
 
-def associated_units(ix) -> dict[int, int]:
-    """Assign off-footprint UNIT street points with P2-01's existing 25 m rule.
-
-    For example, 1780 Broadway's city point is 5.9 m outside the footprint.
-    Containing footprints win, then prefer one holding residential mailing points.
-    This attaches each street to one footprint; merely being nearby is insufficient.
-    """
+def associated_units(ix, assignments=None) -> dict[int, int]:
+    """Street UNIT counts use the same point assignment as /city's map labels."""
+    if assignments is None:
+        assignments = mailing_assignment(ix)
     result = {}
-    residential = {}
     for street, units in ix.units_by_street.items():
-        point = ix.addr_utm[ix.addr_by_street[street]]
-        near = ix.tree.query(point, predicate="dwithin", distance=NEAREST_MAX_M)
-        choices = []
-        for i in near:
-            if i not in residential:
-                residential[i] = bool(_addresses_in(ix, i))
-            choices.append((shapely.distance(ix.utm[i], point), not residential[i], i))
-        inside = [choice for choice in choices if choice[0] == 0]
-        if choices:
-            _, _, i = min(inside or choices, key=lambda choice: (choice[1], choice[0]))
+        i = int(assignments[ix.addr_by_street[street]])
+        if i >= 0:
             result[i] = max(result.get(i, 0), units)
     return result
 
 
-def footprint_inputs(ix, i: int, associated_street_units: int = 0) -> dict | None:
+def footprint_inputs(ix, i: int, associated_street_units: int = 0, address_indices=None) -> dict | None:
     """P2-01 assembly plus the concurrent lookup-fixes residential/size guards."""
     p = ix.props[i]
     if p["Struc_Type"] in {"Office", "Public"} or str(p.get("PackedPin") or "").strip().lower() in {"garage", "carport", "canopy", "parking deck"}:
         return None
-    addresses = _addresses_in(ix, i)
+    if address_indices is None:
+        address_indices = ix.addr_tree.query(ix.utm[i], predicate="contains")
+        addresses = _addresses_in(ix, i)
+    else:
+        hits = {ix.addr_street[j] for j in address_indices if ix.addr_residential[j]}
+        bases = {a.split(" UNIT ")[0] for a in hits if " UNIT " in a}
+        addresses = sorted(hits - bases)
     # UNIT rows may be TYPE Vacant (Verve/721 S Forest, 625 Church, Hubbard).
-    # P2-01 counts street UNIT rows of every TYPE, so inspect all contained points.
-    inside = ix.addr_tree.query(ix.utm[i], predicate="contains")
-    streets = [*addresses, *ix.addr_street[inside]]
+    # P2-01 counts street UNIT rows of every TYPE; use the common spatial assignment.
+    streets = [*addresses, *(ix.addr_street[j] for j in address_indices)]
     street_units = max((ix.units_by_street[street_key(a)] for a in streets), default=0)
     street_units = max(street_units, associated_street_units)
     units = max(len(addresses), street_units)
@@ -147,9 +140,14 @@ def candidates() -> list[dict]:
     group_tree = shapely.STRtree([shape(f["geometry"]) for f in groups])
     bench_tree = shapely.STRtree([shape(f["geometry"]) for f in benchmarks])
     rows = []
-    unit_counts = associated_units(ix)
+    assignments = mailing_assignment(ix)
+    unit_counts = associated_units(ix, assignments)
+    address_groups = {}
+    for j, i in enumerate(assignments):
+        if i >= 0:
+            address_groups.setdefault(int(i), []).append(j)
     for i in range(len(ix.props)):
-        row = footprint_inputs(ix, i, unit_counts.get(i, 0))
+        row = footprint_inputs(ix, i, unit_counts.get(i, 0), address_groups.get(i, []))
         if row is None:
             continue
         point = ix.wgs[i].representative_point()
@@ -210,7 +208,7 @@ def write_table(rows: list[dict], path: Path) -> None:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--model-url", default=MODEL_BASE_URL)
     parser.add_argument("--output", type=Path, default=TABLE_PATH)
     parser.add_argument("--checkpoint", type=Path, default=DATA_DIR / "city_score_checkpoint.jsonl")
@@ -279,6 +277,7 @@ def main(argv=None) -> int:
               "stopped_after_benchmark": stopped,
               "projected_minutes": round(projected_minutes, 2), "failures": failures,
               "sources": {"benchmark": BENCHMARK_SOURCE, "block_groups": BG_SOURCE},
+              "mailing_assignment": "P3 HOUSE_SCHEMA section 3: inside, else nearest within 1.1e-4 WGS84 degrees; all mailing TYPEs; same as /city labels",
               "percentile": "midpoint empirical: 100 * (less + 0.5 * equal) / N, within building type",
               "notes": "Predicted heating + cooling only; P2-01 plus lookup-fixes residential/size guards; census tracts proxy neighborhoods."}
     args.output.with_suffix(".json").write_text(json.dumps(report, indent=2) + "\n")
