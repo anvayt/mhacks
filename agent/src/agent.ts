@@ -4,7 +4,10 @@ import { Spectrum } from "spectrum-ts";
 import { imessage } from "spectrum-ts/providers/imessage";
 import { terminal } from "spectrum-ts/providers/terminal";
 import { env } from "./env.ts";
-import { inboundText, replyFor } from "./replies.ts";
+import { httpApi } from "./api.ts";
+import { Conversations } from "./conversation.ts";
+import { mockApi } from "./mockApi.ts";
+import { inboundText } from "./replies.ts";
 
 async function start() {
   if (env.agentTerminal) return Spectrum({ providers: [terminal.config()] });
@@ -23,7 +26,11 @@ async function start() {
 
 const app = await start();
 
-console.log(`Hidden Rent agent listening on ${env.agentTerminal ? "terminal (mock)" : "iMessage"}`);
+const conversations = new Conversations(env.useMockApi ? mockApi() : httpApi(env.apiBaseUrl));
+console.log(
+  `Hidden Rent agent listening on ${env.agentTerminal ? "terminal (mock)" : "iMessage"}, ` +
+    `API ${env.useMockApi ? "MOCK (USE_MOCK_API=1)" : env.apiBaseUrl}`,
+);
 
 for await (const [space, message] of app.messages) {
   if (message.direction === "outbound") continue;
@@ -31,7 +38,7 @@ for await (const [space, message] of app.messages) {
   if (text === null) continue;
   console.log(`[${message.platform}] ${message.sender?.id ?? "unknown"}: ${text}`);
   try {
-    await space.responding(async () => space.send(await replyFor(text)));
+    await space.responding(async () => space.send(await conversations.reply(space.id, text)));
   } catch (err) {
     // One bad send (e.g. "Target not allowed for this project") must not kill the loop.
     console.error(`reply to ${message.sender?.id ?? "unknown"} failed:`, err);

@@ -25,6 +25,9 @@ export const env = {
   get useMocks() {
     return flag("USE_MOCKS") || !this.hasPhoton;
   },
+  get useMockApi() {
+    return flag("USE_MOCK_API");
+  },
   get agentTerminal() {
     return flag("AGENT_TERMINAL") || !this.hasPhoton;
   },
