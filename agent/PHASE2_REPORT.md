@@ -18,7 +18,7 @@ Branch: `p4/phase2-real`, based on `origin/dev` wave 6 (`534f67a`). Changes are 
 
 ## Validation
 
-- `npm test`: **68 passed**. `npm run typecheck`: passed. `git diff --check`: passed.
+- `npm test`: **69 passed**. `npm run typecheck`: passed. `git diff --check`: passed.
 - Tests cover every new intent, six-digit regex, normalized/numeric-email identity, ref and unit-size property isolation, restart rehydration, opt-in/stop/pause, provisional wording, tips, Calendar isolation/repeat suppression, all agent-key endpoints, root env precedence, comma/date/unit parsing, receipt durability/idempotent acknowledgement/recovery. Existing Phase 1 tests remain passing.
 - Independent **real API** checks on port 8040: web login rejects five-digit intent without a confirm call; mixed-case six-digit login succeeds; web polling reaches verified with a token (never printed); bad-code message is repeated verbatim; all eight relevant requests carry the key. `USE_MOCKS=1` kept auth onboarding on the sms mock path. Separate real API checks confirm stop/pause survive inbound replies and restart, and ordinary replies still work after stop.
 - Full real-model conversation is **blocked**: API 8040's `/estimate` returned `503 model_unavailable` / `ConnectError`; no process was listening on 8001. The model was not started, stopped or rebuilt. No cached/seeded estimates were substituted and called live results.

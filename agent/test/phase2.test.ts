@@ -190,3 +190,15 @@ test("mock included answer preserves building band/CO2 and quotes cooling only; 
   const single = must(await api.answer({ session_id: first.session_id!, question_id: "window_panes", answer: "1" }));
   assert.ok(!single.badges!.includes("double-pane-club")); assert.match(estimateText(single), /cooling only/);
 });
+
+
+test("manual direct delivery obeys global receipts and retries a matching delivered acknowledgement without texting", async () => {
+  const api = mockApi(); let sends = 0, acknowledgements = 0;
+  api.reminderSent = async () => { acknowledgements++; return ok({ stopped: false, paused: false }); };
+  const store = receipt(); store.set("old-id", "sending");
+  const poller = new ReminderPoller(api, async () => { sends++; }, store, () => {});
+  await poller.deliver(reminder); assert.equal(sends, 0);
+  store.set("old-id", "delivered"); await poller.deliver(reminder); assert.equal(sends, 0);
+  await poller.deliver({ ...reminder, reminder_id: "old-id" }); assert.equal(acknowledgements, 1); assert.equal(sends, 0);
+  await poller.deliver(reminder); assert.equal(sends, 1);
+});

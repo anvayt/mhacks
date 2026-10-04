@@ -46,8 +46,10 @@ export class ReminderPoller {
   }
   async deliver(reminder: Reminder) {
     const id = reminder.reminder_id;
-    if (this.receipts.ids[id]) {
-      if (this.receipts.ids[id] === "sending") this.log("[reminders] uncertain delivery after restart; not resending. Inspect the receipt file before manual recovery.");
+    if (this.receipts.ids[id] === "delivered") { await this.acknowledge(id); return; }
+    if (this.receipts.ids[id] === "acknowledged") return;
+    if (Object.values(this.receipts.ids).some((state) => state === "sending" || state === "delivered")) {
+      this.log("[reminders] proactive delivery paused pending receipt recovery or acknowledgement.");
       return;
     }
     this.receipts.set(id, "sending");
