@@ -161,7 +161,8 @@ def _monthly_from_intensity(it: dict, w: pd.DataFrame, area_ft2: float, fuel: st
     return out
 
 
-def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[list, dict]:
+def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[list, dict, list]:
+    """Price each month, then return (seasons, annual, months). Seasons and annual are plain sums of the months."""
     m = monthly.copy()
     for c in ("heat_ccf", "heat_kwh", "cool_kwh"):
         m[c] = m[c] * scale
@@ -183,12 +184,25 @@ def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[lis
             "weather": {"tmean_f": round(float(ws.loc[s, "tmean_f"]), 1), "hdd65": round(float(ws.loc[s, "hdd65"]), 0),
                         "cdd65": round(float(ws.loc[s, "cdd65"]), 0), f"hdd{TAU_H_GAS}": round(float(ws.loc[s, f"hdd{TAU_H_GAS}"]), 0)},
         })
+    months = []
+    for i, (_, r) in enumerate(m.iterrows()):
+        wr = w.iloc[i]
+        months.append({
+            "month": int(r.month), "year": None if pd.isna(wr.get("year")) else int(wr["year"]), "days": int(wr["days"]),
+            "heating": {"usd": round(float(r.heat_usd), 0), "gas_ccf": round(float(r.heat_ccf), 1),
+                        "electric_kwh": round(float(r.heat_kwh), 0)},
+            "cooling": {"usd": round(float(r.cool_usd), 0), "electric_kwh": round(float(r.cool_kwh), 0)},
+            "total_usd": round(float(r.heat_usd + r.cool_usd), 0),
+            "weather": {"tmean_f": round(float(climate.c_to_f(wr.tmean_c)), 1), "hdd65": round(float(wr.hdd65), 0),
+                        "cdd65": round(float(wr.cdd65), 0), f"hdd{TAU_H_GAS}": round(float(wr[f"hdd{TAU_H_GAS}"]), 0),
+                        **({"basis": str(wr.level_source)} if "level_source" in w and pd.notna(wr.get("level_source")) else {})},
+        })
     annual = {"heating_usd": round(float(m.heat_usd.sum()), 0), "cooling_usd": round(float(m.cool_usd.sum()), 0),
               "total_usd": round(float(m.heat_usd.sum() + m.cool_usd.sum()), 0),
               "gas_ccf": round(float(m.heat_ccf.sum()), 1), "electric_kwh": round(float(m.heat_kwh.sum() + m.cool_kwh.sum()), 0),
               "hdd65": round(float(w.hdd65.sum()), 0), "cdd65": round(float(w.cdd65.sum()), 0),
               "tmean_f": round(float(climate.c_to_f(np.average(w.tmean_c, weights=w.days))), 1)}
-    return seasons, annual
+    return seasons, annual, months
 
 
 # ------------------------------------------------------------------ public API
@@ -305,14 +319,14 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
 
     # building totals → this unit (floor-area share)
     scale = unit_sqft / area
-    seasons, annual = _seasonal(monthly, w, scale)
+    seasons, annual, months = _seasonal(monthly, w, scale)
     detail = _model_detail(method, bid, parts if method != "metered" else None, fuel, area, unit_sqft, w, answers)
     out = {
         "location": loc,
         "building": building,
         "unit_sqft": unit_sqft, "unit_sqft_source": unit_src,
         "mode": str(mode), "method": method,
-        "seasons": seasons, "annual": annual,
+        "seasons": seasons, "annual": annual, "months": months,
         "model_detail": detail,
         "weather_source": w.level_source.iloc[0] if "level_source" in w else None,
         "prices": {"gas_usd_per_ccf": "EIA MI residential marginal (fixed charges removed), by month",
@@ -320,7 +334,7 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         "sources": sources,
     }
     if cross is not None:
-        _, ca = _seasonal(cross, w, 1.0)
+        _, ca, _ = _seasonal(cross, w, 1.0)
         out["cross_check_resstock"] = {"heating_usd": ca["heating_usd"], "cooling_usd": ca["cooling_usd"],
                                        "calibrated_to_meters": it_rs["calibrated_to_meters"]}
     v = r["validation"]
@@ -334,6 +348,18 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
                               "local meter data, so expect at least this error"}[path],
         "cooling_note": "cooling is validated less well than heating (building features barely beat the median)",
     }
+    mg = (v.get("real") or {}).get("monthly_gas_vs_real_meters", {}).get(path, {})
+    me = (v.get("real") or {}).get("monthly_elec_vs_real_meters", {}).get(path, {})
+    out["accuracy"]["monthly_gas_median_abs_error_all_months"] = mg.get("all_months")
+    out["accuracy"]["monthly_elec_median_abs_error_all_months"] = me.get("all_months")
+    for mo in out["months"]:
+        g_, e_ = mg.get("by_month", {}).get(str(mo["month"])), me.get("by_month", {}).get(str(mo["month"]))
+        mo["accuracy"] = {"gas_median_abs_error": g_ and g_["median_abs_pct_error"], "gas_bias": g_ and g_["median_signed_error"],
+                          "elec_median_abs_error": e_ and e_["median_abs_pct_error"], "elec_bias": e_ and e_["median_signed_error"],
+                          "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"}
+    if str(mode) == "forecast":
+        out["accuracy"]["monthly_forecast_note"] = ("beyond ~2 weeks, monthly weather comes from the seasonal-forecast "
+                                                    "ensemble mean or normals; month-to-month detail is not a skilful forecast")
     if method == "resstock":
         rv = v["resstock"]["targets"]
         key = "all_answers" if answers else "public_record_only"
