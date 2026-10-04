@@ -11,7 +11,7 @@ STAGE=${STAGE:-${TMPDIR:-/tmp}/hidden-rent-stage-$APP}
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 rsync -a --exclude .git --exclude '.env*' --exclude node_modules --exclude .venv --exclude __pycache__ \
   --exclude .next --exclude '/data' --exclude '/model/data' --exclude '/model/artifacts' --exclude '/model/results' \
-  --exclude .runtime --exclude web --exclude research --exclude '*.zip' "$ROOT/" "$STAGE/"
+  --exclude .runtime --exclude web --exclude research --exclude '*.zip' --exclude .claude --exclude fern "$ROOT/" "$STAGE/"
 if [[ "$APP" == api ]]; then
   for d in model/artifacts model/data model/results; do
     [[ -d "$MODEL_SRC/$d" ]] || { echo "missing $MODEL_SRC/$d (trained model files)"; exit 1; }
