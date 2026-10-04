@@ -3,8 +3,10 @@ P1's model server (make -C model dashboard, MODEL_BASE_URL) and skips without it
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
+from app import estimate
 from app.estimate import MODEL_BASE_URL
 from app.geo import FOOTPRINTS_PATH
 from app.main import app
@@ -51,6 +53,14 @@ def test_model_error_is_503(monkeypatch):  # a real non-422 error from the model
     monkeypatch.setattr("app.estimate.MODEL_BASE_URL", f"{MODEL_BASE_URL}/no-such-path")
     r = client.post("/estimate", json={"address": "1514 Morton Ave, Ann Arbor, MI 48104"})
     assert r.status_code == 503 and r.json()["detail"]["code"] == "model_unavailable"
+
+
+def test_model_down_message_hides_internals(monkeypatch):  # no URL, make target or exception name for users
+    monkeypatch.setattr("app.estimate.MODEL_BASE_URL", "http://127.0.0.1:9")
+    with pytest.raises(HTTPException) as e:
+        estimate._hc({"lat": 42.28, "lon": -83.74})
+    assert e.value.status_code == 503
+    assert e.value.detail == {"code": "model_unavailable", "message": estimate.MODEL_DOWN}
 
 
 @needs_data

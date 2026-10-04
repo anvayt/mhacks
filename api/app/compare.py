@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, model_validator
 
 from app import estimate as estimates
+from app import sessions
 from app.badges import badges
 
 router = APIRouter()
@@ -20,6 +21,15 @@ class Listing(BaseModel):
     url: str | None = None
     address: str | None = None
     unit_sqft: float | None = None
+    session_id: str | None = None  # the renter's answered session, used as is (no re-estimate)
+
+
+def _listing(item: Listing) -> dict:
+    if item.session_id:
+        if (s := sessions.get(item.session_id)) is None:
+            raise estimates._fail(404, "not_found", estimates.EXPIRED)
+        return s
+    return estimates.estimate(item.url, item.address, item.unit_sqft)
 
 
 class CompareRequest(BaseModel):
@@ -40,14 +50,17 @@ def compare(req: CompareRequest | None = None) -> dict:
         raise _missing_input()
     results = {}
     with ThreadPoolExecutor(max_workers=2) as pool:
-        pending = {side: pool.submit(estimates.estimate, item.url, item.address, item.unit_sqft)
-                   for side, item in zip(("a", "b"), req.listings)}
+        pending = {side: pool.submit(_listing, item) for side, item in zip(("a", "b"), req.listings)}
         for side, future in pending.items():
             try:
                 est = future.result()
-            except HTTPException as exc:
-                detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
-                raise HTTPException(422, {"code": "estimate_failed", **detail, "listing": side}) from exc
+            except HTTPException as exc:  # the listing's own status and code, plus which listing failed
+                d = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+                err = {"code": d.get("code", "estimate_failed"), "listing": side,
+                       "message": d.get("message", "We couldn't estimate this listing. Try again.")}
+                if d.get("hint"):
+                    err["hint"] = d["hint"]
+                raise HTTPException(exc.status_code, err) from exc
             # Copy the response and badge list: a stored session may reuse the estimate dictionary.
             results[side] = {**est, "badges": list(dict.fromkeys([*(est.get("badges") or []), *badges(est)]))}
 

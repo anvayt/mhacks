@@ -1,0 +1,42 @@
+.page { max-width: 1320px; margin: auto; padding: 28px 36px 64px; }
+.nav { display:flex; justify-content:space-between; gap:16px; font:12px var(--font-mono); text-transform:uppercase; }
+.header { margin:64px 0 36px; }
+.header h1 { font:clamp(64px,8vw,112px)/.94 var(--font-display); margin:18px 0; text-transform:uppercase; }
+.header h1 em { font:italic 1em var(--font-serif); text-transform:none; }
+.header p:first-child, .eyebrow { font:11px var(--font-mono); letter-spacing:.07em; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.card { min-width:0; background:var(--paper); color:var(--ink); padding:28px; border:2px solid var(--ink); }
+.winner { border-color:var(--blue); box-shadow:inset 0 0 0 4px var(--paper),inset 0 0 0 6px var(--blue); }
+.cardTop { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:24px; }
+.cardTop h2 { font:32px var(--font-display); margin:0; text-transform:uppercase; }
+.badge { font:10px var(--font-mono); padding:8px; background:var(--blue); color:white; }
+.card label { display:block; font:12px var(--font-mono); margin:16px 0 8px; }
+.card label span { color:var(--muted); }
+.card input { box-sizing:border-box; width:100%; min-width:0; padding:14px 12px; border:1px solid var(--ink); border-radius:0; background:var(--white); color:var(--ink); font:15px var(--font-sans); }
+.card input:focus-visible, .submit:focus-visible { outline:3px solid #ffb000; outline-offset:3px; }
+.card input[type=number] { max-width:200px; }
+.results { margin-top:32px; border-top:1px solid var(--ink); padding-top:20px; }
+.gradeRow { display:flex; gap:20px; align-items:center; }
+.grade { font:clamp(70px,8vw,120px)/1 var(--font-display); letter-spacing:-.04em; white-space:nowrap; }
+.gradeRow p { font-size:13px; line-height:1.6; }
+.annual { font:60px/1 var(--font-display); margin:20px 0 6px; }
+.annual span { font:14px var(--font-mono); margin-left:8px; }
+.range { font:13px var(--font-mono); }
+.stats { margin:24px 0; border-top:1px solid #c9c7c0; }
+.stats div { padding:16px 0; border-bottom:1px solid #c9c7c0; display:flex; justify-content:space-between; gap:16px; }
+.stats dt { font-size:12px; max-width:55%; }
+.stats dd { margin:0; font:20px var(--font-display); text-align:right; }
+.note { font-size:11px; color:var(--muted); line-height:1.6; }
+.cardLink { font:12px var(--font-mono); display:inline-block; margin-top:12px; text-decoration:underline; }
+.placeholder { font:italic 26px/1.2 var(--font-serif); margin:40px 0 16px; max-width:300px; }
+.error { color:#a21815; font-size:13px; line-height:1.5; border-left:3px solid #a21815; padding-left:10px; }
+.generalError { background:var(--paper); color:#a21815; padding:20px; }
+.submit { margin-top:24px; width:100%; padding:22px; border:1px solid var(--ink); background:var(--ink); color:white; font:18px var(--font-mono); cursor:pointer; }
+.submit:disabled { opacity:.7; cursor:wait; }
+.reveal { margin-top:32px; background:var(--paper); color:var(--ink); padding:36px; }
+.reveal h2 { font:clamp(38px,5vw,68px)/1.05 var(--font-display); max-width:960px; margin:20px 0; }
+.reveal p { max-width:760px; font-size:13px; line-height:1.6; }
+.reveal p:first-child { font:12px var(--font-mono); }
+@media(max-width:600px) { .page { padding:20px 16px 40px; } .nav { font-size:10px; flex-wrap:wrap; } .header { margin-top:44px; } .header h1 { font-size:64px; } .grid { grid-template-columns:1fr; } .card { padding:22px; } .grade { font-size:92px; } .gradeRow { gap:14px; } .submit { font-size:14px; } .reveal { padding:24px; } }
+
+.nav a { color: inherit; }
