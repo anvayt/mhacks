@@ -1,17 +1,27 @@
-.PHONY: install deps gis model demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
+.PHONY: install deps data data-bundle gis model demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
 
 # One-step setup. Each step is skipped when its output already exists:
 #   deps  -> .venv, api/.venv, web/ and agent/ node_modules
+#   data  -> unzips model-data.zip from the repo root, if present, so gis/model skip downloads and training
 #   gis   -> data/a2_footprints.geojson, data/a2_mailing_addresses.geojson
-#   model -> model/artifacts/resstock_hc.pkl (first build downloads ~1 h of data)
+#   model -> model/artifacts/resstock_hc.pkl (~8 min: downloads data and trains)
 MODEL_PKL  := model/artifacts/resstock_hc.pkl
+MODEL_TABLE := model/data/processed/buildings_hc.parquet
 
-install: deps gis model
+install: deps data gis model
 
 deps:
 	@bash scripts/install.sh
 
-gis: deps
+data:
+	@if [ -f model-data.zip ]; then bash scripts/model-data.sh unpack; \
+	else echo '==> data: no model-data.zip in repo root; missing inputs will be downloaded'; fi
+
+# Zip this checkout's downloaded data and trained models (model/artifacts/*.pkl, one build) into model-data.zip to share with teammates.
+data-bundle:
+	@bash scripts/model-data.sh pack
+
+gis: deps data
 	@if [ -s data/a2_footprints.geojson ] && [ -s data/a2_mailing_addresses.geojson ]; then \
 		echo '==> gis: footprints already downloaded'; \
 	else \
@@ -19,11 +29,11 @@ gis: deps
 		cd api && .venv/bin/python scripts/fetch_footprints.py; \
 	fi
 
-model: deps
-	@if [ -f $(MODEL_PKL) ]; then \
+model: deps data
+	@if [ -f $(MODEL_PKL) ] && [ -f $(MODEL_TABLE) ]; then \
 		echo '==> model: already built ($(MODEL_PKL))'; \
 	else \
-		echo '==> model: building (first run downloads ~1 h of data)'; \
+		echo '==> model: building (~8 min)'; \
 		$(MAKE) -C model build; \
 	fi
 
