@@ -1,0 +1,22 @@
+{
+  "unit_check": {
+    "n_building_years": 360,
+    "kbtu_per_gas_unit_median": 104.0,
+    "kbtu_per_gas_unit_iqr": [
+      102.6,
+      105.5
+    ],
+    "conclusion": "gas unit = ccf (\u2248103 kBtu), electricity unit = kWh"
+  },
+  "rows": 4788,
+  "buildings": 133,
+  "buildings_with_10plus_good_gas_months": 105,
+  "buildings_with_10plus_good_elec_months": 113,
+  "years": [
+    2021,
+    2022,
+    2023
+  ],
+  "footprint_join_rate": 1.0,
+  "gfa_vs_footprint_estimate_median_ratio": 1.2623236951694132
+}

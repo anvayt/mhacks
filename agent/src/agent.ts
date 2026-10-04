@@ -31,7 +31,7 @@ for await (const [space, message] of app.messages) {
   if (text === null) continue;
   console.log(`[${message.platform}] ${message.sender?.id ?? "unknown"}: ${text}`);
   try {
-    await space.responding(() => space.send(replyFor(text)));
+    await space.responding(async () => space.send(await replyFor(text)));
   } catch (err) {
     // One bad send (e.g. "Target not allowed for this project") must not kill the loop.
     console.error(`reply to ${message.sender?.id ?? "unknown"} failed:`, err);

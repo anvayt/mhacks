@@ -41,4 +41,4 @@ The opener is text-only and the judge texts first (inbound-first), which avoids 
 - 10 allowlisted users total (team phones included). Delete old users in the dashboard to free slots.
 - DMs only; no group chats on the shared pool.
 - Android numbers get SMS/RCS fallback.
-- The agent says no numbers yet (PLAN.md §0 rule 4). P4-02 wires it to `/estimate` and `/answer`.
+- Links and addresses go to the real `POST /estimate` at `API_BASE_URL` (default `http://localhost:8000`); the reply only repeats numbers from that response (PLAN.md §0 rule 4). API down → a "try again" text, no numbers. P4-02 adds the grade and the `/answer` interview.

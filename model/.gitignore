@@ -1,0 +1,6 @@
+data/raw/
+data/cache/
+artifacts/*.pkl
+artifacts/*.json.gz
+data/raw
+data/cache
