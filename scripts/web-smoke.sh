@@ -9,14 +9,16 @@
 #
 # Env: API (default http://localhost:8033), WEB (default http://localhost:3004), HEADED=1, PW_CHANNEL (default chrome).
 # Optional phone sign-in check (USE_MOCKS=1 API, fictional number): SMOKE_SIGNIN=1 with AGENT_API_KEY in the env.
-# Uses the real public 30/min budget: starts after a clean minute, counts Node + browser requests,
-# and logs PACE waits between browser flows. Run against an otherwise idle test API.
-# Browser requests never receive X-Agent-Key; any 429 fails instead of being retried.
+# SMOKE_ENV_FILE loads private settings via uv; the key is used only by Node's oracle calls, never by the browser.
 # Start the API:  cd api && MODEL_BASE_URL=http://localhost:8001 USE_MOCKS=1 WEB_ORIGINS=http://localhost:3004 \
 #   SESSIONS_DB=/tmp/rev-s.sqlite APP_DB=/tmp/rev-a.sqlite uv run --env-file ../.env uvicorn app.main:app --port 8033
-# Start the web:  cd web && NEXT_PUBLIC_API_BASE_URL=http://localhost:8033 npm run dev -- -p 3004
+# Start the web: build with NEXT_PUBLIC_API_BASE_URL=http://localhost:8033, then npm run start -- -p 3004.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
+if [[ -n "${SMOKE_ENV_FILE:-}" && "${SMOKE_ENV_LOADED:-}" != 1 ]]; then
+  export SMOKE_ENV_LOADED=1
+  exec uv run --project "$here/../api" --env-file "$SMOKE_ENV_FILE" bash "$here/web-smoke.sh" "${1:-all}"
+fi
 if [ "${1:-all}" = api ]; then exec node "$here/web-smoke.mjs" api; fi
 # ponytail: playwright comes from the npx cache (no repo dependency); browsers = system Chrome.
 exec npx -y -p playwright@1.61.1 sh -c 'PW="$(dirname "$(command -v playwright)")/../playwright/index.mjs" exec node "$0" "$1"' \
