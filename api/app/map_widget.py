@@ -5,10 +5,8 @@ No model imports: look-alike simulation/pricing stays pending P1's HTTP endpoint
 """
 
 import json
-import re
-from collections import Counter
 from functools import lru_cache
-from threading import BoundedSemaphore, Lock
+from threading import Lock
 
 import httpx
 import numpy as np
@@ -17,8 +15,8 @@ from fastapi import APIRouter, HTTPException
 from shapely.geometry import mapping, shape
 
 from app import estimate, sessions
-from app.geo import ADDRESSES_PATH, DATA_DIR
-from app.geo.footprints import _index, _project
+from app.geo import DATA_DIR
+from app.geo.footprints import _index, _project, mailing_assignment, mailing_labels
 
 router = APIRouter()
 TIGERWEB_BG = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/10/query"
@@ -28,7 +26,6 @@ ADDRESSES_URL = "https://a2maps.a2gov.org/a2arcgis/rest/services/MailingAddress/
 HEIGHT_SOURCE = "City of Ann Arbor BuildingFootprints ABG_BLD_HG (above-ground height, originally aerial LiDAR)"
 PENDING = "pending P1: matching ResStock rented homes priced at this address needs P1's look-alike HTTP endpoint"
 SQFT_PER_M2 = 10.7639  # same conversion as app.geo.features (exact ft = 0.3048 m)
-_MODEL_SLOTS = BoundedSemaphore(4)  # shared model; never more than four /map calls in flight
 _BG_LOCK = Lock()
 
 
@@ -36,35 +33,10 @@ def _unavailable(message: str) -> HTTPException:
     return HTTPException(503, {"code": "model_unavailable", "message": message})
 
 
-def _mailing_labels(ix) -> dict[int, str]:
-    """P3 HOUSE_SCHEMA §3, also used by /city: inside, else nearest within 1.1e-4 degrees.
-
-    This sourced snap limit is ~12 m north/south and ~9 m east/west in Ann Arbor. All mailing
-    TYPEs contribute labels, not unit counts; most common street line wins, source-row order ties.
-    It labels the similar sample only: the selected building always comes from the saved session.
-    """
-    tree = shapely.STRtree(ix.wgs)
-    counts: dict[int, Counter] = {}
-    for address in json.loads(ADDRESSES_PATH.read_text())["features"]:
-        if not address.get("geometry"):
-            continue
-        point = shape(address["geometry"])
-        hits = tree.query(point, predicate="within")
-        if not len(hits):
-            hits = tree.query_nearest(point, max_distance=1.1e-4)
-        if not len(hits):
-            continue
-        street = address["properties"]["PROPSTREET"]
-        base = re.split(r"\s+(?:UNIT|APT|STE|#)\s*", street.strip(), maxsplit=1)[0]
-        label = " ".join(w if w[:1].isdigit() else w.capitalize() for w in base.split())
-        counts.setdefault(int(hits[0]), Counter())[label] += 1
-    return {i: c.most_common(1)[0][0] for i, c in counts.items()}
-
-
 @lru_cache(maxsize=1)
 def _city_data() -> tuple:
     ix = _index()
-    labels = _mailing_labels(ix)
+    labels = mailing_labels(ix, mailing_assignment(ix))  # P3 HOUSE_SCHEMA §3, same labels as /city
     rows = []
     for i, (p, g, utm) in enumerate(zip(ix.props, ix.wgs, ix.utm)):
         rows.append({"id": int(p["OBJECTID"]), "address": labels.get(i),
@@ -124,18 +96,21 @@ def _block_group(geoid: str) -> dict:
         return geom
 
 
-@lru_cache(maxsize=1024)
-def _model_step(session_id: str, params_json: str, answers: tuple) -> dict:
-    """Cache each prefix, so a new answer reuses all previous steps (including public record).
+def _step_params(model_params: dict, answers: tuple) -> str:
+    """/hc/estimate params after these answers, built like /fixes and /forecast (estimate.session_params; skips add
+    nothing). Answers left in model_params are stripped so public record is the baseline."""
+    base = {k: v for k, v in model_params.items() if k not in estimate.QUESTIONS}
+    return json.dumps(estimate.session_params({"model_params": base, "answers": dict(answers)}), sort_keys=True)
 
-    _hc_ac reaches P1 over HTTP and applies the same explicit no-AC correction as /answer.
-    Skips remain visible survey steps but add no model parameter. Calls within one request are sequential.
-    """
-    params = {k: v for k, v in json.loads(params_json).items() if k not in estimate.QUESTIONS}
-    params.update({q: value for q, value in answers if value is not None})
+
+@lru_cache(maxsize=1024)
+def _model_step(params_json: str) -> dict:
+    """Cached per params, so a new answer reuses all previous steps (including public record).
+
+    _hc_ac: same HTTP call as /answer (No AC rule, estimate.MODEL_SLOTS cap of 4). Calls within one request are
+    sequential."""
     try:
-        with _MODEL_SLOTS:
-            return estimate._hc_ac(params)
+        return estimate._hc_ac(json.loads(params_json))
     except (HTTPException, httpx.HTTPError) as e:
         raise _unavailable("The heating/cooling model is unavailable for this map. Try again.") from e
 
@@ -162,12 +137,11 @@ def get_map(session_id: str) -> dict:
     s = sessions.get(session_id)
     if s is None:
         raise HTTPException(404, {"code": "not_found", "message": estimate.EXPIRED})
-    params_json = json.dumps(s["model_params"], sort_keys=True)
-    public = _model_step(session_id, params_json, ())
+    public = _model_step(_step_params(s["model_params"], ()))
     answers = tuple(s.get("answers", {}).items())
     steps = [_step("public_record", None, public)]
     for n, (q, value) in enumerate(answers, 1):
-        steps.append(_step(q, value, _model_step(session_id, params_json, answers[:n])))
+        steps.append(_step(q, value, _model_step(_step_params(s["model_params"], answers[:n]))))
 
     ix, rows, bounds = _city_data()
     i = _selected(ix, s["building"]["footprint_geojson"])
