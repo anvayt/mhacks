@@ -159,6 +159,7 @@ async function runViewport(browser, name) {
       await page.waitForURL('**/board'); await board();
       const position = await request(`/leaderboard/position?session_id=${encodeURIComponent(morton.session_id)}`);
       await capture('rank', '1. Your place among same-type homes', 'Real city ranks. Bars scale peer costs to this estimated unit size.', page.getByRole('heading', { name: 'Same-type peers' }));
+      if (name === 'mobile') await capture('rank-bars', '1. Your home and nearby ranks', 'The highlighted “You” bar is the current building estimate.', page.getByRole('list', { name: 'Anonymized nearby ranks, annual cost at your unit size' }));
       return { address: MORTON, grade: morton.grade, grade_span: morton.grade_span, annual: morton.bill.annual, rank: position.current };
     });
     await beat(2, 'Listing battle', async () => {
@@ -239,6 +240,7 @@ async function runViewport(browser, name) {
       await form.getByText(/normal for this weather/).waitFor();
       await form.getByText(/Early signal, not verified savings/).waitFor();
       await capture('bill-result', '5. An early signal, not verified savings', 'One hypothetical bill; uncertainty remains and the current grade stays unchanged.', form.getByText(/normal for this weather/));
+      await capture('bill-signal', '5. The signal still has uncertainty', 'This provisional bill signal does not change your current grade or rank.', form.getByText(/^Provisional bill signal/));
       return { therms: 120, start: '2026-02-01', end: '2026-02-28', pct_vs_expected_for_weather: result.pct_vs_expected_for_weather,
         noise_floor: result.noise_floor, verified: result.verified, current_unchanged: true, bill_signal: result.bill_signal, snapshot: result.snapshot };
     });
