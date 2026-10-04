@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/demo-common.sh"
-command -v cloudflared >/dev/null 2>&1 || fail 'Install cloudflared first: brew install cloudflared'
+# TUNNEL=cloudflared (default) | localhostrun (ssh -R over port 22, no account). make demo-public-check picks.
+TUNNEL=${TUNNEL:-cloudflared}
+case "$TUNNEL" in
+    cloudflared) command -v cloudflared >/dev/null 2>&1 || fail 'Install cloudflared first: brew install cloudflared' ;;
+    localhostrun) need ssh ;;
+    *) fail "Unknown TUNNEL=$TUNNEL (use cloudflared or localhostrun)" ;;
+esac
 need curl; need npm
 [[ -x "$API_PY" ]] || fail 'Run (cd api && uv sync) first.'
 [[ -n "${AGENT_API_KEY:-}" ]] || fail 'Set a private AGENT_API_KEY in .env before exposing the account API.'
@@ -51,9 +57,21 @@ fi
 
 start_tunnel() {
     local name=$1 port=$2 attempt url
-    start_owned "$name-tunnel" "$ROOT" cloudflared tunnel --no-autoupdate --protocol http2 --url "http://127.0.0.1:$port"
+    if [[ "$TUNNEL" == localhostrun ]]; then
+        # stdin is an open, silent pipe: no EOF to end the session, no terminal read from a background job.
+        # exec keeps ssh as the tracked PID, so a dropped tunnel is noticed; tail dies with the owned group.
+        start_owned "$name-tunnel" "$ROOT" /bin/bash -c 'exec ssh -T -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -R "80:127.0.0.1:$1" nokey@localhost.run \
+            < <(tail -f /dev/null)' _ "$port"
+    else
+        start_owned "$name-tunnel" "$ROOT" cloudflared tunnel --no-autoupdate --protocol http2 --url "http://127.0.0.1:$port"
+    fi
     for ((attempt=0; attempt<90; attempt++)); do
-        url=$(sed -nE 's|.*(https://[a-z0-9-]+\.trycloudflare\.com).*|\1|p' "$DEMO_LOG_DIR/$name-tunnel.log" | head -1)
+        # localhost.run prints "<id>.lhr.life tunneled with tls termination, https://<id>.lhr.life";
+        # its banner also links admin.localhost.run, so only the tunnel line (or an lhr.life URL) counts.
+        url=$(sed -nE -e 's|.*(https://[a-z0-9-]+\.trycloudflare\.com).*|\1|p' \
+            -e 's|.*tunneled with tls termination, (https://[^[:space:],]+).*|\1|p' \
+            -e 's|.*(https://[a-z0-9-]+\.lhr\.life).*|\1|p' "$DEMO_LOG_DIR/$name-tunnel.log" | head -1)
         if [[ -n "$url" ]]; then TUNNEL_URL=$url; return; fi
         kill -0 "$LAST_PID" 2>/dev/null || fail "$name tunnel exited; see $DEMO_LOG_DIR/$name-tunnel.log"
         sleep 1
@@ -70,7 +88,7 @@ NEXT_PUBLIC_ONBOARD_URL=$ONBOARD_URL
 PUBLIC_URL=$ONBOARD_URL
 WEB_ORIGINS=${WEB_ORIGINS:-http://localhost:3000},$WEB_URL
 WEB_ORIGIN=$WEB_URL
-PUBLIC_TUNNEL=1
+PUBLIC_TUNNEL=$([[ "$TUNNEL" == cloudflared ]] && echo 1 || echo "$TUNNEL")
 EOF
 mv "$ROOT/data/demo/public.env.tmp" "$ROOT/data/demo/public.env"
 RECONFIGURED=1  # A failed restart may still have applied env; restore on exit.

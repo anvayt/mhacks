@@ -26,6 +26,7 @@ def protected(method, path, query_string=b""):
         return "catalog_ids" in parse_qs(query_string.decode("utf-8", errors="replace"), keep_blank_values=True)
     return (method == "POST" and path in {
         "/estimate", "/answer", "/compare", "/calibrate", "/projection", "/properties", "/auth/web/start",
+        "/simulate/fast-forward",  # runs the same what-if as /projection
     }) or (method == "GET" and any(path == p or path.startswith(p + "/") for p in (
         "/map", "/forecast", "/fixes", "/debug/features",
     )))

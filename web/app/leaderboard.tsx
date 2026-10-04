@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ListingForm } from "./listing-form";
 import { apiFetch, ApiError, load, save } from "./lib/api";
 import { BillCheck } from "./board/bill-check";
+import { FastForward } from "./board/fast-forward";
 import { billRange, errorText, gradeSpan, kg, money, type Calibration, type Commitment, type Estimate, type Position, type Projection, type PublicBoard, type Snapshot, type Suggestion, type VerifiedBoard } from "./board/api";
 import styles from "./board/board.module.css";
 
@@ -184,6 +185,9 @@ export function Leaderboard() {
   ].sort((a, b) => a.annual - b.annual) : [];
   const highest = Math.max(1, ...rows.map(p => p.annual));
   const heatIn = !!estimate?.bill.building_annual; // heat is in the rent: the renter's own $ is cooling only
+  // Fast-forward simulates the toggled choices, plus the saved home's accepted ones when signed in.
+  const ffIds = [...new Set([...(context?.propertyId ? accepted.filter(c => c.status !== "dismissed").map(c => c.catalog_id) : []), ...chosen])];
+  const ffModeled = ffIds.some(id => suggestions.some(s => s.catalog_id === id && !s.pending_model && s.projected));
   return <main className={`hero ranking board-screen ${styles.screen}`} style={gradientStops(1 - percentile)}>
     <div className="hero-decor" aria-hidden="true"><img className="halo" src="/hero/halo.svg" alt="" /><img className="orbit" src="/hero/orbit.svg" alt="" /><img className="texture" src="/hero/texture.svg" alt="" /></div>
     <div className="ranking-inner">
@@ -220,6 +224,7 @@ export function Leaderboard() {
             {item.note && <small>{item.note}</small>}
           </button>)}</div>
           <div aria-live="polite">{busy === "projection" && <p>Re-running the model for your selected changes…</p>}{ghost && <div className={styles.card}><strong>Projected if completed: grade {ghost.grade} · score {ghost.score}/100{position?.projected?.rank != null ? ` · rank #${position.projected.rank.toLocaleString()}` : ""}</strong>{heatIn ? <><span>Your cooling bill (heat is in your rent): {billRange(ghost.bill_annual)}</span>{ghost.building_annual_usd != null && <span>Building heating + cooling: {money(ghost.building_annual_usd)}/yr</span>}</> : <span>{billRange(ghost.bill_annual)}</span>}<span>{money(projection!.delta.usd_saved_yr)}/yr {heatIn ? "off your cooling bill" : "saved"} and {kg(projection!.delta.co2_kg_saved_yr)} CO₂/yr saved</span><span className="board-note">{projection!.model_version}. Your current grade and “You” marker have not changed.</span></div>}</div>
+          <FastForward sessionId={context.sessionId} propertyId={context.propertyId} catalogIds={ffIds} ready={ffModeled && !calibrated && !rankMismatch} blocked={calibrated || rankMismatch ? "Fast-forward isn't available for this home's current baseline yet." : undefined} />
           {context.propertyId && context.userId ? <><label className={styles.input}>Target date (optional)<input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} /></label><button type="button" className="action" disabled={!chosen.length || !!busy || calibrated || rankMismatch} onClick={commitChosen}>{busy === "commit" ? "Saving…" : "Commit"}</button></> : <Link href="/signin" className="board-note">Sign in to save your commitments ↗</Link>}
           {accepted.filter(c => c.status !== "dismissed").map(item => <div className={styles.card} key={item.id}><strong>{item.title}</strong><span className="board-note">{item.status === "completed" ? "Reported done · awaiting bill evidence" : "Accepted"}{item.target_date ? ` · target ${item.target_date}` : ""}</span><div className={styles.actions}>{item.status === "accepted" && <button type="button" className="control choice" onClick={() => done(item)} disabled={!!busy}>Done</button>}{item.status === "accepted" && (calendar || calendarConnected) && <button type="button" className="control choice" onClick={() => calendarReminder(item)} disabled={!!busy}>Add calendar reminder</button>}</div></div>)}
           {!!accepted.length && context.signed && <div className={styles.actions}><button type="button" className="control choice" onClick={connectCalendar} disabled={!!busy}>Connect calendar (optional)</button>{calendar && <a href={calendar.auth_url} target="_blank" rel="noreferrer">{calendar.mock ? "Open demo calendar connection" : "Continue calendar connection"} ↗</a>}</div>}
