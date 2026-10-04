@@ -102,7 +102,9 @@ export class Conversations {
   /** Append the API's next unanswered question, unless the grade is locked or the API sent none. */
   private withNextQuestion(s: ChatState, body: string): string {
     const e = s.last;
-    const q = e && !e.locked && s.sessionId ? (e.questions ?? []).find((x) => !s.answered.has(x.id)) : undefined;
+    const usable = (x: Question) => x && typeof x.id === "string" && typeof x.text === "string" && Array.isArray(x.options);
+    const questions = Array.isArray(e?.questions) ? e.questions : [];
+    const q = e && !e.locked && s.sessionId ? questions.find((x) => usable(x) && !s.answered.has(x.id)) : undefined;
     if (q) {
       s.pending = { kind: "question", question: q };
       return `${body}\n\n${questionText(q)}`;
