@@ -52,7 +52,7 @@ export class MockPhase2 {
       ...("amount_usd" in req ? { extracted: { estimated_from_amount: true, note: "Demo gas usage estimated from your bill amount." } } : {}) };
     this.bills.set(key, result); return result;
   }
-  readonly methods: Pick<Api, "authPhone" | "confirmLogin" | "me" | "patchMe" | "property" | "checkin" | "suggestions" | "commitments" | "commit" | "updateCommitment" | "projection" | "remindersDue" | "reminderSent" | "reminderInbound" | "reminderControl" | "reminderDemo" | "calendarConnect" | "calendarReminder" | "habitCheckin" | "habits"> = {
+  readonly methods: Pick<Api, "authPhone" | "confirmLogin" | "me" | "patchMe" | "property" | "checkin" | "suggestions" | "commitments" | "commit" | "updateCommitment" | "projection" | "remindersDue" | "reminderSent" | "reminderInbound" | "reminderControl" | "reminderDemo" | "calendarConnect" | "calendarReminder" | "habitCheckin" | "habits" | "fastForward"> = {
     authPhone: async (req) => {
       const phone = accountHandle(req.phone); let a = this.phones.get(phone); const created = !a;
       if (!a) {
@@ -103,6 +103,18 @@ export class MockPhase2 {
       return ok(this.streak(id));
     },
     habits: async (id) => this.users.has(id) ? ok(this.streak(id)) : fail("not_found", "Account not found."),
+    // Demo data: only window_upgrade is "modeled" (the mock projection's $125 / 699 kg a year), spread flat.
+    fastForward: async ({ property_id, days }) => {
+      const m = this.owner(property_id); if (!m) return fail("property_not_found", "Property not found.");
+      if (days < 1 || days > 365) return fail("bad_days", "Fast-forward 1 to 365 days.");
+      const mine = [...this.accepted.values()].filter((c) => c.property_id === property_id && c.status !== "dismissed");
+      const modeled = mine.some((c) => c.catalog_id === "window_upgrade"), share = modeled ? days / 365 : 0;
+      const real = this.streak(m.user_id).current;
+      return ok({ label: "simulated_projected_if_kept", label_text: "Simulated · projected if you keep your commitments",
+        totals: { days, end_date: new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10), usd_saved: Math.round(125 * share * 100) / 100, kg_co2_saved: Math.round(699 * share * 100) / 100 },
+        commitments: mine.map((c) => ({ catalog_id: c.catalog_id, title: c.title, modeled: c.catalog_id === "window_upgrade" })),
+        not_modeled: mine.filter((c) => c.catalog_id !== "window_upgrade").map((c) => c.catalog_id), real_habit_streak: real, simulated_habit_streak: real + days });
+    },
     calendarConnect: async (id) => { const m = this.users.get(id); if (!m) return fail("not_found", "Account not found."); m.calendar_connected = true; return ok({ auth_url: "https://example.com/calendar-demo", mock: true, message: "Demo data: Calendar connection simulated." }); },
     calendarReminder: async (req) => { if (!this.users.get(req.user_id)?.calendar_connected) return fail("calendar_not_connected", "Connect Calendar first."); const c = this.accepted.get(req.commitment_id); if (!c || c.status !== "accepted") return fail("commitment_not_accepted", "An accepted commitment is required."); c.calendar_event_id = `demo-event-${c.id}`; return ok({ reminder_id: `demo-calendar-${c.id}`, event_id: c.calendar_event_id, html_link: null, mock: true }); },
   };

@@ -342,7 +342,8 @@ def what_if(s: dict, cids: list[str], property_id: str | None = None) -> dict:
     current = {"score": s["score"], "grade": s["grade"], "percentile_city": s.get("percentile_city"),
                "bill_annual": ref, "co2_kg_yr": _band(co2_kg(a["gas_ccf"], a["electric_kwh"]), ref),
                "building_annual_usd": a["total_usd"]}
-    projected, delta = {**current, "label": LABEL}, {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0}
+    projected, delta = {**current, "label": LABEL}, {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0,
+                                                     "building_heating_usd_saved_yr": 0, "building_cooling_usd_saved_yr": 0}
     model_effects = None
     if modeled:
         change = {k: v for c in modeled for k, v in changes[c].items()}  # effects don't add: one composed run
@@ -355,7 +356,10 @@ def what_if(s: dict, cids: list[str], property_id: str | None = None) -> dict:
                      "bill_annual": _band(n[estimate.renter_usd_key(s)], ref),
                      "co2_kg_yr": _band(co2_kg(n["gas_ccf"], n["electric_kwh"]), ref),
                      "building_annual_usd": n["total_usd"], "label": LABEL}
-        delta = {"score": sc["score"] - s["score"], "usd_saved_yr": usd, "co2_kg_saved_yr": kg}
+        # the building's heating vs cooling $ (simulate.py spreads each over its own typical-weather days)
+        delta = {"score": sc["score"] - s["score"], "usd_saved_yr": usd, "co2_kg_saved_yr": kg,
+                 "building_heating_usd_saved_yr": round(a["heating_usd"] - n["heating_usd"]),
+                 "building_cooling_usd_saved_yr": round(a["cooling_usd"] - n["cooling_usd"])}
     return {"current": current, "projected": projected, "delta": {**delta, "label": LABEL}, "label": LABEL,
             "modeled": modeled, "not_modeled": [c for c in cids if c not in changes],
             **({"model_effects": model_effects} if model_effects is not None else {}),

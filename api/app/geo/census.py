@@ -32,7 +32,7 @@ def _valid(v) -> int | None:
 
 
 def median_year_built(block_geoid: str | None) -> tuple[int | None, str]:
-    """(year, source) for a 15-digit 2020 block GEOID; tries block group, then tract, then county."""
+    """(year, source) for a 2020 block (15-digit) or block group (12-digit) GEOID; tries block group, tract, county."""
     t = _table()
     release = t["release"]["name"]
     geos = [("block group", "15000US" + block_geoid[:12]), ("tract", "14000US" + block_geoid[:11])] if block_geoid else []
