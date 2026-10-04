@@ -30,7 +30,9 @@ start_services() {
     if [[ -z "$WEB_PID" ]] && healthy 'http://localhost:3000'; then printf 'Reusing healthy web on :3000 (cannot reconfigure).\n'
     else
         port_used 3000 && fail 'Port 3000 is occupied; leaving it untouched.'
-        start_owned web "$ROOT/web" npm run dev -- --hostname 127.0.0.1 --port 3000
+        # Rebuild for the current public URLs; production avoids StrictMode's
+        # duplicate development requests when a presenter opens the board.
+        start_owned web "$ROOT/web" /bin/bash -c 'npm run build && exec npm run start -- --hostname 127.0.0.1 --port 3000'
         WEB_PID=$LAST_PID
         wait_healthy web 'http://localhost:3000' "$WEB_PID" 120
     fi

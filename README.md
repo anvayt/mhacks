@@ -27,6 +27,8 @@ make demo-check                 # isolated API/model with outbound Python networ
 finally the agent. Open [the website](http://localhost:3000). Without both Photon credentials the agent always
 uses terminal chat; with both credentials, plain `make demo` uses Photon. Set `AGENT_TERMINAL=1` to force terminal
 chat. Terminal mode uses the agent's plain-text prompt and does not initialize Photon or send messages.
+The supervisor builds the web and runs `npm run start` in production, including after public URL changes;
+development StrictMode must not double the demo's board requests.
 
 Environment variables already set in the shell take precedence over literal assignments in root `.env`, then
 `agent/.env`. Files are parsed without executing shell code; `$VARIABLE` interpolation is not supported. No
@@ -90,10 +92,12 @@ terminals, then use this checkout's `make demo`. Commands use a cooperative mail
 permission to kill**. A crashed supervisor may leave `data/demo/services.lock` (or `public.lock`); inspect the
 ports/old launcher first, then remove only the stale directory. A second public launcher is refused.
 
-The API uses a single-process in-memory public budget: **30 expensive requests per IP per minute**, and
+The API uses a single-process in-memory public budget: **120 expensive requests per IP per minute** by default
+(configure `RATE_LIMIT_PER_MIN`), and
 **3 bill photos per IP per 10 minutes** (each photo runs two paid vision calls). These are demo operating budgets,
 not model accuracy thresholds. Estimate, answer, compare, calibrate, map, forecast and model-calling property,
-projection, fixes, suggestion and position routes share the budget; web-login starts also count. `429` uses
+projection and fixes routes share the budget; web-login starts also count. Read-only suggestions and current
+position reads do not count, but position requests with `catalog_ids` do because they calculate a projection. `429` uses
 `detail.code=slow_down`, renter-facing copy and `Retry-After`. Only a constant-time match to a **nonempty**
 `AGENT_API_KEY` bypasses rate limits; bearer sign-in does not. The byte cap applies even to agent requests:
 **8 MiB base64 photo**, **8 MiB + 64 KiB total JSON**, counted while streaming regardless of Content-Length.
