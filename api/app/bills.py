@@ -177,7 +177,8 @@ def _gas_price(session: dict, month: int) -> tuple[float, str] | None:
         heat = m.get("heating", {})
         ccf, usd = heat.get("gas_ccf"), heat.get("usd")
         if m.get("month") == month and ccf and usd is not None and ccf > 0 and usd >= 0:
-            return usd / ccf, f"P1 session heating_cooling.months[{month}].heating.usd / gas_ccf (EIA monthly gas pricing)"
+            return usd / ccf, (f"Rate inferred from rounded P1 session monthly heating cost/use: month {month}, "
+                               "heating.usd / gas_ccf; the model uses EIA gas pricing")
     return None
 
 
@@ -219,7 +220,8 @@ def save_bill(prop: dict, session: dict, extracted: dict, start: date, end: date
                       "therms_avoided": round(therms, 4), "usd_saved": round(avoided_ccf * price[0], 2),
                       "baseline_snapshot_id": baseline["id"], "commitment_ids": commitment_ids,
                       "method": "P1 weather-normal expected gas minus observed bill gas, reversed monthly proration; gas only",
-                      "emission_factors": dict(FACTORS), "pricing": {"gas_usd_per_ccf": price[0], "source": price[1]},
+                      "emission_factors": dict(FACTORS), "pricing": {"gas_usd_per_ccf": price[0], "source": price[1],
+                                  "method": "ratio_of_rounded_model_monthly_cost_and_use"},
                       "model_version": session.get("model_version") or MODEL_VERSION, "created_at": _now()}
         elif verified:
             reason = "verified_gas_reduction_but_session_gas_price_unavailable"
