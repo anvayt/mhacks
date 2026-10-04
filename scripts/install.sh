@@ -56,6 +56,6 @@ cat <<EOF
 
 Dependencies installed. One-time data setup (needs network), if not done yet:
   (cd api && .venv/bin/python scripts/fetch_footprints.py)   # city GIS, ~30 s
-  make -C model build && make -C model leakage              # long; see README
+  make -C model build                                        # long; see README
 Then: make demo
 EOF
