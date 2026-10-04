@@ -53,6 +53,11 @@ Given any Ann Arbor street address, return the building features the bill model 
 - [x] Tests pass; works offline after the first footprint download
 - [x] No secrets committed; every value lists its source (PLAN.md §0)
 
+## Follow-up (team decisions Oct 3, ~9:20 PM; branch p2/address-features)
+- [ ] **Townhouse rule:** classify row/attached homes as `Single-Family Attached` (ResStock category) instead of small multi-family.
+- [ ] **Stories snapping:** snap `in.geometry_stories` to the nearest ResStock 2024.2 MI category (1–15, 20, 21, 35); keep the raw count in `stories_raw`.
+- **FOR MERGE (tell P1/Dennis):** `in.geometry_stories` is snapped to ResStock's categories (e.g. 26-story Tower Plaza → 21 or 35, nearest). If P1's model treats stories as a number instead, use `stories_raw`. Decide at merge.
+
 ## Handoff (fill in when done; DEV_STRATEGY #1)
 **Branch `p2/address-features` @ 2731a80, pushed. Not merged into dev.** All "Done when" items pass (12 tests).
 
