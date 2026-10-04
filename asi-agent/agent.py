@@ -35,6 +35,8 @@ class NoRegistration(AgentRegistrationPolicy):
 def seed_for(name='agent'):
     RUNTIME.mkdir(mode=0o700, parents=True, exist_ok=True)
     RUNTIME.chmod(0o700)
+    if name == 'agent' and os.getenv('ASI_AGENT_SEED'):
+        return os.environ['ASI_AGENT_SEED'].strip()  # hosted: the seed is a platform secret, not a file
     path = RUNTIME / (name + '.seed')
     if not path.exists():
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)

@@ -2,7 +2,8 @@
 
 RATE_LIMIT_PER_MIN defaults to 120 model requests/minute per visitor; 3 photos/10
 minutes limits the two paid vision calls per photo. Trust Cloudflare's client header only
-on the launcher-only loopback socket (uvicorn --no-proxy-headers).
+on the launcher-only loopback socket (uvicorn --no-proxy-headers); on Fly (FLY_APP_NAME set)
+trust Fly-Client-IP, which Fly's proxy always sets.
 """
 import hmac
 import ipaddress
@@ -50,6 +51,13 @@ class PublicGuard:
 
     def visitor(self, scope, headers):
         peer = (scope.get("client") or ("unknown",))[0]
+        if os.environ.get("FLY_APP_NAME"):
+            # Behind Fly's proxy the peer is the proxy. Fly sets Fly-Client-IP and
+            # overwrites any client-supplied value, so it is the visitor.
+            try:
+                return str(ipaddress.ip_address(headers.get(b"fly-client-ip", b"").decode()))
+            except (ValueError, UnicodeDecodeError):
+                pass
         if os.environ.get("PUBLIC_TUNNEL") == "1":
             try:
                 if ipaddress.ip_address(peer).is_loopback:
