@@ -134,7 +134,8 @@ def _home(property_id: str, request: Request) -> tuple[dict, dict]:
 def _effect(s: dict, new: dict) -> tuple[dict, int, int]:
     """(score_for the re-run, $ saved a year, kg CO₂ saved a year) vs the session's own estimate."""
     a, n, b = s["heating_cooling"]["annual"], new["annual"], s["building"]
-    return (score_for(n["total_usd"], b["sqft"], b["type"]), round(a["total_usd"] - n["total_usd"]),
+    k = estimate.renter_usd_key(s)  # $ saved is the renter's: cooling only when heat is included in the rent
+    return (score_for(n["total_usd"], b["sqft"], b["type"]), round(a[k] - n[k]),
             round(co2_kg(a["gas_ccf"] - n["gas_ccf"], a["electric_kwh"] - n["electric_kwh"])))
 
 
@@ -302,7 +303,7 @@ def post_projection(req: ProjectionRequest, request: Request) -> dict:
         sc, usd, kg = _effect(s, new)
         n = new["annual"]
         projected = {"score": sc["score"], "grade": sc["grade"], "percentile_city": sc["percentile_city"],
-                     "bill_annual": _band(n["total_usd"], ref),
+                     "bill_annual": _band(n[estimate.renter_usd_key(s)], ref),
                      "co2_kg_yr": _band(co2_kg(n["gas_ccf"], n["electric_kwh"]), ref), "label": LABEL}
         delta = {"score": sc["score"] - s["score"], "usd_saved_yr": usd, "co2_kg_saved_yr": kg}
     pid = "prj_" + secrets.token_hex(6)
