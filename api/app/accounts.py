@@ -435,11 +435,15 @@ def _me(user_id: str) -> dict:
     props = _properties(user_id)
     cur = next((p for p in props if p["active"]), None)
     est = sessions.get(cur["session_id"]) if cur else None
+    # "your grade": the latest snapshot that isn't a provisional bill signal (one bill inside P1's noise never moves it)
+    snap = next((x for x in reversed(bills.list_snapshots(cur["id"])) if not x.get("provisional")), None) if cur else None
     return {"user_id": u["id"], "phone_masked": mask(u["phone_number"]), "alias": u["alias"],
             "leaderboard_opt_in": u["leaderboard_opt_in"], "timezone": u["timezone"],
             "reminder_prefs": u["reminder_prefs"], "current_property_id": u["current_property_id"],
             "properties": props, "current_estimate": est and {k: v for k, v in est.items() if k not in INTERNAL_KEYS},
-            "pending_checkin": u["pending_checkin"], "calendar_connected": gcal.is_connected(u["id"])}
+            "pending_checkin": u["pending_checkin"], "calendar_connected": gcal.is_connected(u["id"]),
+            "current_grade": snap and {k: snap.get(k) for k in ("source", "grade", "score", "percentile_city",
+                                                                "bill_annual", "label", "created_at")}}
 
 
 @router.get("/me/{user_id}")
