@@ -1,0 +1,143 @@
+{
+  "weather_vs_noaa_normals": {
+    "USC00200230": {
+      "name": "ANN ARBOR U OF MICH",
+      "lat": 42.2981,
+      "lon": -83.6639,
+      "compare": {
+        "ANN-HTDD-NORMAL": {
+          "noaa": 6500.6,
+          "ours": 6453.2,
+          "pct_diff": -0.007
+        },
+        "ANN-CLDD-NORMAL": {
+          "noaa": 653.1,
+          "ours": 656.5,
+          "pct_diff": 0.005
+        },
+        "DJF-HTDD-NORMAL": {
+          "noaa": 3455.6,
+          "ours": 3448.2,
+          "pct_diff": -0.002
+        },
+        "MAM-HTDD-NORMAL": {
+          "noaa": 1660.8,
+          "ours": 1662.2,
+          "pct_diff": 0.001
+        },
+        "SON-HTDD-NORMAL": {
+          "noaa": 1317.4,
+          "ours": 1293.0,
+          "pct_diff": -0.019
+        },
+        "JJA-CLDD-NORMAL": {
+          "noaa": 533.3,
+          "ours": 546.8,
+          "pct_diff": 0.025
+        },
+        "ANN-TAVG-NORMAL": {
+          "noaa": 48.8,
+          "ours": 49.1,
+          "pct_diff": 0.007
+        }
+      }
+    },
+    "USW00094889": {
+      "name": "ANN ARBOR MUNI AP",
+      "lat": 42.2228,
+      "lon": -83.7444,
+      "compare": {
+        "ANN-HTDD-NORMAL": {
+          "noaa": 6741.6,
+          "ours": 6470.9,
+          "pct_diff": -0.04
+        },
+        "ANN-CLDD-NORMAL": {
+          "noaa": 519.6,
+          "ours": 644.4,
+          "pct_diff": 0.24
+        },
+        "DJF-HTDD-NORMAL": {
+          "noaa": 3515.3,
+          "ours": 3451.8,
+          "pct_diff": -0.018
+        },
+        "MAM-HTDD-NORMAL": {
+          "noaa": 1710.6,
+          "ours": 1667.3,
+          "pct_diff": -0.025
+        },
+        "SON-HTDD-NORMAL": {
+          "noaa": 1420.1,
+          "ours": 1300.3,
+          "pct_diff": -0.084
+        },
+        "JJA-CLDD-NORMAL": {
+          "noaa": 437.9,
+          "ours": 537.1,
+          "pct_diff": 0.226
+        },
+        "ANN-TAVG-NORMAL": {
+          "noaa": 47.8,
+          "ours": 49.1,
+          "pct_diff": 0.026
+        }
+      }
+    }
+  },
+  "seasonal_gas_vs_real_meters": {
+    "n_building_season_years": 800,
+    "n_buildings": 101,
+    "median_abs_pct_error": {
+      "metered": {
+        "all": 0.074,
+        "winter": 0.065,
+        "spring": 0.055,
+        "summer": 0.152,
+        "fall": 0.066
+      },
+      "meter_model": {
+        "all": 0.312,
+        "winter": 0.3,
+        "spring": 0.327,
+        "summer": 0.3,
+        "fall": 0.302
+      },
+      "resstock": {
+        "all": 0.296,
+        "winter": 0.3,
+        "spring": 0.295,
+        "summer": 0.299,
+        "fall": 0.291
+      },
+      "blend": {
+        "all": 0.283,
+        "winter": 0.278,
+        "spring": 0.28,
+        "summer": 0.299,
+        "fall": 0.272
+      },
+      "null": {
+        "all": 0.354,
+        "winter": 0.351,
+        "spring": 0.383,
+        "summer": 0.302,
+        "fall": 0.375
+      }
+    },
+    "p90_abs_pct_error_winter": {
+      "metered": 0.164,
+      "meter_model": 0.855,
+      "resstock": 1.173,
+      "blend": 0.94,
+      "null": 1.417
+    },
+    "median_signed_error": {
+      "metered": 0.005,
+      "meter_model": -0.067,
+      "resstock": 0.021,
+      "blend": -0.023,
+      "null": 0.003
+    }
+  }
+}
