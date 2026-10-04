@@ -487,6 +487,41 @@ async function webOnce() {
   }
 }
 
+// Inject only a missing size into real API responses to cover the null-size rendering regression.
+async function webNullSize() {
+  const sc = "web null size";
+  const { ctx, page } = await newPage(sc);
+  try {
+    const battle = await api("/compare", { listings: COMPARE.map(address => ({ address })) });
+    if (battle.status !== 200) throw new Error(`Compare fixture unavailable: ${battle.status}`);
+    const cmp = battle.data;
+    cmp.a.building.sqft = null;
+    cmp.b.building.sqft = null;
+    await page.route(`${API}/session/${cmp.a.session_id}`, route => route.fulfill({ json: cmp.a }));
+    await page.goto(`${WEB}/board?session_id=${cmp.a.session_id}`);
+    ok(sc, "board labels missing size", await waitText(page, /size unknown/));
+    await page.locator(".board-col.you").waitFor();
+    ok(sc, "board keeps current bar without inventing peer dollar bars",
+      await page.locator(".board-col").count() === 1 && /Peer cost bars are unavailable/.test(await text(page)));
+    ok(sc, "board contains no NaN or undefined", !/\bNaN\b|undefined/.test(await text(page)));
+    await audit(page, sc, "/board 375px");
+
+    await page.route(`${API}/compare`, route => route.fulfill({ json: cmp }));
+    await page.goto(`${WEB}/compare`);
+    await page.locator("#listing-a").fill(COMPARE[0]);
+    await page.locator("#listing-b").fill(COMPARE[1]);
+    await page.locator("button[type=submit]").click();
+    ok(sc, "compare renders both results with missing sizes", await waitText(page, /size unknown/)
+      && (await text(page)).match(/size unknown/g)?.length === 2);
+    ok(sc, "compare preserves the returned annual gap", (await text(page)).includes(`${money(cmp.diff_usd_yr)}/yr more`));
+    await audit(page, sc, "/compare 375px");
+  } catch (e) {
+    rec(sc, "aborted", "FAIL", e.message.split("\n")[0].slice(0, 200));
+  } finally {
+    await ctx.close();
+  }
+}
+
 // Optional (SMOKE_SIGNIN=1 + AGENT_API_KEY in env): phone sign-in with a fictional number on a USE_MOCKS=1 API.
 // Plays the agent's part (POST /auth/web/confirm) itself; checks the token lands in hr_token and polling stops.
 async function webSignin() {
@@ -534,6 +569,7 @@ if (MODE === "web" || MODE === "all") {
   browser = await pw.chromium.launch({ channel: process.env.PW_CHANNEL ?? "chrome", headless: process.env.HEADED !== "1" });
   for (const a of ADDRS) await webFlow(a);
   await webOnce();
+  await webNullSize();
   if (process.env.SMOKE_SIGNIN === "1" && process.env.AGENT_API_KEY) await webSignin();
   await browser.close();
 }

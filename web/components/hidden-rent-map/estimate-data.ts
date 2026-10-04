@@ -4,7 +4,7 @@ type Band = { p10: number | null; p50: number; p90: number | null };
 
 export interface Estimate {
   session_id: string;
-  building: { address: string; sqft: number; type: string };
+  building: { address: string; sqft: number | null; type: string };
   grade: string;
   grade_span?: string[];
   locked?: boolean;

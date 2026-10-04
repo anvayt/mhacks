@@ -174,8 +174,10 @@ export function Leaderboard() {
   // made by this page against its current report, and never after bill regrading.
   const ghost = !calibrated && !rankMismatch && projection ? projection.projected : null;
   const percentile = ghost?.percentile_city ?? current?.percentile_city ?? .5;
+  const sqft = estimate?.building.sqft;
+  const sizeLabel = sqft != null ? `${sqft.toLocaleString()} sq ft` : "size unknown";
   const rows = estimate && current && currentBill ? [
-    ...position!.neighbors.map((p, i) => ({ id: `peer-${i}`, annual: p.cost_per_sqft * estimate.building.sqft, rank: p.rank, you: false })),
+    ...(sqft != null ? position!.neighbors.map((p, i) => ({ id: `peer-${i}`, annual: p.cost_per_sqft * sqft, rank: p.rank, you: false })) : []),
     { id: "you", annual: currentBill.p50, rank: current.rank, you: true },
   ].sort((a, b) => a.annual - b.annual) : [];
   const highest = Math.max(1, ...rows.map(p => p.annual));
@@ -189,7 +191,7 @@ export function Leaderboard() {
         {loading && <p role="status">Loading your home, city rank and model-scored options…</p>}
         {error && <div role="alert" className={`${styles.status} ${styles.error}`}>{error} <button type="button" className="control choice" onClick={initialize} disabled={loading}>Retry</button> <Link href="/address">Try another address</Link></div>}
         {!loading && !context && !error && <p>Look up a home to see your predicted place. <Link href="/address">Find my hidden rent ↗</Link></p>}
-        {estimate && <p className="board-note">{estimate.building.address} · {estimate.building.type} · {estimate.building.sqft.toLocaleString()} sq ft</p>}
+        {estimate && <p className="board-note">{estimate.building.address} · {estimate.building.type} · {sizeLabel}</p>}
         {rankMismatch && estimate && <div className={styles.card}><p>Ranking is temporarily unavailable for this saved heat-included home. Its saved bill and building rank use different cost bases.</p><p>Predicted building grade {gradeSpan(estimate.grade, estimate.grade_span)} · score {estimate.score}/100. Building: {billRange(estimate.bill.building_annual!)}.</p><p className="board-note">Your bill: {billRange(estimate.bill.annual)}. {estimate.bill.note}</p></div>}
         {current && estimate && currentBill && <>
           <div className={styles.summary} aria-live="polite"><span><strong>Predicted {gradeSpan(current.grade, snapshot?.grade_span ?? estimate.grade_span)}</strong><br />Score {current.score}/100</span><span><strong>#{current.rank.toLocaleString()}</strong> of {current.of.toLocaleString()}<br />same-type city homes</span><span><strong>{percent(current.percentile_city)}%</strong><br />of all city homes cost more per sq ft</span></div>
@@ -200,7 +202,7 @@ export function Leaderboard() {
             <span className="board-value">{p.you ? money(p.annual) : <>≈ {money(p.annual)}<br />at your size</>}</span><span className={`board-track ${styles.track}`}><span className="board-bar" style={{ height: `${p.annual / highest * 100}%`, background: backgroundColorAt(i / Math.max(1, rows.length - 1)) }} />{p.you && ghost && <span className={styles.ghostBar} role="img" style={{ height: `${Math.min(100, (ghost.building_annual_usd ?? ghost.bill_annual.p50) / highest * 100)}%` }} aria-label={`Projected if completed: score ${ghost.score}, ${money(ghost.building_annual_usd ?? ghost.bill_annual.p50)} per year`} />}</span><span className="board-label">{p.you ? "You" : "Peer"}<br />#{p.rank.toLocaleString()}</span>
           </li>)}</ol>
           {ghost && <p className="board-note">Dashed overlay: projected if completed · {money(ghost.building_annual_usd ?? ghost.bill_annual.p50)}/yr · score {ghost.score}{position?.projected?.rank != null ? ` · same-type rank #${position.projected.rank.toLocaleString()}` : ""}. Your solid bar stays fixed.</p>}
-          <p className="board-note">Nearby ranks come from the API&apos;s scored city footprints of your building type. Peer bars scale their annual cost per sq ft to your {estimate.building.sqft.toLocaleString()} sq ft. Your bar stays at the current building estimate. If heat is included in rent, the chart still rates the building; your own bill is shown separately.</p>
+          <p className="board-note">Nearby ranks come from the API&apos;s scored city footprints of your building type. {sqft != null ? <>Peer bars scale their annual cost per sq ft to your {sizeLabel}.</> : "Peer cost bars are unavailable: size unknown."} Your bar stays at the current building estimate. If heat is included in rent, the chart still rates the building; your own bill is shown separately.</p>
           <div className={styles.rail} aria-label="Current and projected city percentiles"><span className={styles.marker} style={{ left: pin(current.percentile_city) }}>You · {percent(current.percentile_city)}%</span>{ghost && <span className={`${styles.marker} ${styles.ghost}`} style={{ left: pin(ghost.percentile_city) }}>Projected if completed<br />Score {ghost.score} · {percent(ghost.percentile_city)}%</span>}</div>
           <p className="board-note">The markers and page color use the API&apos;s percentile against all city homes. Blue is lower cost; red is higher cost. The same-type rank above stays fixed.</p>
           <details><summary>How this is calculated</summary><p className="board-note">Predicted heating + cooling from P1&apos;s model, ranked against Ann Arbor&apos;s cached city footprint scores. Rank and score compare the same building type; city percentile compares all types. Ranges express model uncertainty, not a guaranteed utility bill. {position?.model_version}</p></details>

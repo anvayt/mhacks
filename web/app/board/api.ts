@@ -2,7 +2,7 @@ import { ApiError } from "../lib/api";
 
 export type Band = { p10?: number | null; p50: number; p90?: number | null };
 export type Estimate = {
-  session_id: string; building: { address: string; sqft: number; type: string };
+  session_id: string; building: { address: string; sqft: number | null; type: string };
   bill: { annual: Band; building_annual?: Band; band_method?: string; note?: string; covers?: string };
   score: number; grade: string; grade_span?: string[]; locked?: boolean; badges?: string[];
 };
