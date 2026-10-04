@@ -160,13 +160,14 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
   <section class="card" id="results">
     <h2>Estimate <span class="badge" id="method">–</span></h2>
     <div class="tiles">
-      <div class="tile"><div class="k"><span class="key" style="background:var(--heat)"></span>Heating / yr</div><div class="v" id="t-heat">–</div><div class="s" id="t-heat-s"></div></div>
-      <div class="tile"><div class="k"><span class="key" style="background:var(--cool)"></span>Cooling / yr</div><div class="v" id="t-cool">–</div><div class="s" id="t-cool-s"></div></div>
-      <div class="tile"><div class="k">Total / yr</div><div class="v" id="t-tot">–</div><div class="s" id="t-acc"></div></div>
+      <div class="tile"><div class="k"><span class="key" style="background:var(--heat)"></span>Heating / yr, ≈ $ at EIA price</div><div class="v" id="t-heat">–</div><div class="s" id="t-heat-s"></div></div>
+      <div class="tile"><div class="k"><span class="key" style="background:var(--cool)"></span>Cooling / yr, ≈ $ at EIA price</div><div class="v" id="t-cool">–</div><div class="s" id="t-cool-s"></div></div>
+      <div class="tile"><div class="k">Total / yr, ≈ $ at EIA price</div><div class="v" id="t-tot">–</div><div class="s" id="t-acc"></div></div>
     </div>
+    <p class="note" style="margin:8px 0 0">Dollars are a <b>conversion</b>: estimated energy × the US EIA Michigan statewide residential price for each month (gas: marginal price, fixed monthly charges removed; electricity: average price). They are not a prediction of anyone's bill. The model estimates <b>energy</b>, and that is what is checked against real meters.</p>
     <div style="margin-top:16px">
       <span class="toggle"><button class="ghost" id="tbl-btn" type="button">Table view</button></span>
-      <div class="legend"><span><span class="key" style="background:var(--heat)"></span>Heating</span><span><span class="key" style="background:var(--cool)"></span>Cooling</span></div>
+      <div class="legend"><span><span class="key" style="background:var(--heat)"></span>Heating</span><span><span class="key" style="background:var(--cool)"></span>Cooling</span><span class="muted">($ = energy × EIA Michigan price)</span></div>
       <div id="chart"></div>
       <div id="season-table" hidden></div>
     </div>
@@ -188,7 +189,7 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
       <ul>
         <li><b>Heating energy</b>: the natural gas (ccf; 1 ccf ≈ 1.04 therms) burned for space heating. The building's gas use minus its year-round baseload (hot water, cooking). For electrically heated buildings it is the electricity (kWh) used for heating instead.</li>
         <li><b>Cooling energy</b>: the electricity (kWh) used for air conditioning. The building's electricity minus its baseload (lights, plugs, appliances).</li>
-        <li><b>Cost</b> = energy × that month's Michigan price, scaled from the whole building to your unit by floor area.</li>
+        <li><b>Dollars</b> = a conversion of the estimated energy at that month's Michigan statewide residential price (US EIA), after scaling from the whole building to your unit by floor area. No building's bills are available, so dollars are never presented as a measured or validated quantity; energy is what's validated against real meters.</li>
       </ul>
       <p>Heating and cooling can't be read off a meter directly; a meter only records the total. For buildings with real meters, the split comes from a change-point regression: how much the total rises per degree-day of cold (heating) or heat (cooling). So the honest test of the whole pipeline is to <b>predict each building's total monthly gas and electricity for data the model never saw, and compare with what the meter actually recorded</b>. That's what the scatter and the building explorer below show.</p>
       <p><b>Metered</b> = one of the Ann Arbor properties that report monthly utility readings (gas and electricity, 2021–2023) to the city's energy benchmarking program. Everything else is <b>unmetered</b>, and its estimate comes from models trained on the metered ones (and on ResStock).</p>
@@ -209,7 +210,6 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
         <option value="metered">Metered: own fit, other years</option><option value="blend" selected>Unmetered: blend (served)</option>
         <option value="meter_model">Unmetered: meter-trained model</option><option value="resstock">Unmetered: ResStock</option><option value="null">No-skill median</option></select></label>
       <label class="f">Season<select id="sc-season"><option value="">All</option><option>winter</option><option>spring</option><option>summer</option><option>fall</option></select></label>
-      <label class="f">Units<select id="sc-units"><option value="">Energy (ccf / kWh)</option><option value="_usd">Cost ($)</option></select></label>
     </form>
     <div class="stats" id="sc-stats"></div>
     <div class="two">
@@ -220,7 +220,6 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
     <h3>3 · Metered building explorer: monthly actual vs model</h3>
     <form class="controls" id="mb-form">
       <label class="f">Metered property<select id="mb-sel" style="max-width:360px"></select></label>
-      <label class="f">Units<select id="mb-units"><option value="">Energy (ccf / kWh)</option><option value="_usd">Cost ($, at the estimate's prices)</option></select></label>
     </form>
     <div class="stats" id="mb-stats"></div>
     <div class="legend" id="mb-legend"></div>
@@ -248,7 +247,7 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
   </section>
 
   <section class="card span2">
-    <h2>591 Ann Arbor apartment buildings · typical-year heating + cooling for an 854 ft² unit</h2>
+    <h2>591 Ann Arbor apartment buildings · typical-year heating + cooling energy for an 854 ft² unit, shown as $ at EIA Michigan prices</h2>
     <div id="map"></div>
     <div class="mapleg"><span id="leg-lo">–</span><span class="ramp"></span><span id="leg-hi">–</span>
       <span class="muted">· ring = metered (real meters) · click a building to estimate it</span></div>
@@ -376,7 +375,7 @@ function render(e) {
   $("t-heat-s").textContent = fuel === "gas" ? `${e.annual.gas_ccf} ccf gas` : `electric heat`;
   $("t-cool-s").textContent = `${Math.round(e.seasons.reduce((s, x) => s + x.cooling.electric_kwh, 0))} kWh`;
   const acc = e.accuracy && e.accuracy.seasonal_gas_median_abs_error;
-  $("t-acc").textContent = acc ? `typical error ±${pct(acc.all)} (real meters)` : "";
+  $("t-acc").textContent = acc ? `energy error ±${pct(acc.all)} vs real meters` : "";
   renderChart(e); renderTable(e); renderMeta(e); renderWx(e); renderDetail(e);
   if (e.method === "metered" && e.building.benchmarking_id && $("mb-sel").options.length) { $("mb-sel").value = e.building.benchmarking_id; loadMetered(); }
   const ul = $("srcs"); ul.replaceChildren(...e.sources.map((s) => el("li", {}, s)));
@@ -752,7 +751,7 @@ const PATH_NAME = { metered: "Metered: own fit, other years", blend: "Unmetered:
 async function loadHeld() { HELD = await getJSON("/hc/heldout"); drawScatter(); }
 function drawScatter() {
   if (!HELD) return;
-  const fuel = $("sc-fuel").value, path = $("sc-path").value, season = $("sc-season").value, u = $("sc-units").value;
+  const fuel = $("sc-fuel").value, path = $("sc-path").value, season = $("sc-season").value, u = "";  // energy only: no building cost data exists
   const unit = u ? "$" : (fuel === "gas" ? "ccf" : "kWh");
   const rows = HELD.filter((r) => r.fuel === fuel && (!season || r.season === season) && r[path + u] > 0 && r["actual" + u] > 0);
   const errs = rows.map((r) => r[path + u] / r["actual" + u] - 1).sort((a, b) => a - b);
@@ -811,7 +810,7 @@ function drawScatter() {
     fuel === "gas" ? "Gas per season = hot water/cooking base + heating. Metered = the building's own fit from its other two years. Unmetered paths never saw the building; they add the median metered base load per ft²."
                    : "Electricity per season = lights/plugs base + cooling (gas-heated buildings). Base load dominates electricity, and building features barely predict it: no unmetered path beats the no-skill median here."));
 }
-["sc-fuel", "sc-path", "sc-season", "sc-units"].forEach((id) => $(id).addEventListener("change", drawScatter));
+["sc-fuel", "sc-path", "sc-season"].forEach((id) => $(id).addEventListener("change", drawScatter));
 
 // ---------------------------------------------------------------- metered building explorer
 async function loadMeteredList() {
@@ -858,7 +857,7 @@ function lineChart(boxId, months, series, unit) {
 }
 function drawMetered() {
   if (!MB) return;
-  const u = $("mb-units").value, M = MB.monthly, b = MB.building;
+  const u = "", M = MB.monthly, b = MB.building;  // energy only: no building cost data exists
   const S = (fuel, unit) => [
     { name: "actual meter reading", values: M.map((r) => r[`${fuel}_actual${u}`]), color: css("--text-primary"), dots: true },
     { name: "predicted for a year the model never saw", values: M.map((r) => r[`${fuel}_heldout${u}`]), color: css("--accent") },
@@ -892,7 +891,6 @@ function drawMetered() {
   if (ef) stat(`electric fit R² (base ${f3(ef.alpha, 0)} kWh/day + ${f3(ef.beta_c, 1)} kWh/CDD${ef.tau_c ?? ""})`, f3(ef.r2));
 }
 $("mb-sel").addEventListener("change", loadMetered);
-$("mb-units").addEventListener("change", drawMetered);
 loadHeld(); loadMeteredList();
 
 run();
