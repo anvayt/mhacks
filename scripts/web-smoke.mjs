@@ -137,126 +137,178 @@ async function waitText(page, re, timeout = 20000) {
 }
 const stored = (page, key) => page.evaluate((k) => localStorage.getItem(k), key);
 
+// Seeds a session the way W1 should have (estimate + answers via the API) so W2 can be checked on its own branch.
+async function seed(page, addr) {
+  const e = (await api("/estimate", { address: addr })).data;
+  for (const q of e.questions) {
+    const want = addr.startsWith(HEAT_INCLUDED_ADDR) && q.id === "heating_fuel" ? "Heat is included in my rent" : PICK[q.id];
+    await api("/answer", { session_id: e.session_id, question_id: q.id, answer: (q.options.find((o) => o.label === want) ?? q.options[0]).value });
+  }
+  await page.evaluate((id) => localStorage.setItem("hr_session_id", id), e.session_id);
+  return e.session_id;
+}
+
 async function webFlow(addr) {
-  const sc = `web ${short(addr)}`;
-  const { ctx, page, calls } = await newPage(sc);
+  const w1 = `W1 ${short(addr)}`;
+  const w2 = `W2 ${short(addr)}`;
+  const { ctx, page, calls } = await newPage(`web ${short(addr)}`);
+  let sid = null;
+  // ---- W1: address -> survey -> sign-in (skip) -> grade
   try {
     await page.goto(`${WEB}/address`);
-    await audit(page, sc, "/address");
+    await audit(page, w1, "/address");
     await page.getByLabel(/listing link or address/i).fill(addr);
     await button(page, /^next/i).click();
-    await page.waitForURL(/\/survey|\/loading/, { timeout: 30000 });
-    const sid = await stored(page, "hr_session_id");
-    ok(sc, "session saved as hr_session_id", !!sid, sid ?? "missing");
-    if (!sid) return;
-    await page.waitForURL(/\/survey/, { timeout: 15000 });
+    // W1 may ask for the unit size first (multi-unit, sqft_estimated); skip keeps the first estimate.
+    const unitAsk = page.getByLabel(/how big is the unit|unit size/i).first();
+    await Promise.race([page.waitForURL(/\/survey/, { timeout: 40000 }), unitAsk.waitFor({ timeout: 40000 })]);
+    if (await unitAsk.isVisible().catch(() => false)) {
+      rec(w1, "unit-size ask shown (not in P3 design)", "WARN", "skipped");
+      await audit(page, w1, "unit-size ask");
+      await page.getByRole("button", { name: /^skip$/i }).first().click();
+      await page.waitForURL(/\/survey/, { timeout: 20000 });
+    }
+    sid = await stored(page, "hr_session_id");
+    ok(w1, "session saved as hr_session_id", !!sid, sid ?? "missing");
+    if (!sid) throw new Error("no session saved; W1 not wired here");
     const first = (await api(`/session/${sid}`)).data;
     await page.waitForTimeout(800);
-    await audit(page, sc, "/survey");
-    const surveyText = await text(page);
-    ok(sc, "old hardcoded survey stepper gone", !/this month's gas bill/i.test(surveyText), "", true);
+    await audit(page, w1, "/survey");
+    ok(w1, "old hardcoded survey stepper gone", !/this month's gas bill/i.test(await text(page)));
     for (const q of first.questions) {
       const want = addr.startsWith(HEAT_INCLUDED_ADDR) && q.id === "heating_fuel" ? "Heat is included in my rent" : PICK[q.id] ?? q.options[0].label;
       const b = page.getByRole("button", { name: want, exact: true }).first();
       const shown = await b.isVisible().catch(() => false);
-      ok(sc, `survey shows API question ${q.id} option "${want}"`, shown);
-      if (shown) await b.click();
+      ok(w1, `survey shows API question ${q.id} option "${want}"`, shown);
+      if (shown) await Promise.all([page.waitForResponse((r) => r.url().includes("/answer"), { timeout: 15000 }).catch(() => null), b.click()]);
     }
     await button(page, /^next/i).click();
     // Sign-in is offered right before the grade with "Skip for now" (decision 2).
     const skip = page.getByRole("button", { name: /skip for now/i }).or(page.getByRole("link", { name: /skip for now/i })).first();
     const sawSkip = await skip.waitFor({ timeout: 15000 }).then(() => true, () => false);
-    ok(sc, 'sign-in step with "Skip for now" before the grade', sawSkip);
+    ok(w1, 'sign-in step with "Skip for now" before the grade', sawSkip);
     if (sawSkip) {
-      await audit(page, sc, "sign-in step");
+      await audit(page, w1, "sign-in step");
       await skip.click();
     }
     await page.waitForURL(/\/grade/, { timeout: 30000 });
     const s = (await api(`/session/${sid}`)).data;
-    ok(sc, "answers reached POST /answer", first.questions.every((q) => q.id in (s.answers ?? {})), JSON.stringify(s.answers));
+    ok(w1, "answers reached POST /answer", first.questions.every((q) => q.id in (s.answers ?? {})), JSON.stringify(s.answers));
     const gradeRe = new RegExp(`\\b${span(s.locked ? [s.grade] : s.grade_span)}\\b`);
-    ok(sc, `grade shown (${s.locked ? s.grade : s.grade_span.join("–")})`, await waitText(page, gradeRe, 15000));
+    ok(w1, `grade shown (${s.locked ? s.grade : s.grade_span.join("–")})`, await waitText(page, gradeRe, 15000));
     const t = await text(page);
-    ok(sc, `score ${s.score} shown`, new RegExp(`\\b${s.score}\\b`).test(t), "", true);
-    ok(sc, '"predicted" label', /predicted/i.test(t));
-    ok(sc, `hidden rent ${s.hidden_rent_usd_mo}/mo shown`, t.includes(money(s.hidden_rent_usd_mo)), "", true);
-    ok(sc, "no illustrative/mock copy on grade", !BAD_COPY.test(t), t.match(BAD_COPY)?.[0]);
-    if (s.bill?.note) ok(sc, "bill.note shown (heat included)", t.includes(s.bill.note.slice(0, 25)));
-    ok(sc, "address shown", t.toUpperCase().includes(s.building.address.split(",")[0].toUpperCase()), "", true);
+    ok(w1, `score ${s.score} shown`, new RegExp(`\\b${s.score}\\b`).test(t), "", true);
+    ok(w1, '"predicted" label', /predicted/i.test(t));
+    ok(w1, `hidden rent ${s.hidden_rent_usd_mo}/mo shown`, t.includes(money(s.hidden_rent_usd_mo)), "", true);
+    ok(w1, "no illustrative/mock copy on grade", !BAD_COPY.test(t), t.match(BAD_COPY)?.[0]);
+    if (s.bill?.note) ok(w1, "bill.note shown (heat included)", t.includes(s.bill.note.slice(0, 25)));
+    ok(w1, "address shown", t.toUpperCase().includes(s.building.address.split(",")[0].toUpperCase()), "", true);
     const hrefs = await page.$$eval("a[href]", (as) => as.map((a) => a.getAttribute("href")));
-    ok(sc, "Compare link -> /compare?a=", hrefs.some((h) => /^\/compare\?a=/.test(h)), hrefs.filter((h) => /compare/.test(h)).join(" "));
-    ok(sc, "Share link -> /share?session=<id>", hrefs.some((h) => h.includes(`/share?session=${sid}`)), hrefs.filter((h) => /share/.test(h)).join(" "));
-    await audit(page, sc, "/grade");
-
-    // Board
+    ok(w1, "Compare link -> /compare?a=", hrefs.some((h) => /^\/compare\?a=/.test(h)), hrefs.filter((h) => /compare/.test(h)).join(" "));
+    ok(w1, "Share link -> /share?session=<id>", hrefs.some((h) => h.includes(`/share?session=${sid}`)), hrefs.filter((h) => /share/.test(h)).join(" "));
+    await audit(page, w1, "/grade");
     const next = button(page, /^next/i);
-    await next.waitFor({ timeout: 10000 });
     await page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /^next/i.test(b.textContent.trim()) && !b.disabled), null, { timeout: 10000 }).catch(() => {});
     await next.click();
     await page.waitForURL(/\/board/, { timeout: 30000 });
+  } catch (e) {
+    rec(w1, "flow stopped", "FAIL", e.message.split("\n")[0].slice(0, 200));
+  }
+  // ---- W2: board (rank, commitments -> ghost, monthly bill)
+  try {
+    if (!sid) {
+      await page.goto(`${WEB}/`);
+      sid = await seed(page, addr);
+      rec(w2, "session seeded via API (W1 flow not available on this build)", "WARN", sid);
+    }
+    if (!/\/board/.test(page.url())) await page.goto(`${WEB}/board`);
     const pos = (await api(`/leaderboard/position?session_id=${sid}`)).data;
-    ok(sc, `board rank ${pos.current.rank} of ${pos.current.of} shown`, await waitText(page, new RegExp(num(pos.current.rank)), 15000));
+    ok(w2, `board rank ${pos.current.rank} of ${pos.current.of} shown`, await waitText(page, new RegExp(num(pos.current.rank)), 15000));
     let bt = await text(page);
-    ok(sc, "no mock/hardcoded copy on board", !BAD_COPY.test(bt), bt.match(BAD_COPY)?.[0]);
+    ok(w2, "no mock/hardcoded copy on board", !BAD_COPY.test(bt), bt.match(BAD_COPY)?.[0]);
+    ok(w2, '"predicted" label', /predicted/i.test(bt));
     const sug = (await api(`/commitments/suggested?session_id=${sid}`)).data.commitments;
     const modeled = sug.filter((c) => !c.pending_model);
-    for (const c of sug.slice(0, 3)) ok(sc, `commitment "${c.title.slice(0, 30)}" listed`, bt.includes(c.title.slice(0, 20)), "", true);
+    for (const c of sug.slice(0, 3)) ok(w2, `commitment "${c.title.slice(0, 30)}" listed`, bt.includes(c.title.slice(0, 20)), "", true);
     if (modeled.length) {
       const c = modeled[0];
       const gp = (await api(`/leaderboard/position?session_id=${sid}&catalog_ids=${c.catalog_id}`)).data;
-      await page.getByRole("button", { name: new RegExp(c.title.slice(0, 20).replace(/[()]/g, "."), "i") }).first().click().catch(() => rec(sc, "toggle modeled commitment", "FAIL", "button not found"));
-      ok(sc, '"projected if completed" after toggle', await waitText(page, /projected if completed/i, 15000));
-      ok(sc, `ghost marker at projected rank ${gp.projected.rank}`, await waitText(page, new RegExp(num(gp.projected.rank)), 5000), "", true);
-    } else rec(sc, "toggle modeled commitment", "WARN", "no modeled commitment for this home");
-    await audit(page, sc, "/board");
+      const pr = (await api("/projection", { session_id: sid, commitment_ids: [c.catalog_id] })).data;
+      await page.getByRole("button", { name: new RegExp(c.title.slice(0, 20).replace(/[()]/g, "."), "i") }).first().click().catch(() => rec(w2, "toggle modeled commitment", "FAIL", "button not found"));
+      ok(w2, `"projected if completed" after toggling ${c.catalog_id}`, await waitText(page, /projected if completed/i, 20000));
+      ok(w2, `projected score ${pr.projected.score} shown`, await waitText(page, new RegExp(`score ${pr.projected.score}\\b`), 5000), "", true);
+      ok(w2, `ghost at projected rank ${gp.projected.rank}`, await waitText(page, new RegExp(num(gp.projected.rank)), 3000), "", true);
+    } else rec(w2, "toggle modeled commitment", "WARN", "no modeled commitment for this home (all pending_model)");
+    await audit(page, w2, "/board");
     // Monthly bill (decision 3): typed therms.
     const no = page.getByRole("button", { name: /^no$/i }).first();
     if (await no.isVisible().catch(() => false)) await no.click();
     const gas = page.getByLabel(/gas used/i).first();
     if (await gas.isVisible({ timeout: 3000 }).catch(() => false)) {
+      const cal = (await api("/calibrate", { session_id: sid, therms: 60, gas_unit: "therms", ...lastMonth() })).data;
       await gas.fill("60");
-      const send = page.getByRole("button", { name: /check|send|compare|submit|save|add/i }).last();
-      await (await send.isVisible() ? send.click() : gas.press("Enter"));
-      ok(sc, "bill result: % vs normal for this weather", await waitText(page, /normal for (this|the) weather/i, 20000));
+      await Promise.all([page.waitForResponse((r) => r.url().includes("/calibrate"), { timeout: 30000 }).catch(() => null), gas.press("Enter")]);
+      ok(w2, "bill result: % vs normal for this weather", await waitText(page, /normal for (this|the) weather/i, 20000));
       bt = await text(page);
-      ok(sc, "bill wording never says verified for an early signal", !/\bverified\b/i.test(bt) || /early signal/i.test(bt), "", true);
-    } else rec(sc, 'monthly bill "Gas used this month" input', "FAIL", "not found (label /gas used/)");
-    ok(sc, "board calls", true, [...new Set(calls)].join(" | "));
+      const pct = Math.abs(cal.pct_vs_expected_for_weather);
+      ok(w2, `bill % (${pct}) matches the API`, bt.includes(pct.toLocaleString("en-US", { maximumFractionDigits: 1 })) || bt.includes(String(Math.round(pct))), "", true);
+      ok(w2, "early signal not called verified", !/\bverified (savings|reduction)\b/i.test(bt.replace(/not verified/gi, "")) || cal.verified, "", true);
+      await audit(page, w2, "/board after bill");
+    } else rec(w2, 'monthly bill "Gas used this month" input', "FAIL", "not found (label /gas used/)");
   } catch (e) {
-    rec(sc, "flow aborted", "FAIL", e.message.split("\n")[0].slice(0, 200));
-    ok(sc, "calls so far", true, [...new Set(calls)].join(" | "));
+    rec(w2, "flow stopped", "FAIL", e.message.split("\n")[0].slice(0, 200));
   } finally {
+    ok(`web ${short(addr)}`, "API calls made by the pages", true, [...new Set(calls)].join(" | "));
     await ctx.close();
   }
 }
 
+function lastMonth() {
+  const now = new Date();
+  const f = (d) => d.toISOString().slice(0, 10);
+  return { start: f(new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, 1))), end: f(new Date(Date.UTC(now.getFullYear(), now.getMonth(), 0))) };
+}
+
 async function webOnce() {
-  // Compare, share, map
-  let sc = "web compare";
+  // Compare (?a= is the grade screen's session id, as W1 links it), share, map
+  let sc = "W3 compare";
   let { ctx, page, calls } = await newPage(sc, { width: 1280, height: 900 });
   try {
     const cmp = (await api("/compare", { listings: COMPARE.map((address) => ({ address })) })).data;
-    await page.goto(`${WEB}/compare?a=${encodeURIComponent(COMPARE[0])}`);
-    const inputs = page.locator("input[type=text],input:not([type]),input[type=url],input[type=search]");
+    const a = (await api("/estimate", { address: COMPARE[0] })).data;
+    await page.goto(`${WEB}/compare?a=${encodeURIComponent(a.session_id)}`);
+    const inputs = page.getByLabel(/address|listing/i);
+    await page.waitForFunction(() => {
+      const i = document.querySelector("input");
+      return i && i.value && !i.disabled;
+    }, null, { timeout: 15000 }).catch(() => {});
     ok(sc, "two listing inputs", (await inputs.count()) >= 2, `${await inputs.count()} inputs`);
-    if ((await inputs.nth(0).inputValue()) === "") await inputs.nth(0).fill(COMPARE[0]);
-    else ok(sc, "?a= prefills listing A", true, await inputs.nth(0).inputValue());
+    const pre = await inputs.nth(0).inputValue();
+    ok(sc, "?a=<session> prefills listing A with its address", /624 CHURCH/i.test(pre), pre);
+    if (!pre) await inputs.nth(0).fill(COMPARE[0]);
     await inputs.nth(1).fill(COMPARE[1]);
-    await page.getByRole("button", { name: /compare|battle|go|fight|next/i }).first().click();
-    ok(sc, `diff ${money(cmp.diff_usd_yr)}/yr shown`, await waitText(page, new RegExp(money(cmp.diff_usd_yr).replace("$", "\\$")), 30000));
+    await page.locator("button[type=submit]").first().click();
+    const got = await waitText(page, new RegExp(money(cmp.diff_usd_yr).replace("$", "\\$")), 30000);
+    ok(sc, `diff ${money(cmp.diff_usd_yr)}/yr (API, addresses only) shown`, got, got ? "" : (await text(page)).match(/costs \$[\d,]+\/yr more|\$[\d,]+\/yr more/)?.[0]);
     const t = await text(page);
+    ok(sc, "winner named", /more to live in|lower predicted bill|winner/i.test(t));
+    ok(sc, cmp.confident ? "confident: ranges don't overlap" : "not confident: too close to call", cmp.confident ? !/too close to call/i.test(t) : /too close to call|overlap/i.test(t));
     ok(sc, "no illustrative copy", !BAD_COPY.test(t), t.match(BAD_COPY)?.[0]);
     ok(sc, '"predicted" label', /predicted/i.test(t));
     await audit(page, sc, "/compare desktop");
     await page.setViewportSize({ width: 375, height: 812 });
     await audit(page, sc, "/compare 375px");
-    ok(sc, "calls", calls.includes("POST /compare"), [...new Set(calls)].join(" | "));
-    // compare error: one side without an address
+    ok(sc, "calls", calls.some((c) => c.startsWith("POST /compare")), [...new Set(calls)].join(" | "));
+    // compare error: listing B without an address -> that side's message + hint
     await page.goto(`${WEB}/compare`);
     await inputs.nth(0).fill(COMPARE[0]);
     await inputs.nth(1).fill(ZUMPER);
-    await page.getByRole("button", { name: /compare|battle|go|fight|next/i }).first().click();
-    ok(sc, "estimate_failed on B shows the needs_address message", await waitText(page, /doesn't show the street address|what's the address/i, 20000));
+    await page.locator("button[type=submit]").first().click();
+    ok(sc, "listing B error shows the needs_address message", await waitText(page, /doesn't show the street address|what's the address/i, 20000));
+    await page.route(`${API}/**`, (r) => r.abort());
+    await page.locator("button[type=submit]").first().click();
+    ok(sc, "API down -> unreachable message", await waitText(page, /isn't reachable/i, 15000));
+    await page.unroute(`${API}/**`);
   } catch (e) {
     rec(sc, "aborted", "FAIL", e.message.split("\n")[0].slice(0, 200));
   } finally {
@@ -264,7 +316,7 @@ async function webOnce() {
   }
 
   const est = (await api("/estimate", { address: ADDRS[0] })).data;
-  sc = "web share";
+  sc = "W3 share";
   ({ ctx, page, calls } = await newPage(sc));
   try {
     await page.goto(`${WEB}/share?session=${est.session_id}`);
@@ -282,7 +334,7 @@ async function webOnce() {
     await ctx.close();
   }
 
-  sc = "web map";
+  sc = "W3 map";
   ({ ctx, page, calls } = await newPage(sc, { width: 1280, height: 900 }));
   try {
     await page.goto(`${WEB}/`);
@@ -304,7 +356,7 @@ async function webOnce() {
   }
 
   // Error paths on /address
-  sc = "web errors";
+  sc = "W1 errors";
   ({ ctx, page } = await newPage(sc));
   const tryAddr = async (value, re, label) => {
     await page.goto(`${WEB}/address`);
@@ -338,7 +390,7 @@ async function webOnce() {
 // Optional (SMOKE_SIGNIN=1 + AGENT_API_KEY in env): phone sign-in with a fictional number on a USE_MOCKS=1 API.
 // Plays the agent's part (POST /auth/web/confirm) itself; checks the token lands in hr_token and polling stops.
 async function webSignin() {
-  const sc = "web signin";
+  const sc = "W1 signin";
   const phone = "+17345550142";
   const { ctx, page, calls } = await newPage(sc);
   try {
