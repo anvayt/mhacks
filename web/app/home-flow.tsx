@@ -63,16 +63,12 @@ export function HomeFlow() {
   if (step === -1) {
     return (
       <main className={styles.stage}>
-        <button type="button" className={`${styles.houseButton} ${leaving ? styles.zoom : ""}`} onClick={start} aria-label="Start" tabIndex={-1}>
+        <button type="button" className={`${styles.houseButton} ${leaving ? styles.zoom : ""}`} onClick={start} aria-label="Start">
           <span className={styles.photo}>
             <img className={styles.ghostRed} src="/hero/house.png" alt="" />
             <img className={styles.ghostBlue} src="/hero/house.png" alt="" />
             <img className={styles.house} src="/hero/house.png" alt="" />
           </span>
-        </button>
-        <button type="button" className={`${styles.startHouse} ${leaving ? styles.fadeOut : ""}`} onClick={start}>
-          Start
-          <img src="/hero/arrow-up-right.svg" alt="" width={18} height={18} />
         </button>
       </main>
     );
