@@ -172,7 +172,10 @@ def _leaderboard(scope: str) -> dict:
 
 
 @router.get("/leaderboard")
-def leaderboard(scope: str = "city") -> dict:
+def leaderboard(scope: str = "city", board: str | None = None) -> dict:
     if scope not in {"city", "neighborhood"}:
         raise HTTPException(422, {"code": "bad_scope", "message": "Choose scope=city or scope=neighborhood."})
+    if board is not None:
+        from app.boards import board_result
+        return board_result(board, scope)
     return _leaderboard(scope)
