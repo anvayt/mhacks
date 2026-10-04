@@ -2,7 +2,7 @@
 
 Thin integration only (full P2-04 still to come). Fields of the PLAN.md §10 shape that have no source yet stay
 null/empty: session_id, co2_t (P2-03), score/grade/percentiles/hidden rent/badges/questions (P2-04),
-bill p10/p90 (needs held-out error quantiles from P1), bill.monthly (P1 returns seasons only).
+bill p10/p90 (needs held-out error quantiles from P1).
 
 /api reaches /model over HTTP (P1's server, `make -C model dashboard`, MODEL_BASE_URL, default :8001) so the two
 Python environments (api: uv, py3.12; model: root .venv with xgboost/lightgbm/rasterio and pickled models) stay apart.
@@ -19,6 +19,7 @@ from app.links import resolve_link
 
 MODEL_BASE_URL = os.environ.get("MODEL_BASE_URL", "http://localhost:8001")
 SEASONS = ("winter", "spring", "summer", "fall")
+MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 NOT_A_HOME = "That doesn't look like a home. Send a residential address or listing."  # team decision (P2-04)
 
 
@@ -76,7 +77,7 @@ def estimate(url: str | None = None, address: str | None = None, unit_sqft: floa
         "bill": {"covers": "heating + cooling only (P1 model); base electricity, hot water and fixed charges not yet",
                  "annual": _band(hc["annual"]["total_usd"]),
                  "seasonal": {s: _band(seasons[s]["total_usd"]) for s in SEASONS if s in seasons},
-                 "monthly": {}},
+                 "monthly": {MONTHS[m["month"] - 1]: _band(m["total_usd"]) for m in hc.get("months", [])}},
         "co2_t": None,
         "score": None, "grade": None, "grade_span": [], "locked": False,
         "percentile_peers": None, "percentile_city": None, "hidden_rent_usd_mo": None,
