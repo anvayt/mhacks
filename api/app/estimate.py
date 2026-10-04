@@ -1,6 +1,6 @@
 """POST /estimate, POST /answer, GET /session/{id} (PLAN.md §10): listing link | address -> building features
 (P2-01/02) -> P1 heating + cooling model -> score/grade/percentiles (app/score.py), p10/p90 band, next questions.
-Every body is saved as the session's latest (app/sessions.py). co2_t (P2-03) and badges are wired in at merge.
+Every body is saved as the session's latest (app/sessions.py), with co2_t (app/co2.py) and badges (app/badges.py).
 
 /api reaches /model over HTTP (P1's server, `make -C model dashboard`, MODEL_BASE_URL, default :8001) so the two
 Python environments (api: uv, py3.12; model: root .venv with xgboost/lightgbm/rasterio and pickled models) stay apart.
@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from shapely.geometry import shape
 
-from app import sessions
+from app import badges, co2, sessions
 from app.geo.features import get_features
 from app.links import resolve_link
 from app.score import GRADES, score_for
@@ -66,10 +66,18 @@ def _hc(params: dict) -> dict:
     return r.json()
 
 
+def session_params(s: dict) -> dict:
+    """A saved session's /hc/estimate params with its answers (heating_fuel, window_panes, ...; "2" -> 2)."""
+    known = {q: int(v) if v.isdigit() else v for q, v in s["answers"].items() if v is not None}
+    return {**s["model_params"], **known}
+
+
 def _hc_ac(params: dict) -> dict:
-    """_hc, with cooling set to $0 (and 0 kWh) for "No AC": P1's cooling model only covers homes with AC."""
-    hc = _hc(params)
-    if str(params.get("cooling_code")) == "0":
+    """_hc, with cooling set to $0 (and 0 kWh) for "No AC": P1's cooling model only covers homes with AC, so
+    cooling_code=0 is never sent (out of its training data: it moved 912 Mary St's heating $3,199 -> $4,246)."""
+    no_ac = str(params.get("cooling_code")) == "0"
+    hc = _hc({k: v for k, v in params.items() if not (no_ac and k == "cooling_code")})
+    if no_ac:
         a = hc["annual"]
         a["electric_kwh"] -= sum(s["cooling"]["electric_kwh"] for s in hc["seasons"])
         a["total_usd"] -= a["cooling_usd"]
@@ -141,7 +149,7 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
                                 f"estimate path ({hc['method']}). Never wider than before the last answer. "
                                 "Seasons and months are scaled by the same ratios.",
                  **({"note": NO_AC} if known.get("cooling_code") == "0" else {})},
-        "co2_t": None,
+        "co2_t": None,  # below, from the bill band
         **score_for(p50, sqft, btype), "grade_span": span, "locked": len(span) == 1 or not ask,
         # additive
         "grade_band_usd": {"p10": g_lo, "p50": p50, "p90": g_hi},
@@ -155,6 +163,11 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
         "heating_cooling": hc,  # additive: P1's full answer (heating vs cooling, energy, weather, method, accuracy)
         "answers": answers, "model_params": params,  # additive (see app/sessions.py)
     }
+    body["co2_t"] = co2.co2_t(hc, body["bill"])
+    body["badges"] = badges.badges(body, used_fixes=bool(prev and prev.get("used_fixes")),
+                                   previous_grade=prev and prev.get("grade"))
+    if prev and prev.get("used_fixes"):
+        body["used_fixes"] = True  # kept across answers for leak-hunter (set by /fixes)
     sessions.save(body)
     return body
 

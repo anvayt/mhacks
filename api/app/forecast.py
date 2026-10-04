@@ -17,7 +17,7 @@ import httpx
 from fastapi import APIRouter
 
 from app import sessions
-from app.estimate import MODEL_BASE_URL, _fail
+from app.estimate import MODEL_BASE_URL, _fail, session_params
 from app.geo import DATA_DIR
 
 router = APIRouter()
@@ -102,7 +102,9 @@ def forecast(session_id: str) -> dict:
     s = sessions.get(session_id)
     if s is None:
         raise _fail(404, "not_found", "That session expired. Send the listing again.")
-    p = {k: v for k, v in s["model_params"].items() if v is not None}
+    p = session_params(s)  # the renter's answers too (heating_fuel sets the heating base)
+    no_ac = p.get("cooling_code") == 0  # never sent to P1 (out of its training data); cooling stays $0, as in /estimate
+    p = {k: v for k, v in p.items() if v is not None and not (no_ac and k == "cooling_code")}
     hc = _get(f"{MODEL_BASE_URL}/hc/estimate", {**p, "mode": "forecast"}, "model_unavailable", MODEL_DOWN)
     wx = _get(f"{MODEL_BASE_URL}/hc/weather", {"lat": p["lat"], "lon": p["lon"], "mode": "forecast"},
               "model_unavailable", MODEL_DOWN)
@@ -113,6 +115,7 @@ def forecast(session_id: str) -> dict:
     hist = _history(lat, lon)
 
     hb, cb = _bases(hc)
+    cb = None if no_ac else cb
     usd = {m["month"]: m for m in hc["months"]}  # 12 consecutive months, so the month number is unique
     # ponytail: P1 rounds month $ to whole dollars, so a month of a few $ carries a few % to tens of % rounding
     rate = {}  # month -> ($ per heating degree-day, $ per cooling degree-day, PRISM offset deg C)
