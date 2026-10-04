@@ -54,7 +54,11 @@ Given any Ann Arbor street address, return the building features the bill model 
 - [x] No secrets committed; every value lists its source (PLAN.md §0)
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
-**Branch `p2/address-features` @ 8c0dfa1, pushed. Not merged into dev.** All "Done when" items pass (10 tests).
+**Branch `p2/address-features` @ 2731a80, pushed. Not merged into dev.** All "Done when" items pass (12 tests).
+
+**Verifier fixes (2731a80)**
+- Units = max(residential addresses inside the footprint, `"<street> UNIT n"` rows of any TYPE for the street line that located the footprint). Fixes towers read as SFD: 721 S Forest Ave (Verve) -> MF 5+, 218 units, 1,800 sq ft; 2901 Northbrook Pl -> 202 units, 831; 1770 Broadway St -> 106 units, 1,219. `sources.est_units` says which count won.
+- `in.sqft` outside the ResStock 2024.2 MI range (MF min 322, SFD max 5,587, per verifier's parquet check) adds a `warnings` entry; multi-unit without caller `unit_sqft` then uses the MI renter MF median 854 sq ft (n=2,628), `sqft_estimated` true. 405 S Main St 50 -> 854, 727 Miller Ave 110 -> 854 (both still report wrong stories, 2 and 1).
 
 **What changed** (all under `/api`)
 - `pyproject.toml` + `uv.lock` (py3.12; fastapi, uvicorn, httpx, shapely, pyproj, pandas; pytest dev), `README.md`, empty `app/__init__.py`
@@ -72,7 +76,7 @@ Given any Ann Arbor street address, return the building features the bill model 
 - Stories from height: `ABG_BLD_HG` is in **feet**; uses a least-squares fit on footprints with both fields (≈11.1 ft/story + 1.4 ft), not "÷ 3 m".
 - Year built via **Census Reporter** (ACS 2020-2024 5-yr), because api.census.gov now redirects keyless calls to missing_key. Fallback BG → tract → county.
 - `500 S State St` is the UM LSA Building (Public), so it returns the non-home case.
-- Multi-unit `in.sqft` = building floor area ÷ address count (no generic per-unit constant needed); includes hallways, so it runs high.
+- Multi-unit `in.sqft` = building floor area ÷ unit count; includes hallways, so it runs high. Below 322 it falls back to the 854 median (above).
 
 **Known gaps**: 2020+ builds bin to `2010s` (no ResStock bin); footprint area may include attached garages; a few tall buildings have odd `STORIES` (e.g. The Standard = 2); geocode cache is per-address on first use (network needed once per new address); no offline demo fixtures (team decision: testing after merge).
 
