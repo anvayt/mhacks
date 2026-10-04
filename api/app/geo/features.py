@@ -5,7 +5,7 @@ Category strings are copied from the ResStock 2024 release 2 Michigan baseline p
 - in.vintage: <1940, 1940s, 1950s, 1960s, 1970s, 1980s, 1990s, 2000s, 2010s (no 2020s bin)
 - in.geometry_building_type_recs: Single-Family Detached, Single-Family Attached,
   Multi-Family with 2 - 4 Units, Multi-Family with 5+ Units, Mobile Home
-- in.geometry_stories: integer strings ("1", "2", ... "35")
+- in.geometry_stories: integer strings, categories 1-15, 20, 21, 35 (raw count kept in stories_raw)
 - in.county_name: "Washtenaw County" (in.county G2601610)
 
 CLI (from /api): uv run python -m app.geo.features "500 S State St, Ann Arbor, MI" [--unit-sqft N] [--year-built Y]
@@ -21,6 +21,8 @@ from app.geo.geocode import geocode
 SQFT_PER_M2 = 10.7639  # 1 m = 3.28084 ft (exact definition: 0.3048 m/ft)
 COUNTY = "Washtenaw County"
 SFD, MF24, MF5 = "Single-Family Detached", "Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units"
+SFA = "Single-Family Attached"
+STORIES_CATS = (*range(1, 16), 20, 21, 35)  # in.geometry_stories categories, ResStock 2024.2 MI (team decision Oct 3)
 # in.sqft bounds in the ResStock 2024.2 MI baseline parquet (checked by the P2-01 verifier, 2026-10-03):
 # multi-family minimum 322, single-family-detached maximum 5,587. Outside them, the estimate is suspect.
 SQFT_MIN = {MF24: 322, MF5: 322}
@@ -40,13 +42,33 @@ def building_type(struc_type: str | None, units: int) -> str | None:
     inside the footprint) decides: 1 -> Single-Family Detached, 2-4 -> Multi-Family with 2 - 4 Units,
     5+ -> Multi-Family with 5+ Units. A Residential footprint with no address counts as 1 unit.
     A Commercial/Office/Public footprint with no residential address has no ResStock type (None).
-    Never produced (no data to tell them apart): Single-Family Attached, Mobile Home.
+    Single-Family Attached comes from townhouse_row() instead. Never produced (no data): Mobile Home.
     """
     if units >= 5:
         return MF5
     if units >= 2:
         return MF24
     return SFD if units == 1 or struc_type == "Residential" else None
+
+
+def snap_stories(n: int) -> int:
+    """Raw story count -> nearest ResStock 2024.2 MI in.geometry_stories category; ties go down (28 -> 21)."""
+    return min(STORIES_CATS, key=lambda c: (abs(c - n), c))
+
+
+def townhouse_row(struc_type: str | None, addresses: list[str], street_units: int, stories: int) -> bool:
+    """Townhouse rule -> Single-Family Attached (checked before the unit-count rule).
+
+    The city draws a row of townhouses as ONE footprint and gives each home its own house number
+    (2841, 2843, ... 2851 HARDWICK RD), while apartments get "UNIT n" rows or share a number (912 / 912 1/2).
+    Fires when: Residential footprint, 2+ residential addresses, each its own house number, no UNIT rows
+    (inside the footprint or for the street line), at most 3 stories. That also catches side-by-side
+    duplexes (506 / 508 PACKARD ST), which RECS 2020 (ResStock's source) counts as single-family attached.
+    ponytail: no shared-wall rule; separate touching footprints (<=0.3 m) are 3 in the whole city.
+    """
+    nums = [a.split()[0] for a in addresses]
+    return (struc_type == "Residential" and len(nums) >= 2 and len(set(nums)) == len(nums) and stories <= 3
+            and street_units == 0 and not any(" UNIT " in a for a in addresses))
 
 
 def get_features(address: str, unit_sqft: float | None = None, year_built: int | None = None) -> dict:
@@ -69,7 +91,8 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         stories_src = (f"city footprint ABG_BLD_HG {p['ABG_BLD_HG']:.0f} ft / {ft:.1f} ft per story "
                        f"(+{off:.1f} ft; least-squares fit on footprints with both STORIES and height)")
 
-    building_sqft = round(b.area_m2 * SQFT_PER_M2 * stories)
+    building_sqft = round(b.area_m2 * SQFT_PER_M2 * stories)  # raw stories: real floor area
+    stories_cat = snap_stories(stories)
     units = len(b.addresses)
     units_src = f"{units} residential mailing address(es) inside the footprint (City of Ann Arbor MailingAddress)"
     if b.street_units > units:
@@ -78,7 +101,13 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         units = b.street_units
     if units == 0 and p["Struc_Type"] == "Residential":
         units, units_src = 1, "no mailing address inside the footprint; Residential footprint assumed 1 unit"
-    btype = building_type(p["Struc_Type"], units)
+    if townhouse_row(p["Struc_Type"], b.addresses, b.street_units, stories):
+        btype = SFA
+        type_src = (f"townhouse rule: {units} residential addresses in one Residential footprint, each its own "
+                    f"house number, no UNIT rows, {stories} stories (<= 3) -> {SFA}")
+    else:
+        btype = building_type(p["Struc_Type"], units)
+        type_src = f"unit-count rule: {units} unit(s) -> ResStock category (see building_type())"
     if btype is None:
         warnings.append(f"Footprint Struc_Type is {p['Struc_Type']!r} with no residential address: not a known home")
     is_multi = units >= 2
@@ -89,7 +118,8 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         sqft, sqft_src, sqft_est = None, "not a home: no unit sq ft (see building_sqft)", False
     elif is_multi:
         sqft, sqft_est = round(building_sqft / units), True
-        sqft_src = f"building floor area {building_sqft} sq ft / {units} units (includes hallways and common areas)"
+        sqft_src = (f"building floor area {building_sqft} sq ft / {units} townhouses (equal split)" if btype == SFA else
+                    f"building floor area {building_sqft} sq ft / {units} units (includes hallways and common areas)")
     else:
         sqft, sqft_src, sqft_est = building_sqft, "footprint area (UTM 17N) x stories", False
 
@@ -109,10 +139,11 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
 
     return {
         "in.sqft": sqft,
-        "in.geometry_stories": str(stories),
+        "in.geometry_stories": str(stories_cat),
         "in.geometry_building_type_recs": btype,
         "in.vintage": vintage(year) if year else None,
         "in.county_name": COUNTY,
+        "stories_raw": stories,
         "matched_address": geo["matched_address"],
         "lat": geo["lat"],
         "lon": geo["lon"],
@@ -129,11 +160,14 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
             "lat_lon": "US Census geocoder (Public_AR_Current / Current_Current)",
             "footprint": f"City of Ann Arbor BuildingFootprints OBJECTID {p['OBJECTID']} "
                          f"(Struc_Type {p['Struc_Type']}), found via {b.match}",
-            "in.geometry_stories": stories_src,
+            "in.geometry_stories": f"{stories} stories ({stories_src})"
+                                   + (f", snapped to nearest ResStock 2024.2 MI category {stories_cat}"
+                                      if stories_cat != stories else ", already a ResStock 2024.2 MI category"),
+            "stories_raw": stories_src,
             "in.sqft": sqft_src,
             "building_sqft": "footprint area projected to UTM 17N (EPSG:32617) x stories",
             "est_units": units_src,
-            "in.geometry_building_type_recs": f"{units} unit(s) -> ResStock category (see building_type())",
+            "in.geometry_building_type_recs": type_src,
             "in.vintage": f"year built {year} ({year_src}) -> ResStock decade bin",
             "in.county_name": "all Ann Arbor addresses are in Washtenaw County; ResStock 2024.2 string",
         },
