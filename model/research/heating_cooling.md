@@ -68,6 +68,9 @@ The urban station matches within 2.5% in every season. The airport is a cold ope
 
 ## 5. Dollars (EIA, Michigan residential, last 24 months: 2024-08 → 2026-07)
 
+**Dollars are a conversion, not a prediction.** No bill data exists for any building. Every dollar figure is the
+estimated energy converted at a Michigan statewide price, and only energy is validated against real meters.
+
 - **Gas:** EIA's monthly "average price" includes fixed customer charges, so it nearly doubles in summer ($1.88/ccf in June vs $0.97 in January). Heating is *extra* gas, so we use the **marginal** price. A regression of monthly revenue on volume gives slope **$9.06/Mcf** (R² 0.99) and fixed ≈ $54.6M/month statewide. The monthly marginal price is (revenue − fixed)/volume: **$0.77–0.97/ccf**.
 - **Electricity:** the same regression has a negative intercept (summer peak rates are confounded with volume), so marginal can't be separated from fixed. We use EIA-861M average $/kWh by month: **$0.190–0.219/kWh**.
 
