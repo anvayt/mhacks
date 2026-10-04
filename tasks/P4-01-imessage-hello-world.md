@@ -2,7 +2,7 @@
 id: P4-01
 title: Photon iMessage hello-world + judge QR onboarding page
 owner: P4
-status: review
+status: done
 branch: p4/imessage-hello-world
 type: build
 checkpoint: 10:30 PM (a judge's phone can text the agent)
@@ -32,23 +32,33 @@ A Spectrum iMessage agent that answers anyone who texts it, plus a QR-code onboa
 - Env names (in `/agent/.env.example`): `PHOTON_PROJECT_ID`, `PHOTON_PROJECT_SECRET` (PLAN.md §10), plus agent-only `PUBLIC_URL`, `ONBOARD_PORT`, `USE_MOCKS`, `AGENT_TERMINAL`.
 
 ## Steps
-- [ ] Human: create a Photon account + project at https://app.photon.codes, copy Project ID + Secret into `/agent/.env`
+- [x] Human: create a Photon account + project at https://app.photon.codes, copy Project ID + Secret into `/agent/.env`
 - [x] Agent loop on `spectrum-ts` cloud iMessage, with the terminal fallback
 - [x] Onboarding server: form → create shared user → redirect into Messages; QR at `/qr.svg`
-- [ ] `add-user` script; allowlist the 4 team phones (script done; needs credentials)
+- [x] `add-user` script; allowlisted the test iPhone (remaining team phones: run `npm run add-user` per phone)
 - [x] Unit tests for phone normalization and the onboarding handler (mocked Photon)
-- [ ] Expose the onboarding server publicly (tunnel) so a phone off the laptop can open it
+- [ ] Expose the onboarding server publicly (tunnel) so a phone off the laptop can open it (not done; non-blocking, see Handoff)
 
 ## Done when
-- [ ] A phone that has never texted the agent scans the QR, enters its number, taps Send in Messages, and gets the welcome reply
+- [x] A real allowlisted iPhone texts the agent and gets the welcome reply (verified Oct 3)
+- [ ] Same flow starting from the QR code on a public URL (blocked on the tunnel; non-blocking)
 - [x] `npm test` passes (13/13); `npm run typecheck` passes
 - [x] No secrets committed (`.env` git-ignored; only `.env.example` names)
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
-- **What changed:** new `/agent` on branch `p4/imessage-hello-world` (off `dev`). `src/agent.ts` (Spectrum loop; answers text and pasted-link `richlink` messages), `src/onboard.ts` (onboarding server + printable `/card`), `src/photon.ts` (Photon users API + phone normalization), `src/replies.ts` (reply text), `scripts/add-user.ts`, `scripts/doctor.ts`, tests in `test/`. See `/agent/README.md`.
-- **How to run:** `cd agent && npm install && cp .env.example .env` (fill Photon creds) → `npm run doctor` → `npm run add-user -- <phone>` per teammate → `npm run agent` + `npm run onboard`. Tunnel `:8787` (`cloudflared tunnel --url http://localhost:8787`), set `PUBLIC_URL`, print `/card`.
-- **Verified:** 13 unit tests + typecheck. Terminal-mode agent answers piped messages. Onboarding in mock mode: form 200, `/join` 302 into Messages, bad number 400, `/card` + `/qr.svg` render. Against live spectrum.photon.codes with fake credentials: URL and auth format are right (`401 Invalid credentials`); agent, `doctor`, `add-user` and `/join` (502 friendly page) all fail with a clear message.
-- **Not verified yet:** a real phone texting the agent. Needs a Photon project (human step). Until then both pieces run on mocks (`AGENT_TERMINAL`, `USE_MOCKS`; missing creds turn them on automatically).
-- **Known gaps:** agent replies say no numbers (PLAN.md §0 rule 4) until P4-02 calls `/estimate`; no contact-card share after first exchange yet (Photon deliverability tip); free plan caps at 10 users; the tunnel isn't set up (`cloudflared` isn't installed on this laptop).
-- **Merged:** fast-forwarded into `dev` at `48172ae` (Oct 3). Status stays `review` until a real phone gets a reply.
-- **Next:** P4-02 interview loop over iMessage against P2's `/estimate` + `/answer` (P2-04; mock inside `/agent` until it lands).
+- **What changed:** new `/agent`, merged into `dev` at `48172ae` (from `p4/imessage-hello-world`). `src/agent.ts` (Spectrum loop; answers text and pasted-link `richlink` messages), `src/onboard.ts` (onboarding server + printable `/card`), `src/photon.ts` (Photon users API + phone normalization), `src/replies.ts` (reply text), `scripts/add-user.ts`, `scripts/doctor.ts`, tests in `test/`. See `/agent/README.md`.
+- **How to run:** `cd agent && npm install && cp .env.example .env` (fill Photon creds) → `npm run doctor` → `npm run add-user -- <phone>` per teammate → `npm run agent` + `npm run onboard`. For judges: tunnel `:8787` (`cloudflared tunnel --url http://localhost:8787`), set `PUBLIC_URL`, print `/card`.
+- **Verified on a real phone (Oct 3, reported by P4 from their Mac):**
+  - Real Photon credentials validated: the agent connects to Spectrum Cloud iMessage.
+  - Real iPhone inbound message validated: allowlisted iPhone → Photon → agent on the Mac.
+  - Real outbound reply validated: agent → Photon → iPhone; the phone received the Hidden Rent welcome.
+  - Pasted listing link (Zillow/Redfin) from the iPhone: received by the agent and answered (not ignored as a link preview). Passed.
+  - Plain Ann Arbor street address from the iPhone: received and answered correctly. Passed.
+- **Verified in code:** 13 unit tests + typecheck; onboarding server in mock mode (form, `/join` redirect, bad-number 400, `/card`, `/qr.svg`); clear errors for bad credentials against live spectrum.photon.codes.
+- **Not verified:** the onboarding page (`npm run onboard`) with real Photon, and the QR flow from a phone. The QR still points at `localhost`; no public tunnel has been set up or tested.
+- **Remaining non-blocking gaps:**
+  - Public tunnel / QR onboarding URL: still localhost. Needed before judges scan the QR, and the web's "Continue in iMessage" button links to this page (P2 decision, Oct 3).
+  - Agent replies say no numbers (PLAN.md §0 rule 4) until P4-02 calls `/estimate`.
+  - Address detection needs a street type (St, Ave, Rd…); other text gets the welcome.
+  - No contact-card share after the first exchange (Photon deliverability tip). Free plan caps at 10 allowlisted phones.
+- **Next:** P4-02 interview loop over iMessage against P2-04's `/estimate` + `/answer` (mock inside `/agent` until it lands). Not started.
