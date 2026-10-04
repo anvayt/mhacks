@@ -1,0 +1,22 @@
+[project]
+name = "hidden-rent-api"
+version = "0.1.0"
+description = "Hidden Rent backend (FastAPI)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "shapely",
+    "pyproj",
+    "pandas",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
