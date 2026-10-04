@@ -4,3 +4,16 @@ artifacts/*.pkl
 artifacts/*.json.gz
 data/raw
 data/cache
+# Build outputs (make -C model build); shared through model-data.zip, never committed.
+data/processed/
+results/building_model_validation.json
+results/blend_weights.json
+results/hc_validation.json
+results/heldout_*.parquet
+results/oof_*.parquet
+results/leakage_analysis.json
+results/leakage_validation.json
+results/meters_summary.json
+results/resstock_hc_validation.json
+results/resstock_reproduce.json
+results/validation_real.json
