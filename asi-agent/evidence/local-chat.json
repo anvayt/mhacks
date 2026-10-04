@@ -1,0 +1,65 @@
+{
+  "transport": "local HTTP only",
+  "target": "agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum",
+  "started_at": "2026-10-04T12:46:44.916807+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "text": "1514 Morton Ave, Ann Arbor, MI"
+    },
+    {
+      "role": "agent",
+      "text": "\ud83c\udfe0 1514 MORTON AVE, ANN ARBOR, MI, 48104\nGrade B\u2013F (predicted)\nScore 50/100 (predicted)\nTop 52.9% citywide by predicted efficiency (from API percentile)\nPredicted heating + cooling: $1,198\u2013$14,599 (most likely $2,117)/year\nHidden rent: $0/month vs a typical same-size unit\nPredicted heating + cooling CO\u2082: 11.39 tonnes/year\n\nIs the heat gas or electric, or included in your rent?\n1) Gas\n2) Electric\n3) Heat is included in my rent\nReply with an option number, the answer, or skip.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "1"
+    },
+    {
+      "role": "agent",
+      "text": "\ud83c\udfe0 1514 MORTON AVE, ANN ARBOR, MI, 48104\nGrade B\u2013D (predicted)\nScore 50/100 (predicted)\nTop 52.9% citywide by predicted efficiency (from API percentile)\nPredicted heating + cooling: $1,198\u2013$3,070 (most likely $2,117)/year\nHidden rent: $0/month vs a typical same-size unit\nPredicted heating + cooling CO\u2082: 11.39 tonnes/year\n\nWhat air conditioning does the unit have?\n1) No AC\n2) Window/room AC\n3) Central AC\n4) Heat pump\nReply with an option number, the answer, or skip.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "3"
+    },
+    {
+      "role": "agent",
+      "text": "\ud83c\udfe0 1514 MORTON AVE, ANN ARBOR, MI, 48104\nGrade C\u2013D (predicted)\nScore 41/100 (predicted)\nTop 62.7% citywide by predicted efficiency (from API percentile)\nPredicted heating + cooling: $1,583\u2013$3,070 (most likely $2,287)/year\nHidden rent: $14/month vs a typical same-size unit\nPredicted heating + cooling CO\u2082: 11.73 tonnes/year\n\nAre the windows single-, double- or triple-pane?\n1) Single-pane\n2) Double-pane\n3) Triple-pane\nReply with an option number, the answer, or skip.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "1"
+    },
+    {
+      "role": "agent",
+      "text": "\ud83c\udfe0 1514 MORTON AVE, ANN ARBOR, MI, 48104\nGrade D \ud83d\udd12 locked (predicted)\nScore 37/100 (predicted)\nTop 65.8% citywide by predicted efficiency (from API percentile)\nPredicted heating + cooling: $1,670\u2013$3,070 (most likely $2,382)/year\nHidden rent: $22/month vs a typical same-size unit\nPredicted heating + cooling CO\u2082: 12.33 tonnes/year\nSay options for projected improvements.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "options"
+    },
+    {
+      "role": "agent",
+      "text": "Your options (effects are projected if completed):\n1) Switch to a cold-climate heat pump \u2014 landlord: costs $1,674/year more, 3286 kg CO\u2082/year less, 35 GRH points.\n2) Insulate the walls \u2014 landlord: $405/year saved, 2454 kg CO\u2082/year less, 9 GRH points.\n3) Professional whole-home air sealing \u2014 landlord: $221/year saved, 1339 kg CO\u2082/year less, 9 GRH points.\n4) Add storm windows or double-pane windows \u2014 landlord: $124/year saved, 718 kg CO\u2082/year less, 4 GRH points.\n5) Insulate the attic to R-50 \u2014 landlord: $111/year saved, 673 kg CO\u2082/year less, 9 GRH points.\n6) Turn the heat down at night and when you're out \u2014 renter: $52/year saved, 316 kg CO\u2082/year less, 0 GRH points.\n7) Send your landlord the drafted email: add storm windows or double-pane windows \u2014 renter\u2192landlord. Tip only; this model cannot price its effect here.\nReply \"try\" plus option numbers to choose a what-if; then \"ff\" plus days to simulate it. No commitment is saved.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "try 2"
+    },
+    {
+      "role": "agent",
+      "text": "Selected a what-if only: Insulate the walls.\nProjected if completed; nothing is saved as a commitment. Send ff followed by days.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    },
+    {
+      "role": "user",
+      "text": "ff 30"
+    },
+    {
+      "role": "agent",
+      "text": "Simulation, not real usage \u2014 projected if completed and kept.\nAssumed actions: Insulate the walls\nOver 30 days:\nProjected $23 saved\n141.5 kg CO\u2082 avoided (simulated)\nYour current grade and real streak have not changed. No savings are verified.\n\nLocal preview links; public website/onboarding URLs are not configured.\nWeb report: http://localhost:3000/share?session=bf1ba1abab\nCompare listings: http://localhost:3000/compare?a=bf1ba1abab\nContinue in iMessage: http://localhost:8787/?session=bf1ba1abab"
+    }
+  ],
+  "pass": true,
+  "finished_at": "2026-10-04T12:46:45.718807+00:00"
+}
