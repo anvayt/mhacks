@@ -1,0 +1,2994 @@
+{
+  "n_buildings": 125,
+  "targets": {
+    "heat_gas": {
+      "n": 101,
+      "unit": "ccf/1000ft\u00b2/yr",
+      "fit_filter": "gas_r2 \u2265 0.7",
+      "p10_p50_p90": [
+        130.5,
+        324.6,
+        627.1
+      ],
+      "log_target_skew": -2.9241588751679015,
+      "families": {
+        "baseline_median": {
+          "label": "Baseline: median of all buildings (ignores features)",
+          "complexity": 0,
+          "test_medape_mean": 0.41369936272744373,
+          "test_medape_sd": 0.009540761402353184,
+          "per_repeat": [
+            0.41448787327159897,
+            0.41011772914697464,
+            0.42291938009207575,
+            0.4215537396268878,
+            0.39941809149968166
+          ],
+          "within_25pct": 0.2514851485148515,
+          "r2_log": -0.03275291693737507,
+          "train_medape_mean": 0.41186390517746135,
+          "overfit_gap": 0.0018354575499823778,
+          "chosen_params_per_fold": [],
+          "vs_baseline_mean": 0.0,
+          "vs_baseline_sd": 0.0
+        },
+        "year_built_median_reg": {
+          "label": "Median regression on year built only",
+          "complexity": 1,
+          "test_medape_mean": 0.3340827169538912,
+          "test_medape_sd": 0.01070261401478413,
+          "per_repeat": [
+            0.3405865033104247,
+            0.32089861291245614,
+            0.32799728987941146,
+            0.33260590077927654,
+            0.34832527788788703
+          ],
+          "within_25pct": 0.34653465346534656,
+          "r2_log": 0.11730525731299854,
+          "train_medape_mean": 0.32338291296168825,
+          "overfit_gap": 0.010699803992202939,
+          "chosen_params_per_fold": [],
+          "coef_fold_mean": [
+            -0.3630597944523882
+          ],
+          "coef_fold_sd": [
+            0.04494317779962092
+          ],
+          "coef_nonzero_freq": [
+            1.0
+          ],
+          "vs_baseline_mean": -0.07961664577355258,
+          "vs_baseline_sd": 0.017746891357513245
+        },
+        "median_lasso": {
+          "label": "Median regression + lasso penalty (L1 loss, L1 penalty)",
+          "complexity": 2,
+          "test_medape_mean": 0.3491237992127923,
+          "test_medape_sd": 0.03616268639088027,
+          "per_repeat": [
+            0.31221130728692414,
+            0.40055392283963676,
+            0.32937165994190964,
+            0.3314984885474985,
+            0.37198361744799224
+          ],
+          "within_25pct": 0.3564356435643564,
+          "r2_log": 0.11534841358213274,
+          "train_medape_mean": 0.3022107248035185,
+          "overfit_gap": 0.04691307440927378,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.0007498942093324559
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.042169650342858224
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.0007498942093324559
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.042169650342858224
+            },
+            {
+              "alpha": 0.005623413251903491
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.005623413251903491
+            },
+            {
+              "alpha": 0.005623413251903491
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.042169650342858224
+            },
+            {
+              "alpha": 0.005623413251903491
+            },
+            {
+              "alpha": 0.005623413251903491
+            },
+            {
+              "alpha": 0.002053525026457146
+            }
+          ],
+          "coef_fold_mean": [
+            -0.04845644111832796,
+            -0.3383501683318005,
+            0.024291778415391395,
+            0.09242028655583909,
+            0.026243170719098544,
+            -0.032158464021603474,
+            0.10969623184703313
+          ],
+          "coef_fold_sd": [
+            0.04217447217902275,
+            0.1044323206308595,
+            0.07159888873688247,
+            0.08793723045020203,
+            0.04687866034716352,
+            0.033871879076371,
+            0.05391867607884716
+          ],
+          "coef_nonzero_freq": [
+            0.8,
+            0.96,
+            0.28,
+            0.68,
+            0.44,
+            0.72,
+            0.88
+          ],
+          "vs_baseline_mean": -0.0645755635146515,
+          "vs_baseline_sd": 0.04276599082006146
+        },
+        "ols": {
+          "label": "Ordinary least squares",
+          "complexity": 3,
+          "test_medape_mean": 0.3303118058078768,
+          "test_medape_sd": 0.015314005409849774,
+          "per_repeat": [
+            0.328076863270253,
+            0.35270078495603696,
+            0.32109068292696585,
+            0.3128657771052681,
+            0.3368249207808598
+          ],
+          "within_25pct": 0.37425742574257426,
+          "r2_log": 0.02064270565308246,
+          "train_medape_mean": 0.3083127904040814,
+          "overfit_gap": 0.021999015403795397,
+          "chosen_params_per_fold": [],
+          "coef_fold_mean": [
+            -0.07340273258782086,
+            -0.3366227676260785,
+            0.16657347535283132,
+            0.051139111777018034,
+            0.13045389060598578,
+            -0.036061535495521754,
+            0.16187611891026144
+          ],
+          "coef_fold_sd": [
+            0.04957901796215381,
+            0.04720713384717459,
+            0.35881029916949503,
+            0.3528109690343125,
+            0.05086853431451043,
+            0.03518129603177259,
+            0.03457232660795993
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": -0.08338755691956704,
+          "vs_baseline_sd": 0.02289217480214617
+        },
+        "lasso": {
+          "label": "Lasso (squared loss, L1 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.32683198205426994,
+          "test_medape_sd": 0.013589681497219574,
+          "per_repeat": [
+            0.3281267446149736,
+            0.32162376961528016,
+            0.3488551363491581,
+            0.31225825932019824,
+            0.32329600037173944
+          ],
+          "within_25pct": 0.3485148514851485,
+          "r2_log": 0.09858831207235604,
+          "train_medape_mean": 0.3144369313476884,
+          "overfit_gap": 0.012395050706581534,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0006579332246575682
+            },
+            {
+              "alpha": 0.0016876124757881478
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.0016876124757881478
+            },
+            {
+              "alpha": 0.0006579332246575682
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.02848035868435802
+            },
+            {
+              "alpha": 0.02848035868435802
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.02848035868435802
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.004328761281083059
+            },
+            {
+              "alpha": 0.0016876124757881478
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.004328761281083059
+            },
+            {
+              "alpha": 0.004328761281083059
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.0006579332246575682
+            }
+          ],
+          "coef_fold_mean": [
+            -0.05866032634471335,
+            -0.3215614588219375,
+            0.06677667313380285,
+            0.099247257207567,
+            0.10261386952666905,
+            -0.027729275692668275,
+            0.13012583112547588
+          ],
+          "coef_fold_sd": [
+            0.047335939961237986,
+            0.05733639993485582,
+            0.11969866868911837,
+            0.11581112641863468,
+            0.060323285632097524,
+            0.030054895609998574,
+            0.05278612833993108
+          ],
+          "coef_nonzero_freq": [
+            0.92,
+            1.0,
+            0.76,
+            0.72,
+            0.92,
+            0.68,
+            0.92
+          ],
+          "vs_baseline_mean": -0.08686738067317386,
+          "vs_baseline_sd": 0.014011631469282118
+        },
+        "ridge": {
+          "label": "Ridge (squared loss, L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.33598080222071103,
+          "test_medape_sd": 0.011509051841415938,
+          "per_repeat": [
+            0.3317526661115603,
+            0.3526899725496414,
+            0.32087256207416404,
+            0.3380188233293435,
+            0.3365699870388461
+          ],
+          "within_25pct": 0.3683168316831683,
+          "r2_log": 0.07960399540894006,
+          "train_medape_mean": 0.3123622540532164,
+          "overfit_gap": 0.023618548167494646,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 2.030917620904737
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 0.345510729459222
+            },
+            {
+              "alpha": 0.837677640068292
+            },
+            {
+              "alpha": 0.837677640068292
+            },
+            {
+              "alpha": 0.14251026703029984
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 0.837677640068292
+            },
+            {
+              "alpha": 0.345510729459222
+            },
+            {
+              "alpha": 4.923882631706742
+            },
+            {
+              "alpha": 11.93776641714437
+            },
+            {
+              "alpha": 4.923882631706742
+            },
+            {
+              "alpha": 4.923882631706742
+            },
+            {
+              "alpha": 0.345510729459222
+            },
+            {
+              "alpha": 11.93776641714437
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 0.837677640068292
+            },
+            {
+              "alpha": 28.942661247167518
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 2.030917620904737
+            },
+            {
+              "alpha": 2.030917620904737
+            },
+            {
+              "alpha": 4.923882631706742
+            },
+            {
+              "alpha": 0.345510729459222
+            }
+          ],
+          "coef_fold_mean": [
+            -0.07240924559252977,
+            -0.3230525675842025,
+            0.10491174302038903,
+            0.09169943009873523,
+            0.12510522643760094,
+            -0.03316738033292676,
+            0.1462637862752334
+          ],
+          "coef_fold_sd": [
+            0.04749382722032527,
+            0.051401054238516306,
+            0.1970928795550081,
+            0.18854984597285684,
+            0.04418656330220565,
+            0.032158647722226714,
+            0.03740502509791946
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": -0.07771856050673269,
+          "vs_baseline_sd": 0.017914435786275346
+        },
+        "elastic_net": {
+          "label": "Elastic net (squared loss, L1+L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.3264483451067798,
+          "test_medape_sd": 0.01588368243498081,
+          "per_repeat": [
+            0.3290283803771278,
+            0.3051660181646835,
+            0.3488664575931284,
+            0.3201129343309109,
+            0.3290679350680483
+          ],
+          "within_25pct": 0.3485148514851485,
+          "r2_log": 0.0991851668076692,
+          "train_medape_mean": 0.3143337579472101,
+          "overfit_gap": 0.0121145871595697,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.004328761281083059,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.0006579332246575682,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.0016876124757881478,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.07305271542664457,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.004328761281083059,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.0006579332246575682,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.0016876124757881478,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.004328761281083059,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.004328761281083059,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.02848035868435802,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.0016876124757881478,
+              "l1_ratio": 0.5
+            }
+          ],
+          "coef_fold_mean": [
+            -0.06052497872847786,
+            -0.32117194713884667,
+            0.06646941990547349,
+            0.09912630528487203,
+            0.10317820533289405,
+            -0.0262452458109648,
+            0.12917487773407008
+          ],
+          "coef_fold_sd": [
+            0.047286524646700176,
+            0.05327150496786913,
+            0.11700842913464816,
+            0.11494997153548002,
+            0.05825583954329264,
+            0.029730645483195726,
+            0.050451060929867605
+          ],
+          "coef_nonzero_freq": [
+            0.92,
+            1.0,
+            0.76,
+            0.72,
+            0.96,
+            0.68,
+            0.92
+          ],
+          "vs_baseline_mean": -0.08725101762066398,
+          "vs_baseline_sd": 0.015634121372579093
+        },
+        "huber": {
+          "label": "Huber regression (robust loss, L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.3334961528306385,
+          "test_medape_sd": 0.018701965480700956,
+          "per_repeat": [
+            0.32263699805127866,
+            0.34063016166310667,
+            0.3408953536017537,
+            0.30748536676017446,
+            0.35583288407687896
+          ],
+          "within_25pct": 0.35445544554455444,
+          "r2_log": 0.11800740609922737,
+          "train_medape_mean": 0.29578744451631456,
+          "overfit_gap": 0.037708708314323935,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 1.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 2.0
+            }
+          ],
+          "coef_fold_mean": [
+            -0.08850204003225962,
+            -0.3431431653492222,
+            0.07017029497555599,
+            0.07368297883521778,
+            0.05476897966612419,
+            -0.034613611840891914,
+            0.1314535497834944
+          ],
+          "coef_fold_sd": [
+            0.042335392053659035,
+            0.048584174107250945,
+            0.14231774723256252,
+            0.1507599466336162,
+            0.0385240640326305,
+            0.029940977143017553,
+            0.03839148258915403
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": -0.08020320989680527,
+          "vs_baseline_sd": 0.02617983881273084
+        },
+        "random_forest": {
+          "label": "Random forest (tuned)",
+          "complexity": 5,
+          "test_medape_mean": 0.30500982082538997,
+          "test_medape_sd": 0.02275239003316988,
+          "per_repeat": [
+            0.3204992693228085,
+            0.29747739524490946,
+            0.29187025922671717,
+            0.335778626666164,
+            0.27942355366635074
+          ],
+          "within_25pct": 0.40594059405940597,
+          "r2_log": 0.17164907931800286,
+          "train_medape_mean": 0.24289531406403758,
+          "overfit_gap": 0.062114506761352384,
+          "chosen_params_per_fold": [
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 5
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 5
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            }
+          ],
+          "vs_baseline_mean": -0.1086895419020538,
+          "vs_baseline_sd": 0.018604778232101868
+        },
+        "xgboost": {
+          "label": "XGBoost (tuned)",
+          "complexity": 6,
+          "test_medape_mean": 0.3277715863621358,
+          "test_medape_sd": 0.011733737213986323,
+          "per_repeat": [
+            0.3199583620101082,
+            0.32784001140836816,
+            0.32197120714766325,
+            0.34804030228255334,
+            0.32104804896198635
+          ],
+          "within_25pct": 0.37425742574257426,
+          "r2_log": 0.08988489408555125,
+          "train_medape_mean": 0.21752475481874586,
+          "overfit_gap": 0.11024683154338996,
+          "chosen_params_per_fold": [
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:squarederror",
+              "n_estimators": 25,
+              "min_child_weight": 8,
+              "max_depth": 2,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 3,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:squarederror",
+              "n_estimators": 400,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 400,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 8,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 1,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 1,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 200,
+              "min_child_weight": 3,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 100,
+              "min_child_weight": 8,
+              "max_depth": 2,
+              "learning_rate": 0.03,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:squarederror",
+              "n_estimators": 50,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 15,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 8,
+              "max_depth": 4,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 15,
+              "max_depth": 2,
+              "learning_rate": 0.3,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:squarederror",
+              "n_estimators": 50,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.3,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 8,
+              "max_depth": 3,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.3,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 400,
+              "min_child_weight": 8,
+              "max_depth": 2,
+              "learning_rate": 0.01,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:squarederror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 3,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 8,
+              "max_depth": 2,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 2,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 100,
+              "min_child_weight": 15,
+              "max_depth": 3,
+              "learning_rate": 0.3,
+              "colsample_bytree": 1.0
+            }
+          ],
+          "vs_baseline_mean": -0.0859277763653079,
+          "vs_baseline_sd": 0.011447273021694383
+        }
+      },
+      "chosen": "elastic_net",
+      "selection": {
+        "best_by_mean": "random_forest",
+        "threshold": 0.32776221085855983,
+        "within_1se": [
+          "lasso",
+          "elastic_net",
+          "random_forest"
+        ],
+        "rule": "simplest family whose mean held-out error is within one SD (across repeats) of the best"
+      },
+      "final_params": {
+        "alpha": 0.011103363181676379,
+        "l1_ratio": 0.8
+      },
+      "coefficients": [
+        {
+          "feature": "log_gfa",
+          "coef_per_sd": -0.0665872717326523,
+          "feature_mean": 11.52886888347717,
+          "feature_sd": 0.9733464052826849,
+          "coef_per_unit": -0.06841066178624623,
+          "pct_per_sd": -0.0644187375044476
+        },
+        {
+          "feature": "year_built",
+          "coef_per_sd": -0.32550442601241764,
+          "feature_mean": 1979.4653465346535,
+          "feature_sd": 25.415191666681782,
+          "coef_per_unit": -0.012807474768688834,
+          "pct_per_sd": -0.27783701604328837
+        },
+        {
+          "feature": "stories_max",
+          "coef_per_sd": 0.07515437625159208,
+          "feature_mean": 4.217821782178218,
+          "feature_sd": 3.390738581290845,
+          "coef_per_unit": 0.022164603507410768,
+          "pct_per_sd": 0.07805056344423877
+        },
+        {
+          "feature": "height_ft_max",
+          "coef_per_sd": 0.09523368087345066,
+          "feature_mean": 48.815247720990094,
+          "feature_sd": 39.51801242958309,
+          "coef_per_unit": 0.002409880330979373,
+          "pct_per_sd": 0.09991585439460393
+        },
+        {
+          "feature": "surface_to_volume",
+          "coef_per_sd": 0.10676987335812846,
+          "feature_mean": 0.08734501865010821,
+          "feature_sd": 0.026639671602114005,
+          "coef_per_unit": 4.007927535775466,
+          "pct_per_sd": 0.11267816812399523
+        },
+        {
+          "feature": "fp_count",
+          "coef_per_sd": -0.018089444486651503,
+          "feature_mean": 13.425742574257425,
+          "feature_sd": 20.680189274012445,
+          "coef_per_unit": -0.000874723352236598,
+          "pct_per_sd": -0.017926812602365394
+        },
+        {
+          "feature": "fp_area_per_gfa",
+          "coef_per_sd": 0.13080657303988677,
+          "feature_mean": 0.45182177831002207,
+          "feature_sd": 0.23746873696820298,
+          "coef_per_unit": 0.5508370268436714,
+          "pct_per_sd": 0.13974730213342013
+        }
+      ],
+      "intercept_log": 5.665965372917374,
+      "linear_coef_by_family": {
+        "year_built_median_reg": {
+          "features": [
+            "year_built"
+          ],
+          "mean": [
+            -0.3630597944523882
+          ],
+          "sd": [
+            0.04494317779962092
+          ],
+          "nonzero_freq": [
+            1.0
+          ]
+        },
+        "median_lasso": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.04845644111832796,
+            -0.3383501683318005,
+            0.024291778415391395,
+            0.09242028655583909,
+            0.026243170719098544,
+            -0.032158464021603474,
+            0.10969623184703313
+          ],
+          "sd": [
+            0.04217447217902275,
+            0.1044323206308595,
+            0.07159888873688247,
+            0.08793723045020203,
+            0.04687866034716352,
+            0.033871879076371,
+            0.05391867607884716
+          ],
+          "nonzero_freq": [
+            0.8,
+            0.96,
+            0.28,
+            0.68,
+            0.44,
+            0.72,
+            0.88
+          ]
+        },
+        "ols": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.07340273258782086,
+            -0.3366227676260785,
+            0.16657347535283132,
+            0.051139111777018034,
+            0.13045389060598578,
+            -0.036061535495521754,
+            0.16187611891026144
+          ],
+          "sd": [
+            0.04957901796215381,
+            0.04720713384717459,
+            0.35881029916949503,
+            0.3528109690343125,
+            0.05086853431451043,
+            0.03518129603177259,
+            0.03457232660795993
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "lasso": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.05866032634471335,
+            -0.3215614588219375,
+            0.06677667313380285,
+            0.099247257207567,
+            0.10261386952666905,
+            -0.027729275692668275,
+            0.13012583112547588
+          ],
+          "sd": [
+            0.047335939961237986,
+            0.05733639993485582,
+            0.11969866868911837,
+            0.11581112641863468,
+            0.060323285632097524,
+            0.030054895609998574,
+            0.05278612833993108
+          ],
+          "nonzero_freq": [
+            0.92,
+            1.0,
+            0.76,
+            0.72,
+            0.92,
+            0.68,
+            0.92
+          ]
+        },
+        "ridge": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.07240924559252977,
+            -0.3230525675842025,
+            0.10491174302038903,
+            0.09169943009873523,
+            0.12510522643760094,
+            -0.03316738033292676,
+            0.1462637862752334
+          ],
+          "sd": [
+            0.04749382722032527,
+            0.051401054238516306,
+            0.1970928795550081,
+            0.18854984597285684,
+            0.04418656330220565,
+            0.032158647722226714,
+            0.03740502509791946
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "elastic_net": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.06052497872847786,
+            -0.32117194713884667,
+            0.06646941990547349,
+            0.09912630528487203,
+            0.10317820533289405,
+            -0.0262452458109648,
+            0.12917487773407008
+          ],
+          "sd": [
+            0.047286524646700176,
+            0.05327150496786913,
+            0.11700842913464816,
+            0.11494997153548002,
+            0.05825583954329264,
+            0.029730645483195726,
+            0.050451060929867605
+          ],
+          "nonzero_freq": [
+            0.92,
+            1.0,
+            0.76,
+            0.72,
+            0.96,
+            0.68,
+            0.92
+          ]
+        },
+        "huber": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            -0.08850204003225962,
+            -0.3431431653492222,
+            0.07017029497555599,
+            0.07368297883521778,
+            0.05476897966612419,
+            -0.034613611840891914,
+            0.1314535497834944
+          ],
+          "sd": [
+            0.042335392053659035,
+            0.048584174107250945,
+            0.14231774723256252,
+            0.1507599466336162,
+            0.0385240640326305,
+            0.029940977143017553,
+            0.03839148258915403
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "cool_elec": {
+      "n": 96,
+      "unit": "kWh/1000ft\u00b2/yr",
+      "fit_filter": "elec_r2 \u2265 0.3",
+      "p10_p50_p90": [
+        176.0,
+        575.5,
+        1087.4
+      ],
+      "log_target_skew": -2.233794450998354,
+      "families": {
+        "baseline_median": {
+          "label": "Baseline: median of all buildings (ignores features)",
+          "complexity": 0,
+          "test_medape_mean": 0.3468497599757011,
+          "test_medape_sd": 0.011078422852232272,
+          "per_repeat": [
+            0.3637070748391115,
+            0.3419906633811169,
+            0.33557636239031924,
+            0.34120560031097413,
+            0.3517690989569837
+          ],
+          "within_25pct": 0.375,
+          "r2_log": -0.07513137542274295,
+          "train_medape_mean": 0.3455211844600833,
+          "overfit_gap": 0.0013285755156178247,
+          "chosen_params_per_fold": [],
+          "vs_baseline_mean": 0.0,
+          "vs_baseline_sd": 0.0
+        },
+        "year_built_median_reg": {
+          "label": "Median regression on year built only",
+          "complexity": 1,
+          "test_medape_mean": 0.371216406813021,
+          "test_medape_sd": 0.015841857040286653,
+          "per_repeat": [
+            0.39318089736477546,
+            0.35818481859970974,
+            0.3822461886257493,
+            0.3573180419340814,
+            0.3651520875407892
+          ],
+          "within_25pct": 0.3541666666666667,
+          "r2_log": -0.06670464406762941,
+          "train_medape_mean": 0.3533988886129169,
+          "overfit_gap": 0.017817518200104077,
+          "chosen_params_per_fold": [],
+          "coef_fold_mean": [
+            -0.04628747373210344
+          ],
+          "coef_fold_sd": [
+            0.037759870484690684
+          ],
+          "coef_nonzero_freq": [
+            1.0
+          ],
+          "vs_baseline_mean": 0.024366646837319917,
+          "vs_baseline_sd": 0.013955978346056493
+        },
+        "median_lasso": {
+          "label": "Median regression + lasso penalty (L1 loss, L1 penalty)",
+          "complexity": 2,
+          "test_medape_mean": 0.38131233563219014,
+          "test_medape_sd": 0.03261120487372132,
+          "per_repeat": [
+            0.412397316894388,
+            0.39499552896005813,
+            0.40619413303854646,
+            0.34120560031097413,
+            0.3517690989569837
+          ],
+          "within_25pct": 0.35625,
+          "r2_log": -0.09619462678221802,
+          "train_medape_mean": 0.34419147428143426,
+          "overfit_gap": 0.037120861350755874,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.042169650342858224
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.002053525026457146
+            },
+            {
+              "alpha": 0.042169650342858224
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.0
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.11547819846894582
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            },
+            {
+              "alpha": 0.31622776601683794
+            }
+          ],
+          "coef_fold_mean": [
+            0.0037723324385999396,
+            -0.003806002469644445,
+            0.0653692836700025,
+            -0.07043113037473317,
+            0.00786873297461107,
+            -0.005260096589926626,
+            0.023583173023198727
+          ],
+          "coef_fold_sd": [
+            0.04367447066627007,
+            0.04230805295536696,
+            0.22693024120754973,
+            0.21892241518984548,
+            0.025106117369489707,
+            0.02727410346205909,
+            0.05379089599867233
+          ],
+          "coef_nonzero_freq": [
+            0.2,
+            0.16,
+            0.08,
+            0.24,
+            0.12,
+            0.12,
+            0.24
+          ],
+          "vs_baseline_mean": 0.03446257565648899,
+          "vs_baseline_sd": 0.032514532802166055
+        },
+        "ols": {
+          "label": "Ordinary least squares",
+          "complexity": 3,
+          "test_medape_mean": 0.4657368542535901,
+          "test_medape_sd": 0.02468980642741021,
+          "per_repeat": [
+            0.4944811351486134,
+            0.4436618590790804,
+            0.44242736260779153,
+            0.4889402774466419,
+            0.4591736369858236
+          ],
+          "within_25pct": 0.29791666666666666,
+          "r2_log": -0.055549705623709665,
+          "train_medape_mean": 0.43279663808871105,
+          "overfit_gap": 0.03294021616487908,
+          "chosen_params_per_fold": [],
+          "coef_fold_mean": [
+            0.1040919559573341,
+            -0.12715662524380378,
+            0.278369084089571,
+            -0.33003381344363225,
+            0.08333309571513514,
+            -0.02259696387843532,
+            0.13955330887262907
+          ],
+          "coef_fold_sd": [
+            0.07331838199613289,
+            0.055209110669506824,
+            0.299527647561762,
+            0.2571787321365071,
+            0.09357785699560879,
+            0.05057014943222634,
+            0.05357650890895792
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": 0.11888709427788906,
+          "vs_baseline_sd": 0.019663334027646404
+        },
+        "lasso": {
+          "label": "Lasso (squared loss, L1 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.41025444261552985,
+          "test_medape_sd": 0.01568888211041724,
+          "per_repeat": [
+            0.42749578185875325,
+            0.4223253790694733,
+            0.3877925043993632,
+            0.4042224969863665,
+            0.40943605076369327
+          ],
+          "within_25pct": 0.2895833333333333,
+          "r2_log": -0.021606281646576388,
+          "train_medape_mean": 0.38627823999417665,
+          "overfit_gap": 0.023976202621353193,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.4806380863064394
+            },
+            {
+              "alpha": 0.07305271542664457
+            },
+            {
+              "alpha": 0.1873817422860385
+            },
+            {
+              "alpha": 0.4806380863064394
+            }
+          ],
+          "coef_fold_mean": [
+            0.00670236266974061,
+            -0.012772845181364718,
+            0.0,
+            -0.0028249651730609376,
+            0.040951980911764545,
+            0.0,
+            0.02037861129541679
+          ],
+          "coef_fold_sd": [
+            0.018051920409885874,
+            0.028646613399259602,
+            0.0,
+            0.010930556010696861,
+            0.06402210437884949,
+            0.0,
+            0.03733851054468225
+          ],
+          "coef_nonzero_freq": [
+            0.16,
+            0.24,
+            0.0,
+            0.12,
+            0.4,
+            0.0,
+            0.28
+          ],
+          "vs_baseline_mean": 0.0634046826398288,
+          "vs_baseline_sd": 0.010547853671041243
+        },
+        "ridge": {
+          "label": "Ridge (squared loss, L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.38902888069641534,
+          "test_medape_sd": 0.011857879200832937,
+          "per_repeat": [
+            0.39503852228245817,
+            0.3865008053297191,
+            0.37465486059825753,
+            0.40574442460670557,
+            0.3832057906649365
+          ],
+          "within_25pct": 0.2729166666666667,
+          "r2_log": 0.012560336146990902,
+          "train_medape_mean": 0.38072676811312106,
+          "overfit_gap": 0.008302112583294274,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 170.1254279852589
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 170.1254279852589
+            },
+            {
+              "alpha": 170.1254279852589
+            },
+            {
+              "alpha": 170.1254279852589
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 70.1703828670383
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 28.942661247167518
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 1000.0
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 412.46263829013566
+            },
+            {
+              "alpha": 1000.0
+            }
+          ],
+          "coef_fold_mean": [
+            0.010896129380276003,
+            -0.021119671371357424,
+            -0.018731795659573877,
+            -0.02043938720852391,
+            0.030907043888546627,
+            0.01638367694718652,
+            0.027359057786242105
+          ],
+          "coef_fold_sd": [
+            0.018132615019701852,
+            0.015857812846146572,
+            0.008950166317961868,
+            0.010295536692503932,
+            0.0249336663093883,
+            0.009525084560238864,
+            0.018528352323915812
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": 0.04217912072071427,
+          "vs_baseline_sd": 0.013675485919346416
+        },
+        "elastic_net": {
+          "label": "Elastic net (squared loss, L1+L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.4072675994246092,
+          "test_medape_sd": 0.010527837940177358,
+          "per_repeat": [
+            0.40652265289479445,
+            0.40857727392374876,
+            0.39132617683036947,
+            0.4090941649673956,
+            0.42081772850673754
+          ],
+          "within_25pct": 0.28541666666666665,
+          "r2_log": -0.015990808388748445,
+          "train_medape_mean": 0.389068497709462,
+          "overfit_gap": 0.018199101715147215,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 1.232846739442066,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.07305271542664457,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.4806380863064394,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.1873817422860385,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 1.232846739442066,
+              "l1_ratio": 0.5
+            }
+          ],
+          "coef_fold_mean": [
+            0.006735306564517347,
+            -0.009784455818950679,
+            -0.000993923290535441,
+            -0.006660864405856264,
+            0.04088757681599331,
+            0.0003871651044581961,
+            0.017315471987554426
+          ],
+          "coef_fold_sd": [
+            0.022298254285015456,
+            0.02356864148255473,
+            0.0043885948756216975,
+            0.01430492618429898,
+            0.05941743780678939,
+            0.001935825522290981,
+            0.03230174781199854
+          ],
+          "coef_nonzero_freq": [
+            0.12,
+            0.24,
+            0.08,
+            0.24,
+            0.44,
+            0.04,
+            0.32
+          ],
+          "vs_baseline_mean": 0.060417839448908064,
+          "vs_baseline_sd": 0.01118018418158375
+        },
+        "huber": {
+          "label": "Huber regression (robust loss, L2 penalty)",
+          "complexity": 3,
+          "test_medape_mean": 0.4295081869825682,
+          "test_medape_sd": 0.03211324031845348,
+          "per_repeat": [
+            0.47245280992886424,
+            0.45171346175745164,
+            0.4221103294210492,
+            0.394916023999812,
+            0.4063483098056641
+          ],
+          "within_25pct": 0.3166666666666667,
+          "r2_log": -0.07175509142789074,
+          "train_medape_mean": 0.3539492293372453,
+          "overfit_gap": 0.07555895764532289,
+          "chosen_params_per_fold": [
+            {
+              "alpha": 10.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.1,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 1.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.35
+            }
+          ],
+          "coef_fold_mean": [
+            0.03025756970280258,
+            -0.02166147571110679,
+            0.3018217717495871,
+            -0.37698235904041205,
+            0.013053607012267786,
+            -0.005365660886069398,
+            0.09190229896343949
+          ],
+          "coef_fold_sd": [
+            0.06081111087839749,
+            0.06806838174435347,
+            0.3857551008460441,
+            0.3737056397067426,
+            0.045531368367187484,
+            0.0387057671621624,
+            0.047966406804970885
+          ],
+          "coef_nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "vs_baseline_mean": 0.08265842700686714,
+          "vs_baseline_sd": 0.027633661209072607
+        },
+        "random_forest": {
+          "label": "Random forest (tuned)",
+          "complexity": 5,
+          "test_medape_mean": 0.4191613613645352,
+          "test_medape_sd": 0.03775991688185753,
+          "per_repeat": [
+            0.4720629345872668,
+            0.3952560636331512,
+            0.38362083604709063,
+            0.4453317726752587,
+            0.3995351998799084
+          ],
+          "within_25pct": 0.3375,
+          "r2_log": 0.011087254578970529,
+          "train_medape_mean": 0.32781786324716433,
+          "overfit_gap": 0.09134349811737086,
+          "chosen_params_per_fold": [
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 5
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 2
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 2
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 5
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 5
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 2
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.66,
+              "min_samples_leaf": 2
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "squared_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 10
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 1.0,
+              "min_samples_leaf": 20
+            },
+            {
+              "criterion": "absolute_error",
+              "max_features": 0.33,
+              "min_samples_leaf": 20
+            }
+          ],
+          "vs_baseline_mean": 0.07231160138883404,
+          "vs_baseline_sd": 0.0310865258040164
+        },
+        "xgboost": {
+          "label": "XGBoost (tuned)",
+          "complexity": 6,
+          "test_medape_mean": 0.3780243955704778,
+          "test_medape_sd": 0.01937281123563175,
+          "per_repeat": [
+            0.3718144610537555,
+            0.4056866316038123,
+            0.35360343854109305,
+            0.3864610995973192,
+            0.37255634705640883
+          ],
+          "within_25pct": 0.3375,
+          "r2_log": -0.02490147595086678,
+          "train_medape_mean": 0.2860378241894272,
+          "overfit_gap": 0.0919865713810506,
+          "chosen_params_per_fold": [
+            {
+              "subsample": 1.0,
+              "reg_lambda": 1,
+              "objective": "reg:squarederror",
+              "n_estimators": 100,
+              "min_child_weight": 1,
+              "max_depth": 2,
+              "learning_rate": 0.01,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 3,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 1,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 8,
+              "max_depth": 2,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 15,
+              "max_depth": 3,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 25,
+              "min_child_weight": 1,
+              "max_depth": 2,
+              "learning_rate": 0.01,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 50,
+              "min_child_weight": 15,
+              "max_depth": 2,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 2,
+              "learning_rate": 0.3,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 15,
+              "max_depth": 3,
+              "learning_rate": 0.01,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 10,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 200,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 50,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 200,
+              "min_child_weight": 15,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 400,
+              "min_child_weight": 3,
+              "max_depth": 2,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 1,
+              "max_depth": 2,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 25,
+              "min_child_weight": 1,
+              "max_depth": 2,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:squarederror",
+              "n_estimators": 25,
+              "min_child_weight": 15,
+              "max_depth": 3,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 8,
+              "max_depth": 1,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 10,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 400,
+              "min_child_weight": 15,
+              "max_depth": 1,
+              "learning_rate": 0.01,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 0.1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 100,
+              "min_child_weight": 15,
+              "max_depth": 1,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.5
+            }
+          ],
+          "vs_baseline_mean": 0.03117463559477668,
+          "vs_baseline_sd": 0.02274182232404469
+        }
+      },
+      "chosen": "baseline_median",
+      "selection": {
+        "best_by_mean": "baseline_median",
+        "threshold": 0.35792818282793337,
+        "within_1se": [
+          "baseline_median"
+        ],
+        "rule": "simplest family whose mean held-out error is within one SD (across repeats) of the best"
+      },
+      "final_params": {},
+      "linear_coef_by_family": {
+        "year_built_median_reg": {
+          "features": [
+            "year_built"
+          ],
+          "mean": [
+            -0.04628747373210344
+          ],
+          "sd": [
+            0.037759870484690684
+          ],
+          "nonzero_freq": [
+            1.0
+          ]
+        },
+        "median_lasso": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.0037723324385999396,
+            -0.003806002469644445,
+            0.0653692836700025,
+            -0.07043113037473317,
+            0.00786873297461107,
+            -0.005260096589926626,
+            0.023583173023198727
+          ],
+          "sd": [
+            0.04367447066627007,
+            0.04230805295536696,
+            0.22693024120754973,
+            0.21892241518984548,
+            0.025106117369489707,
+            0.02727410346205909,
+            0.05379089599867233
+          ],
+          "nonzero_freq": [
+            0.2,
+            0.16,
+            0.08,
+            0.24,
+            0.12,
+            0.12,
+            0.24
+          ]
+        },
+        "ols": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.1040919559573341,
+            -0.12715662524380378,
+            0.278369084089571,
+            -0.33003381344363225,
+            0.08333309571513514,
+            -0.02259696387843532,
+            0.13955330887262907
+          ],
+          "sd": [
+            0.07331838199613289,
+            0.055209110669506824,
+            0.299527647561762,
+            0.2571787321365071,
+            0.09357785699560879,
+            0.05057014943222634,
+            0.05357650890895792
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "lasso": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.00670236266974061,
+            -0.012772845181364718,
+            0.0,
+            -0.0028249651730609376,
+            0.040951980911764545,
+            0.0,
+            0.02037861129541679
+          ],
+          "sd": [
+            0.018051920409885874,
+            0.028646613399259602,
+            0.0,
+            0.010930556010696861,
+            0.06402210437884949,
+            0.0,
+            0.03733851054468225
+          ],
+          "nonzero_freq": [
+            0.16,
+            0.24,
+            0.0,
+            0.12,
+            0.4,
+            0.0,
+            0.28
+          ]
+        },
+        "ridge": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.010896129380276003,
+            -0.021119671371357424,
+            -0.018731795659573877,
+            -0.02043938720852391,
+            0.030907043888546627,
+            0.01638367694718652,
+            0.027359057786242105
+          ],
+          "sd": [
+            0.018132615019701852,
+            0.015857812846146572,
+            0.008950166317961868,
+            0.010295536692503932,
+            0.0249336663093883,
+            0.009525084560238864,
+            0.018528352323915812
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "elastic_net": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.006735306564517347,
+            -0.009784455818950679,
+            -0.000993923290535441,
+            -0.006660864405856264,
+            0.04088757681599331,
+            0.0003871651044581961,
+            0.017315471987554426
+          ],
+          "sd": [
+            0.022298254285015456,
+            0.02356864148255473,
+            0.0043885948756216975,
+            0.01430492618429898,
+            0.05941743780678939,
+            0.001935825522290981,
+            0.03230174781199854
+          ],
+          "nonzero_freq": [
+            0.12,
+            0.24,
+            0.08,
+            0.24,
+            0.44,
+            0.04,
+            0.32
+          ]
+        },
+        "huber": {
+          "features": [
+            "log_gfa",
+            "year_built",
+            "stories_max",
+            "height_ft_max",
+            "surface_to_volume",
+            "fp_count",
+            "fp_area_per_gfa"
+          ],
+          "mean": [
+            0.03025756970280258,
+            -0.02166147571110679,
+            0.3018217717495871,
+            -0.37698235904041205,
+            0.013053607012267786,
+            -0.005365660886069398,
+            0.09190229896343949
+          ],
+          "sd": [
+            0.06081111087839749,
+            0.06806838174435347,
+            0.3857551008460441,
+            0.3737056397067426,
+            0.045531368367187484,
+            0.0387057671621624,
+            0.047966406804970885
+          ],
+          "nonzero_freq": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "heat_elec": {
+      "n": 8,
+      "unit": "kWh/1000ft\u00b2/yr",
+      "fit_filter": "elec_r2 \u2265 0.3",
+      "p10_p50_p90": [
+        1642.6,
+        4316.0,
+        7033.2
+      ],
+      "log_target_skew": -0.637009484804568,
+      "note": "only 8 metered buildings: too few for model selection; the service uses their median"
+    }
+  },
+  "pooled_balance_points_F": {
+    "heat_gas": 60,
+    "heat_elec": 55,
+    "cool": 65
+  },
+  "scheme": {
+    "rows": "one per metered property",
+    "target": "log(weather-normalized intensity from the building's own change-point fit)",
+    "features": [
+      "log_gfa",
+      "year_built",
+      "stories_max",
+      "height_ft_max",
+      "surface_to_volume",
+      "fp_count",
+      "fp_area_per_gfa"
+    ],
+    "metric": "median |exp(pred \u2212 y) \u2212 1| (median absolute % error), used for tuning AND reporting",
+    "outer_cv": "RepeatedKFold(5 folds \u00d7 5 repeats, seed 0): measures only",
+    "inner_cv": "KFold(5) inside each outer training split: tunes hyperparameters (grid or 40-draw random search)",
+    "selection": "one-standard-error rule across families (simplest within 1 SD of the best mean)",
+    "final_fit": "chosen family re-tuned on all buildings (inner RepeatedKFold 5\u00d73), then refit"
+  }
+}

@@ -1,0 +1,112 @@
+// Photon management API (https://spectrum.photon.codes/openapi/json).
+// Free/Pro shared lines only text numbers registered as project users,
+// so judges get allowlisted here before they text the agent.
+
+const API = "https://spectrum.photon.codes";
+
+/** The text a new user's Messages app opens with. Text only: links in a first message trip Apple's junk filter. */
+export const OPENER = "Hi Hidden Rent! What's my apartment's hidden rent?";
+
+export interface PhotonCreds {
+  projectId: string;
+  projectSecret: string;
+}
+
+export interface SharedUser {
+  id: string;
+  phoneNumber: string;
+  /** The Photon line this user texts (shared pool assigns one per user). */
+  assignedPhoneNumber: string;
+  firstName?: string | null;
+}
+
+/** Normalize a typed phone number to E.164, assuming US (+1) for 10-digit input. Returns null if it can't. */
+export function normalizePhone(input: string): string | null {
+  const trimmed = input.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  if (trimmed.startsWith("+")) return /^[1-9]\d{6,14}$/.test(digits) ? `+${digits}` : null;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+export class PhotonError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+async function photonRequest<T>(
+  creds: PhotonCreds,
+  path: string,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+): Promise<T> {
+  const auth = Buffer.from(`${creds.projectId}:${creds.projectSecret}`).toString("base64");
+  const res = await fetchImpl(`${API}/projects/${creds.projectId}${path}`, {
+    ...init,
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+  });
+  const body = (await res.json().catch(() => null)) as { succeed?: boolean; data?: T; message?: string } | null;
+  if (!res.ok || !body?.succeed || !body.data) {
+    throw new PhotonError(`Photon ${init.method ?? "GET"} ${path} failed (${res.status}): ${body?.message ?? "no message"}`, res.status);
+  }
+  return body.data;
+}
+
+const toUser = (u: SharedUser): SharedUser => ({
+  id: u.id,
+  phoneNumber: u.phoneNumber,
+  assignedPhoneNumber: u.assignedPhoneNumber,
+  firstName: u.firstName ?? null,
+});
+
+/** POST /projects/{id}/users with type "shared". Idempotent per phone number on Photon's side. */
+export async function createSharedUser(
+  creds: PhotonCreds,
+  phoneNumber: string,
+  firstName?: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SharedUser> {
+  const body = JSON.stringify({ type: "shared", phoneNumber, ...(firstName ? { firstName } : {}) });
+  return toUser(await photonRequest<SharedUser>(creds, "/users/", { method: "POST", body }, fetchImpl));
+}
+
+/** GET /projects/{id}/users?type=shared. Also the cheapest way to check credentials. */
+export async function listSharedUsers(
+  creds: PhotonCreds,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ users: SharedUser[]; total: number }> {
+  const data = await photonRequest<{ users: SharedUser[]; total: number }>(
+    creds,
+    "/users/?type=shared&limit=500",
+    { method: "GET" },
+    fetchImpl,
+  );
+  return { users: data.users.map(toUser), total: data.total };
+}
+
+/** DELETE /projects/{id}/users/{userId}: soft-deletes the user, which removes it from the allowlist. */
+export async function deleteUser(creds: PhotonCreds, userId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  await photonRequest<{ userId: string }>(creds, `/users/${encodeURIComponent(userId)}/`, { method: "DELETE" }, fetchImpl);
+}
+
+/** Remove every shared user registered with this phone. Returns the removed users (empty if none matched). */
+export async function removeSharedUserByPhone(
+  creds: PhotonCreds,
+  phoneNumber: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SharedUser[]> {
+  const { users } = await listSharedUsers(creds, fetchImpl);
+  const matches = users.filter((u) => u.phoneNumber === phoneNumber);
+  for (const u of matches) await deleteUser(creds, u.id, fetchImpl);
+  return matches;
+}
+
+/** Public Photon endpoint that 302s into Messages (SMS deep link) with the opener pre-filled. */
+export function redirectUrl(userId: string, msg = OPENER): string {
+  return `${API}/users/${encodeURIComponent(userId)}/redirect?msg=${encodeURIComponent(msg)}`;
+}

@@ -1,0 +1,53 @@
+Recomputing gas held-out rows from copied artifacts/cache...
+Recomputing elec held-out rows from copied artifacts/cache...
+{
+  "passed": true,
+  "elapsed_seconds": 2.838,
+  "checks": {
+    "gas_seasonal_summary_matches": true,
+    "elec_seasonal_summary_matches": true,
+    "gas_monthly_summary_matches": true,
+    "elec_monthly_summary_matches": true,
+    "new_noise_floor_matches": true,
+    "source_hashes_match": true,
+    "source_inputs_unchanged_during_run": true,
+    "prediction_rows_match": true,
+    "families_match": true
+  },
+  "headline": [
+    {
+      "metric": "all-season gas median absolute percentage error",
+      "path": "metered",
+      "recomputed": 0.074,
+      "task_headline": 0.074,
+      "drift_percentage_points": 0.0,
+      "finite_building_year_seasons": 647,
+      "finite_buildings": 66
+    },
+    {
+      "metric": "all-season gas median absolute percentage error",
+      "path": "blend",
+      "recomputed": 0.292,
+      "task_headline": 0.287,
+      "drift_percentage_points": 0.5,
+      "finite_building_year_seasons": 800,
+      "finite_buildings": 101
+    },
+    {
+      "metric": "all-season gas median absolute percentage error",
+      "path": "resstock",
+      "recomputed": 0.299,
+      "task_headline": 0.299,
+      "drift_percentage_points": 0.0,
+      "finite_building_year_seasons": 800,
+      "finite_buildings": 101
+    }
+  ],
+  "within_building_noise": {
+    "all": 0.38501898949064794,
+    "winter": 0.25158402930396623,
+    "winter_months": 514,
+    "winter_buildings": 67,
+    "basis": "p90 abs(actual / held-out same-building weather prediction - 1), monthly gas"
+  }
+}

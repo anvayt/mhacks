@@ -1,0 +1,196 @@
+{
+  "captured_at_utc": "2026-10-04T06:25:27.908457+00:00",
+  "api_revision": "fd8c31c0b40148b1940d9dddd36c4fdfd6bf3691",
+  "request": {
+    "method": "GET",
+    "path": "/leaderboard?scope=neighborhood"
+  },
+  "status": 200,
+  "elapsed_seconds": 0.001,
+  "response": {
+    "best": [
+      {
+        "benchmark_id": "A2BLD-00134",
+        "name": "10318 Ann Arbor",
+        "score": 99.99,
+        "grade": "A",
+        "cost_per_sqft": 0.1649,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00268",
+        "name": "Evans Scholars Michigan",
+        "score": 99.97,
+        "grade": "A",
+        "cost_per_sqft": 0.2473,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00030",
+        "name": "Six11",
+        "score": 99.95,
+        "grade": "A",
+        "cost_per_sqft": 0.0894,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00168",
+        "name": "1500 Pauline",
+        "score": 99.94,
+        "grade": "A",
+        "cost_per_sqft": 0.2627,
+        "building_count": 5,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00505",
+        "name": "Foundry Lofts",
+        "score": 99.93,
+        "grade": "A",
+        "cost_per_sqft": 0.0929,
+        "building_count": 2,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00254",
+        "name": "Alpha Gamma Delta",
+        "score": 99.78,
+        "grade": "A",
+        "cost_per_sqft": 0.3186,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00025",
+        "name": "The Yard",
+        "score": 99.76,
+        "grade": "A",
+        "cost_per_sqft": 0.1013,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00062",
+        "name": "State Street Village LLC",
+        "score": 99.73,
+        "grade": "A",
+        "cost_per_sqft": 0.1126,
+        "building_count": 3,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00073",
+        "name": "Z Place",
+        "score": 99.38,
+        "grade": "A",
+        "cost_per_sqft": 0.1352,
+        "building_count": 1,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      },
+      {
+        "benchmark_id": "A2BLD-00140",
+        "name": "City Place",
+        "score": 99.24,
+        "grade": "A",
+        "cost_per_sqft": 0.156,
+        "building_count": 2,
+        "predicted": true,
+        "source": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0"
+      }
+    ],
+    "worst_blocks": [
+      {
+        "geoid": "26161980101",
+        "area_type": "census_tract",
+        "building_count": 85,
+        "score": 12.84,
+        "excess_usd_per_sqft": 1.2793,
+        "predicted": true
+      },
+      {
+        "geoid": "26161400500",
+        "area_type": "census_tract",
+        "building_count": 875,
+        "score": 24.96,
+        "excess_usd_per_sqft": 0.7475,
+        "predicted": true
+      },
+      {
+        "geoid": "26161402201",
+        "area_type": "census_tract",
+        "building_count": 115,
+        "score": 25.89,
+        "excess_usd_per_sqft": 0.6337,
+        "predicted": true
+      },
+      {
+        "geoid": "26161400800",
+        "area_type": "census_tract",
+        "building_count": 306,
+        "score": 23.01,
+        "excess_usd_per_sqft": 0.611,
+        "predicted": true
+      },
+      {
+        "geoid": "26161400700",
+        "area_type": "census_tract",
+        "building_count": 696,
+        "score": 26.41,
+        "excess_usd_per_sqft": 0.387,
+        "predicted": true
+      },
+      {
+        "geoid": "26161405500",
+        "area_type": "census_tract",
+        "building_count": 600,
+        "score": 50.5,
+        "excess_usd_per_sqft": 0.2442,
+        "predicted": true
+      },
+      {
+        "geoid": "26161400600",
+        "area_type": "census_tract",
+        "building_count": 1393,
+        "score": 29.36,
+        "excess_usd_per_sqft": 0.1887,
+        "predicted": true
+      },
+      {
+        "geoid": "26161405400",
+        "area_type": "census_tract",
+        "building_count": 746,
+        "score": 29.11,
+        "excess_usd_per_sqft": 0.1744,
+        "predicted": true
+      },
+      {
+        "geoid": "26161400400",
+        "area_type": "census_tract",
+        "building_count": 1056,
+        "score": 33.51,
+        "excess_usd_per_sqft": 0.1547,
+        "predicted": true
+      },
+      {
+        "geoid": "26161403400",
+        "area_type": "census_tract",
+        "building_count": 1270,
+        "score": 33.13,
+        "excess_usd_per_sqft": 0.1344,
+        "predicted": true
+      }
+    ]
+  }
+}

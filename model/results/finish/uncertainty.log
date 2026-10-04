@@ -1,0 +1,120 @@
+{
+  "temporal_noise": {
+    "basis": "p90 absolute (actual gas / same-building prediction - 1), each calendar year held out of that building's weather change-point fit; Ann Arbor utility meters 2021\u20132023. This measures temporal variability, not cross-building prediction bias.",
+    "residual_definition": "actual / out_of_year_same_building_prediction - 1",
+    "all": {
+      "p90_abs_residual_fraction": 0.38501898949064794,
+      "n_months": 1985,
+      "n_buildings": 67
+    },
+    "by_season": {
+      "fall": {
+        "p90_abs_residual_fraction": 0.4142562382382543,
+        "n_months": 503,
+        "n_buildings": 66
+      },
+      "spring": {
+        "p90_abs_residual_fraction": 0.35727477119649087,
+        "n_months": 508,
+        "n_buildings": 66
+      },
+      "summer": {
+        "p90_abs_residual_fraction": 0.492150690556069,
+        "n_months": 460,
+        "n_buildings": 64
+      },
+      "winter": {
+        "p90_abs_residual_fraction": 0.25158402930396623,
+        "n_months": 514,
+        "n_buildings": 67
+      }
+    },
+    "by_calendar_month": {
+      "1": {
+        "p90_abs_residual_fraction": 0.25900931288936135,
+        "n_months": 171,
+        "n_buildings": 66
+      },
+      "2": {
+        "p90_abs_residual_fraction": 0.22131686396769978,
+        "n_months": 171,
+        "n_buildings": 66
+      },
+      "3": {
+        "p90_abs_residual_fraction": 0.24985945600875592,
+        "n_months": 170,
+        "n_buildings": 66
+      },
+      "4": {
+        "p90_abs_residual_fraction": 0.303510663728371,
+        "n_months": 168,
+        "n_buildings": 65
+      },
+      "5": {
+        "p90_abs_residual_fraction": 0.5096013180641116,
+        "n_months": 170,
+        "n_buildings": 66
+      },
+      "6": {
+        "p90_abs_residual_fraction": 0.4703563249646355,
+        "n_months": 160,
+        "n_buildings": 63
+      },
+      "7": {
+        "p90_abs_residual_fraction": 0.46703174130508673,
+        "n_months": 152,
+        "n_buildings": 61
+      },
+      "8": {
+        "p90_abs_residual_fraction": 0.5291778747621035,
+        "n_months": 148,
+        "n_buildings": 59
+      },
+      "9": {
+        "p90_abs_residual_fraction": 0.5340788235555595,
+        "n_months": 163,
+        "n_buildings": 65
+      },
+      "10": {
+        "p90_abs_residual_fraction": 0.456773962305612,
+        "n_months": 170,
+        "n_buildings": 66
+      },
+      "11": {
+        "p90_abs_residual_fraction": 0.2307837604318269,
+        "n_months": 170,
+        "n_buildings": 66
+      },
+      "12": {
+        "p90_abs_residual_fraction": 0.21326900284180308,
+        "n_months": 172,
+        "n_buildings": 67
+      }
+    },
+    "by_estimate_path": {
+      "metered": {
+        "source_path": "metered",
+        "temporal_component_only": true,
+        "transfer_to_unmetered": false,
+        "limitation": "Pooled across metered properties; not a personalized prediction interval."
+      },
+      "blend": {
+        "source_path": "metered",
+        "temporal_component_only": true,
+        "transfer_to_unmetered": true,
+        "limitation": "No own-home baseline for unmetered homes; cross-building level bias remains."
+      },
+      "resstock": {
+        "source_path": "metered",
+        "temporal_component_only": true,
+        "transfer_to_unmetered": true,
+        "limitation": "No own-home baseline for unmetered homes; cross-building level bias remains."
+      }
+    }
+  },
+  "audit": {
+    "rows_checked": 1985,
+    "max_absolute_ccf_difference": 0.0,
+    "method": "Refit gas change-point on other calendar years using cached meters_weather; no network."
+  }
+}

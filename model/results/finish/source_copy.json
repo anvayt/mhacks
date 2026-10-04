@@ -1,0 +1,182 @@
+{
+  "source": "read-only copy of mhacks-integration/model; no rebuild",
+  "python": "3.14.6",
+  "versions": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "lightgbm": "4.7.0",
+    "rasterio": "1.5.2",
+    "shapely": "2.1.2",
+    "fastapi": "0.142.2",
+    "uvicorn": "0.54.0"
+  },
+  "files": [
+    {
+      "path": "model/artifacts/bldg_cool_elec.pkl",
+      "sha256": "d7267723b25e72bb2c506ab96720d0ec2da8008d2748ca060c81d455d9fffa9d",
+      "bytes": 902
+    },
+    {
+      "path": "model/artifacts/bldg_heat_elec.pkl",
+      "sha256": "46550c0f42543eb744667343fc4bc1452b3a1e7c39811a83edb103756592fa44",
+      "bytes": 68
+    },
+    {
+      "path": "model/artifacts/bldg_heat_gas.pkl",
+      "sha256": "b43b3f311db2e986b6e595576fdb5e34a5d30856bbbc26075c097e3532429d26",
+      "bytes": 1730
+    },
+    {
+      "path": "model/artifacts/hc_elec.pkl",
+      "sha256": "9105c91f0b5fc735a5a0e9348a20a74c50eff0929b82ca7dd9a663daa107a060",
+      "bytes": 2940
+    },
+    {
+      "path": "model/artifacts/hc_gas.pkl",
+      "sha256": "37af52fa0fa058f7435ebe676f082b3c0d18ba7b9598cbebec1695c7cd45b1b1",
+      "bytes": 978502
+    },
+    {
+      "path": "model/artifacts/leakage.pkl",
+      "sha256": "2cc359d7d703e4d39da77d4dc689422dfa3bd767e7207b698eb100c2e8badf90",
+      "bytes": 2521349
+    },
+    {
+      "path": "model/artifacts/resstock_hc.pkl",
+      "sha256": "ab8e7ca885cbfc4c1d9e27a212768c5511cc131ce235c827fd49110c4b30580b",
+      "bytes": 9189750
+    },
+    {
+      "path": "model/data/processed/building_targets.parquet",
+      "sha256": "190e332b9202223f5744411c714182225ae8c7468201d8d09c0e8b6ca69b7bd6",
+      "bytes": 41408
+    },
+    {
+      "path": "model/data/processed/buildings_hc.csv",
+      "sha256": "f53a50032a639d96848158e42f3f31fdd46ad46bd8702a21ba4e2ba6b3e53449",
+      "bytes": 102922
+    },
+    {
+      "path": "model/data/processed/buildings_hc.parquet",
+      "sha256": "21f9d6e78e041ed97b711006615831916818f547f9574737e080128da742a356",
+      "bytes": 48795
+    },
+    {
+      "path": "model/data/processed/changepoints.parquet",
+      "sha256": "5f7c7d5fb669c6a2027e92ac54e03e4b0c03eaa1b67c9d30cd67f6c08d1af726",
+      "bytes": 20262
+    },
+    {
+      "path": "model/data/processed/leakage_ann_arbor.csv",
+      "sha256": "4d065a5738e709860ef518f0fb1b5a65da79141f07008627b272cf7b4b152544",
+      "bytes": 2626156
+    },
+    {
+      "path": "model/data/processed/leakage_ann_arbor.parquet",
+      "sha256": "334231e407d3579503c91f35e0dffeaad987bc4e1b6d208c850764e7b259ba57",
+      "bytes": 1027198
+    },
+    {
+      "path": "model/data/processed/meters_monthly.parquet",
+      "sha256": "80013fa12a70f4bcb6436b82acdd6eb9abe3646638c61e3bf35df9c2ee39fa70",
+      "bytes": 85730
+    },
+    {
+      "path": "model/data/processed/meters_weather.parquet",
+      "sha256": "7981ef4f54bc68beee5bdd4436611bac345d4f81884233f27a50bc7870330b1a",
+      "bytes": 221600
+    },
+    {
+      "path": "model/data/processed/normal_weather_buildings.parquet",
+      "sha256": "ae08fb320c7f7111ad00f5f61da53a82714ae40c6ebbe87d4585b25962d1ee51",
+      "bytes": 57486
+    },
+    {
+      "path": "model/data/processed/prices_mi.json",
+      "sha256": "45fba8d145833589ffabbc899b0fa2a4732ad53721ef951f91e3c30dab530196",
+      "bytes": 1889
+    },
+    {
+      "path": "model/data/processed/resstock_frame.parquet",
+      "sha256": "649c3c08eadb8b9034160cf1cf1fe7f00da9eb9fd5a3edd9c25a651a6ff1278e",
+      "bytes": 1002541
+    },
+    {
+      "path": "model/results/blend_weights.json",
+      "sha256": "5fea4300042e8638599a098b3a669bdb950f461a1eb698d191593134d9479c63",
+      "bytes": 591
+    },
+    {
+      "path": "model/results/building_model_validation.json",
+      "sha256": "3194bbf8198147da990852ba8f083d2478e8c264c7e4f5f5306b2ad58833125a",
+      "bytes": 83767
+    },
+    {
+      "path": "model/results/hc_validation.json",
+      "sha256": "5fcb322bb66ecc8c835741bbebdd9df4acaad417c718e5bfba64d3a84a179f29",
+      "bytes": 2284
+    },
+    {
+      "path": "model/results/heldout_elec.parquet",
+      "sha256": "4f7548ff6dcc9006dfca265c23dba1e3fda3517a9bd218fdefd8ab3cd8825253",
+      "bytes": 12909
+    },
+    {
+      "path": "model/results/heldout_gas.parquet",
+      "sha256": "9a178eaa40625f5e946f21931efe93255fbc95759b1f9cde823a8361ac77cbee",
+      "bytes": 14140
+    },
+    {
+      "path": "model/results/heldout_monthly.parquet",
+      "sha256": "187241dedcfbb1d14c7f0fb8c5ff465ceb4ce1c062acc6c41294661769892bdb",
+      "bytes": 242611
+    },
+    {
+      "path": "model/results/heldout_seasonal.parquet",
+      "sha256": "088921b62e7d188f247c99bb016aba77420a087593a00e2980ddbcc8d019c346",
+      "bytes": 94261
+    },
+    {
+      "path": "model/results/leakage_analysis.json",
+      "sha256": "efac9fe6b7fcd0d10c6bdd404348d65eddf032637865859022c2db4f2a47597e",
+      "bytes": 1890
+    },
+    {
+      "path": "model/results/leakage_validation.json",
+      "sha256": "df073de8a7b13a92cd1d1f13757bfdc1e1ca3dfd855dc2910f731d45339e65ed",
+      "bytes": 29226
+    },
+    {
+      "path": "model/results/meters_summary.json",
+      "sha256": "0d31ba7b04fa5149df8a578d2f6d54ded9552db26462104bec1f03d9bcd9319b",
+      "bytes": 506
+    },
+    {
+      "path": "model/results/oof_cool_elec.parquet",
+      "sha256": "c3b04dc533dc71f890796bd8db02e98a9a49997a31d2d0042510cd6e22db99fd",
+      "bytes": 17676
+    },
+    {
+      "path": "model/results/oof_heat_gas.parquet",
+      "sha256": "69e6cf7f87ec2165b4c9602878ccc6ec68a13bdebb510695b0e3c97f94641b7e",
+      "bytes": 18203
+    },
+    {
+      "path": "model/results/resstock_hc_validation.json",
+      "sha256": "4b92725eefe0a5e5c1b9585495612b7ff0faf32703ee00ea33146220edd74aa7",
+      "bytes": 3170
+    },
+    {
+      "path": "model/results/resstock_reproduce.json",
+      "sha256": "b1ccda9ec77cbabe2595fa09ad701b441387b8bdad928dee7a445ef041c9ea9b",
+      "bytes": 1131
+    },
+    {
+      "path": "model/results/validation_real.json",
+      "sha256": "74aa1680f15f7f922c9b184714386b29f4edd3bb58bacff79a324242f5e882be",
+      "bytes": 29176
+    }
+  ]
+}
