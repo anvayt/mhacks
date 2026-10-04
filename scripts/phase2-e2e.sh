@@ -185,15 +185,24 @@ def accept():
 
 
 def projection():
-    d = api('POST', '/projection', {'property_id': state['property_id'], 'commitment_ids': [state['commitment_id']]})
+    selected = [state['commitment_id']]
+    # The commitments API also accepts catalog IDs for what-if previews. Include
+    # one advertised placeholder to exercise honesty rather than only an empty list.
+    placeholder = next((x['catalog_id'] for x in state.get('suggestions', [])
+                        if x.get('pending_model') and x.get('catalog_id') != 'window_upgrade'), None)
+    if placeholder:
+        selected.append(placeholder)
+    d = api('POST', '/projection', {'property_id': state['property_id'], 'commitment_ids': selected})
     require(d.get('label') == 'projected_if_completed', 'projection is missing projected_if_completed label')
     current, initial = d['current'], state['estimate']
     require(current['score'] == initial['score'] and current['grade'] == initial['grade'], 'projection changed current score/grade')
     require(current['bill_annual'] == initial['bill']['annual'], 'projection changed current annual bill')
     require(isinstance(d.get('not_modeled'), list), 'projection must list placeholders in not_modeled')
+    ids = {x if isinstance(x, str) else x.get('catalog_id', x.get('commitment_id')) for x in d['not_modeled']}
+    if placeholder:
+        require(placeholder in ids, 'advertised placeholder is missing from not_modeled')
     window = next((x for x in state.get('suggestions', []) if x.get('catalog_id') == 'window_upgrade'), {})
     if window.get('pending_model'):
-        ids = {x if isinstance(x, str) else x.get('catalog_id', x.get('commitment_id')) for x in d['not_modeled']}
         require('window_upgrade' in ids or state['commitment_id'] in ids, 'pending window_upgrade is missing from not_modeled')
     saved = api('GET', '/session/' + endpoint_id(state['session_id']))
     require(saved['score'] == initial['score'] and saved['bill']['annual'] == initial['bill']['annual'], 'projection overwrote the current session')
