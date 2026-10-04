@@ -2,7 +2,7 @@
 id: P2-01
 title: Address → building features (geocoder + Ann Arbor footprints + year built)
 owner: P2
-status: in-progress
+status: review
 branch: p2/address-features
 type: build
 checkpoint: 10:30 PM checkpoint
@@ -38,23 +38,42 @@ Given any Ann Arbor street address, return the building features the bill model 
   - Plus `lat`, `lon`, `footprint_geojson`, `building_sqft`, `is_multi_unit`, `est_units`, `year_built`, `year_built_source`, `block_group_geoid`, and `sources` (where each value came from).
 
 ## Steps
-- [ ] `api/` project skeleton: `pyproject.toml` (Python 3.12, uv), `app/__init__.py`, `app/main.py`, `README.md`
-- [ ] `scripts/fetch_footprints.py`: page through the FeatureServer once → `/data/a2_footprints.geojson` (root `/data/` is git-ignored)
-- [ ] `geo/footprints.py`: load the cache, spatial index, point-in-polygon (nearest within ~25 m as fallback)
-- [ ] `geo/geocode.py`: Census geocoder with block group, with a local response cache
-- [ ] `geo/census.py`: block-group median year built (B25035), cached
-- [ ] `geo/features.py`: assemble the dict, compute area in a projected CRS (UTM 17N), map types and vintage
-- [ ] `tests/test_features.py`: 3 real Ann Arbor addresses (a house, a 2–4 unit, a large apartment building) → sane stories, type and floor area
-- [ ] `/health` + `/debug/features`
+- [x] `api/` project skeleton: `pyproject.toml` (Python 3.12, uv), `app/__init__.py`, `app/main.py`, `README.md`
+- [x] `scripts/fetch_footprints.py`: page through the FeatureServer once → `/data/a2_footprints.geojson` (root `/data/` is git-ignored)
+- [x] `geo/footprints.py`: load the cache, spatial index, point-in-polygon (nearest within ~25 m as fallback)
+- [x] `geo/geocode.py`: Census geocoder with block group, with a local response cache
+- [x] `geo/census.py`: block-group median year built (B25035), cached
+- [x] `geo/features.py`: assemble the dict, compute area in a projected CRS (UTM 17N), map types and vintage
+- [x] `tests/test_features.py`: 3 real Ann Arbor addresses (a house, a 2–4 unit, a large apartment building) → sane stories, type and floor area
+- [x] `/health` + `/debug/features`
 
 ## Done when
-- [ ] `uv run python -m app.geo.features "500 S State St, Ann Arbor, MI"` prints a full features dict
-- [ ] `curl 'localhost:8000/debug/features?address=…'` returns the same
-- [ ] Tests pass; works offline after the first footprint download
-- [ ] No secrets committed; every value lists its source (PLAN.md §0)
+- [x] `uv run python -m app.geo.features "500 S State St, Ann Arbor, MI"` prints a full features dict
+- [x] `curl 'localhost:8000/debug/features?address=…'` returns the same
+- [x] Tests pass; works offline after the first footprint download
+- [x] No secrets committed; every value lists its source (PLAN.md §0)
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
-- What changed (files, endpoints)
-- How to use it / run it
-- Known gaps, TODOs, anything mocked that still needs to be real
-- Who needs to act next (`blocks` owners)
+**Branch `p2/address-features` @ 8c0dfa1, pushed. Not merged into dev.** All "Done when" items pass (10 tests).
+
+**What changed** (all under `/api`)
+- `pyproject.toml` + `uv.lock` (py3.12; fastapi, uvicorn, httpx, shapely, pyproj, pandas; pytest dev), `README.md`, empty `app/__init__.py`
+- `app/main.py`: `GET /health`, `GET /debug/features?address=&unit_sqft=&year_built=` (404 on unknown address; internal, not §10)
+- `app/geo/features.py`: `get_features(address, unit_sqft=None, year_built=None) -> dict` + CLI; mappers `vintage()`, `building_type()`
+- `app/geo/footprints.py` (lookup, UTM 17N area, units, stories-from-height), `geocode.py` (Census geocoder, disk cache), `census.py` (ACS B25035)
+- `scripts/fetch_footprints.py`: downloads city BuildingFootprints (35,007) **and MailingAddress (65,138 points, owner fields not downloaded)** to `/data/`
+- `tests/test_features.py`
+
+**How to use**: `cd api && uv sync && uv run python scripts/fetch_footprints.py` (once, ~20 s) then `uv run python -m app.geo.features "912 Mary St, Ann Arbor, MI"` or `uv run uvicorn app.main:app --port 8000`. P2-04: `from app.geo.features import get_features`; the `in.*` keys go straight to the model, `lat/lon/footprint_geojson/building_sqft/year_built` fill §10 `building`. Raises `LookupError` (no geocode / no footprint within 25 m).
+
+**Deviations from this task file (data said otherwise)**
+- `in.county_name` is `Washtenaw County` (exact string in the ResStock 2024.2 MI parquet), not `MI, Washtenaw County`.
+- `Struc_Type` only has Residential (32,572) / Commercial / Public / Office, so it can't give SF vs MF. Type comes from **the number of residential mailing addresses inside the footprint** (city MailingAddress layer, which lists units like `... UNIT 101`): 1 → SFD, 2–4 → MF 2-4, 5+ → MF 5+. Commercial/Office/Public with 0 residential addresses → type `null`, `in.sqft` `null`, `warnings` set. SFA and Mobile Home are never produced.
+- Stories from height: `ABG_BLD_HG` is in **feet**; uses a least-squares fit on footprints with both fields (≈11.1 ft/story + 1.4 ft), not "÷ 3 m".
+- Year built via **Census Reporter** (ACS 2020-2024 5-yr), because api.census.gov now redirects keyless calls to missing_key. Fallback BG → tract → county.
+- `500 S State St` is the UM LSA Building (Public), so it returns the non-home case.
+- Multi-unit `in.sqft` = building floor area ÷ address count (no generic per-unit constant needed); includes hallways, so it runs high.
+
+**Known gaps**: 2020+ builds bin to `2010s` (no ResStock bin); footprint area may include attached garages; a few tall buildings have odd `STORIES` (e.g. The Standard = 2); geocode cache is per-address on first use (network needed once per new address); no offline demo fixtures (team decision: testing after merge).
+
+**Who acts next**: P2-04 (`/estimate`: call `get_features`, decide what to do with `null` type), P2-06 (city batch: reuse `footprints._index()` / unit counts).
