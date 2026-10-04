@@ -82,6 +82,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [cityCount, setCityCount] = useState<number | null>(null);
+  const cityRef = useRef<FeatureCollection<Geometry, CityBuildingProps> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +101,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
       const maplibregl = (await import("maplibre-gl")).default;
       if (cancelled || !container.current) return;
       setCityCount(city.features.length);
+      cityRef.current = city;
       try {
         map = new maplibregl.Map({
           container: container.current,
@@ -323,11 +325,14 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
     const feature = isSimilar
       ? { center: isSimilar.center, address: isSimilar.address }
       : (() => {
-          const f = map.querySourceFeatures("city", { filter: ["==", ["get", "id"], highlightId] })[0];
+          // Off-screen buildings aren't in the rendered tiles, so fall back to the loaded city layer.
+          const f = map.querySourceFeatures("city", { filter: ["==", ["get", "id"], highlightId] })[0]
+            ?? cityRef.current?.features.find((c) => c.properties.id === highlightId);
           const p = f?.properties as CityBuildingProps | undefined;
-          return f && p?.a ? { center: centroid(f.geometry), address: p.a } : null;
+          return f ? { center: centroid(f.geometry), address: p?.a ?? "" } : null;
         })();
-    if (feature) popupRef.current?.setLngLat(feature.center).setText(feature.address).addTo(map);
+    if (feature && !map.getBounds().contains(feature.center)) map.easeTo({ center: feature.center, duration: 600 });
+    if (feature?.address) popupRef.current?.setLngLat(feature.center).setText(feature.address).addTo(map);
     return () => {
       for (const source of sources) map.setFeatureState({ source, id: highlightId }, { hover: false });
       popupRef.current?.remove();
