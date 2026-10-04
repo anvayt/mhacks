@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
-import { errorText, estimate, listingInput, needsUnitSize, type Estimate } from "./flow-api";
+import { ONBOARD, errorText, estimate, listingInput, needsUnitSize, type Estimate } from "./flow-api";
 import { apiFetch } from "./lib/api";
 import { LoadingSheet } from "./survey-fields";
-
-const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787"; // P4's iMessage onboarding page
 
 export function ListingForm({
   onPicked,
