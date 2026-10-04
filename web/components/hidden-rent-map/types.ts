@@ -1,9 +1,30 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type { MultiPolygon, Polygon } from "geojson";
+
+/** Properties of each feature in `buildings_url`. */
+export interface CityBuildingProps {
+  id: number;
+  /** LiDAR above-ground height, ft (0 if unknown). */
+  h: number;
+  /** 1 if the city marks the footprint Residential. */
+  r: 0 | 1;
+  /** Most common mailing address inside the footprint, if any. */
+  a?: string;
+}
+
+export interface SimilarBuilding {
+  id: number;
+  address: string;
+  /** [lon, lat] */
+  center: [number, number];
+  height_ft: number | null;
+  stories: number | null;
+  footprint_sqft: number;
+}
 
 export type Season = "winter" | "spring" | "summer" | "fall";
 
-/** What the map camera frames: all of Ann Arbor, the census block group, or the building. */
-export type Focus = "city" | "block" | "building";
+/** What the map camera frames: all of Ann Arbor, the selected + similar buildings, the census block group, or the building. */
+export type Focus = "city" | "similar" | "block" | "building";
 
 export interface StepEstimate {
   /** Model's typical-year heating + cooling cost for the unit, $/yr. */
@@ -41,6 +62,8 @@ export interface MapWidgetData {
   /** [west, south, east, north] of every Ann Arbor footprint. */
   city_bounds: [number, number, number, number];
   building: {
+    /** City footprint OBJECTID; the same `id` as in the citywide layer. */
+    id: number;
     footprint: Polygon | MultiPolygon;
     height_ft: number | null;
     height_source: string;
@@ -54,8 +77,10 @@ export interface MapWidgetData {
     building_type: string;
     building_type_source: string;
   };
-  /** Nearby footprints, each with `height_ft`, for 3D context. */
-  neighbors: FeatureCollection<Polygon | MultiPolygon, { height_ft: number }>;
+  /** Every Ann Arbor footprint (`CityBuildingProps`), loaded by the map at runtime; too large to inline. */
+  buildings_url: string;
+  /** Buildings to show relative to the selected one (a ranking later; a labelled test sample for now). */
+  similar: { rule: string; items: SimilarBuilding[] };
   block_group: {
     geoid: string;
     geometry: Polygon | MultiPolygon;
