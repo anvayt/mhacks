@@ -13,11 +13,11 @@
     },
     "elec": {
       "n": 113,
-      "median_r2": 0.54,
-      "median_cv_rmse": 0.092,
+      "median_r2": 0.816,
+      "median_cv_rmse": 0.077,
       "tau_c_counts": {
-        "65.0": 53,
-        "75.0": 18,
+        "65.0": 80,
+        "75.0": 21,
         "70.0": 7
       }
     }
@@ -56,29 +56,29 @@
       "mlr": {
         "monthly_r2": 0.122,
         "monthly_mae_per_1000ft2_day": 6.4273,
-        "building_annual_cooling_r2": -0.693,
-        "building_annual_cooling_mape": 0.798,
+        "building_annual_cooling_r2": -0.98,
+        "building_annual_cooling_mape": 0.823,
         "n_buildings": 113,
         "n_building_months": 2844,
-        "n_buildings_scored": 61
+        "n_buildings_scored": 86
       },
       "random_forest": {
         "monthly_r2": 0.204,
         "monthly_mae_per_1000ft2_day": 6.271,
-        "building_annual_cooling_r2": -0.598,
-        "building_annual_cooling_mape": 0.726,
+        "building_annual_cooling_r2": -0.88,
+        "building_annual_cooling_mape": 0.73,
         "n_buildings": 113,
         "n_building_months": 2844,
-        "n_buildings_scored": 61
+        "n_buildings_scored": 86
       },
       "xgboost": {
         "monthly_r2": 0.142,
         "monthly_mae_per_1000ft2_day": 6.7384,
-        "building_annual_cooling_r2": -0.314,
-        "building_annual_cooling_mape": 0.62,
+        "building_annual_cooling_r2": -0.23,
+        "building_annual_cooling_mape": 0.441,
         "n_buildings": 113,
         "n_building_months": 2844,
-        "n_buildings_scored": 61
+        "n_buildings_scored": 86
       }
     }
   },
