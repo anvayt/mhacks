@@ -1,6 +1,6 @@
 // The iMessage interview (PLAN.md §4 steps 3–5): link/address → estimate → questions one at a time → answers →
 // narrower range, until the API says the grade is locked. One state per chat (Spectrum space), in memory.
-import type { Api, ApiResult, Estimate, EstimateRequest, Question, Me, Suggestion, Commitment, Calibration } from "./api.ts";
+import type { Api, ApiResult, Estimate, EstimateRequest, Question, Me, Suggestion, Commitment, Calibration, ReplyingTo } from "./api.ts";
 import { Accounts, accountHandle, type Sender } from "./accounts.ts";
 import { billResultText, projectionText, suggestionsText } from "./phase2Replies.ts";
 import { refInText } from "./handoff.ts";
@@ -23,6 +23,9 @@ import {
 } from "./replies.ts";
 
 export const LOGIN = /^login\s+(\d{6})$/i;
+// Daily habit check-ins (api/app/habits.py). "done <n>" (commitment n completed) is a different intent.
+export const HABIT_REPLY = /^(done|did it|did it today|✅️?|yes)[.!]*$/iu; // only when answering a task reminder
+export const HABIT_TODAY = /^done today[.!]*$/i; // any time
 
 type Pending = { kind: "checkin" } | { kind: "bill" } | { kind: "move" } | { kind: "address" } | { kind: "unit_sqft" } | { kind: "question"; question: Question };
 
@@ -35,6 +38,7 @@ interface ChatState {
   suggestions?: Suggestion[];
   accepted?: Commitment[];
   savedSession?: string;
+  replyingTo?: ReplyingTo; // the proactive reminder this text answers, from POST /reminders/inbound
   request: EstimateRequest | null;
   sessionId: string | null;
   last: Estimate | null;
@@ -76,6 +80,7 @@ export class Conversations {
       const inbound = await this.api.reminderInbound(s.userId);
       // Losing an acknowledgement must not block a requested stop or a normal reply.
       if (!inbound.ok) console.warn(`[reminders] inbound acknowledgement failed (${inbound.code})`);
+      s.replyingTo = (inbound.ok && inbound.data.replying_to) || undefined;
       if (LOGIN.test(text)) {
         const r = await this.api.confirmLogin({ code: text.match(LOGIN)![1], phone: accountHandle(sender.handle) });
         return this.label([r.ok ? "You're signed in on the web ✅" : r.message]);
@@ -296,6 +301,20 @@ export class Conversations {
       const r = await this.api.reminderControl(uid, action);
       return r.ok ? action === "resume" ? "Reminders resumed with your saved preferences. You can say pause or stop any time." : `Proactive reminders ${action === "stop" ? "stopped" : "paused"}. I'll still answer when you text me.` : r.message;
     }
+    const task = s.replyingTo?.kind === "task" ? s.replyingTo : undefined;
+    if ((task && HABIT_REPLY.test(text)) || HABIT_TODAY.test(text)) {
+      // A reply to a task reminder counts for the reminder's own day (a late reply after midnight is yesterday's).
+      const day = task && !/today/i.test(text) ? { date: task.local_date } : {};
+      const r = await this.api.habitCheckin(uid, { source: "imessage", ...day, ...(task?.commitment_id ? { commitment_id: task.commitment_id } : {}) });
+      s.replyingTo = undefined;
+      return r.ok ? `Day ${r.data.current} 🔥, best ${r.data.best}. See you tomorrow.` : r.message;
+    }
+    if (/^(done|did it|✅️?)$/iu.test(text)) return 'Say "done today" to log today\'s habit, or "done 1" to mark commitment 1 complete.';
+    if (/^(my )?streak\??$/i.test(text)) {
+      const r = await this.api.habits(uid); if (!r.ok) return r.message;
+      const next = r.data.checked_in_today ? "Today already counts." : 'Reply "done today" once you\'ve kept your daily habit.';
+      return `🔥 Habit streak: ${r.data.current} day${r.data.current === 1 ? "" : "s"}, best ${r.data.best}. ${next}`;
+    }
     if (/^(moved|i moved|no[, ]+i moved)$/i.test(text)) { s.pending = { kind: "move" }; return "What's your new address or listing link? Your old home's history stays separate."; }
     if (/^save$/i.test(text)) return this.save(s);
     if (/^(checkin|check-in)$/i.test(text)) {
@@ -306,7 +325,8 @@ export class Conversations {
       s.pending = { kind: "bill" };
       return 'Send this month’s bill photo, or type "120 therms", "120 ccf", or "$85" (estimated from your bill amount). Without dates I use the last full month; you can add start/end dates.';
     }
-    if (/^(remind-now|remind now)$/i.test(text)) { const r = await this.api.reminderDemo(uid); return r.ok ? `${r.data.demo ? "[demo reminder]\n" : ""}${r.data.text_hint}` : r.message; }
+    const remind = text.match(/^remind[- ]now(?:\s+(task|checkin|weather))?$/i);
+    if (remind) { const r = await this.api.reminderDemo(uid, remind[1]?.toLowerCase() as ReplyingTo["kind"] | undefined); return r.ok ? `${r.data.demo ? "[demo reminder]\n" : ""}${r.data.text_hint}` : r.message; }
     const pref = text.match(/^reminders? (daily|weekly|monthly)(?: at (\d{1,2}))?$/i);
     if (pref) {
       const r = await this.api.patchMe(uid, { reminder_prefs: { channel: "imessage", cadence: pref[1].toLowerCase(), ...(pref[2] ? { hour_local: Number(pref[2]) } : {}) } });

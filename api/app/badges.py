@@ -11,7 +11,10 @@ BADGES = {
     "grade-jumper": {"label": "Grade jumper", "emoji": "📈", "rule": "grade is better than previous_grade"},
     "battle-winner": {"label": "Battle winner", "emoji": "🏆",
                       "rule": "Selected by /compare for the lower annual p50; ties select listing a"},
+    "habit-3": {"label": "3-day habit streak", "emoji": "🔥", "rule": "best daily habit streak >= 3 (app/habits.py)"},
+    "habit-7": {"label": "7-day habit streak", "emoji": "🗓️", "rule": "best daily habit streak >= 7 (app/habits.py)"},
 }
+HABIT_BADGES = (("habit-3", 3), ("habit-7", 7))
 GRADES = ("A", "B", "C", "D", "F")
 
 
@@ -55,3 +58,9 @@ def badges(est: dict, *, calibration: dict | None = None, used_fixes: bool = Fal
     if grade in GRADES and previous_grade in GRADES and GRADES.index(grade) < GRADES.index(previous_grade):
         earned.append("grade-jumper")
     return earned
+
+
+def habit_badges(best) -> list[str]:
+    """Daily habit badges stay earned once the best streak reaches them (self-reported check-ins, not savings)."""
+    best = _number(best)
+    return [b for b, days in HABIT_BADGES if best is not None and best >= days]

@@ -4,12 +4,12 @@ from copy import deepcopy
 
 import pytest
 
-from app.badges import BADGES, badges
+from app.badges import BADGES, badges, habit_badges
 
 
 def test_badge_catalog():
     assert set(BADGES) == {"double-pane-club", "top-10-efficient", "leak-hunter", "weather-beater",
-                           "grade-jumper", "battle-winner"}
+                           "grade-jumper", "battle-winner", "habit-3", "habit-7"}
     assert all(set(b) == {"label", "emoji", "rule"} and all(b.values()) for b in BADGES.values())
 
 
@@ -78,3 +78,10 @@ def test_all_rules_are_pure_and_do_not_award_a_battle_win():
         "double-pane-club", "top-10-efficient", "leak-hunter", "weather-beater", "grade-jumper",
     ]
     assert (est, calibration) == original
+
+
+@pytest.mark.parametrize("best,earned", [(0, []), (2, []), (3, ["habit-3"]), (6, ["habit-3"]),
+                                         (7, ["habit-3", "habit-7"]), (None, []), ("x", [])])
+def test_habit_badges(best, earned):
+    assert habit_badges(best) == earned
+    assert not {"habit-3", "habit-7"} & set(badges({"score": 95}, used_fixes=True))  # never from an estimate

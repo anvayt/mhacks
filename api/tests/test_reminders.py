@@ -203,7 +203,8 @@ def test_task_cadence_and_target_requirement(env, cadence, days):
     advance(env)
     row = due(env)[0]
     assert row["kind"] == "task" and row["commitment_id"] == "c1"
-    assert row["text_hint"] == "Your target for Seal drafts is 2026-10-10."
+    assert row["text_hint"] == ("Your target for Seal drafts is 2026-10-10. "
+                                "Reply done once you've done it today to start a habit streak.")  # app/habits.py
     ack(env, row)
     inbound(env)
     if days > 1:
@@ -342,3 +343,33 @@ def test_move_committed_before_queue_lock_rejects_old_home(env, monkeypatch):
     assert due(env) == []
     with reminders._con() as con:
         assert con.execute("SELECT COUNT(*) FROM reminder_queue").fetchone()[0] == 0
+
+
+def test_task_hint_carries_habit_streak_facts(env, monkeypatch):
+    from app import habits
+    monkeypatch.setattr(habits, "_now", lambda: env["clock"][0])
+    with habits._con() as con:
+        con.executemany("INSERT INTO habit_checkins VALUES ('u1', ?, NULL, 'imessage', 'x')",
+                        [("2026-10-01",), ("2026-10-02",), ("2026-10-03",)])
+    hint = env["client"].post("/reminders/demo-send", headers=KEY, json={"user_id": "u1", "kind": "task"}).json()["text_hint"]
+    assert hint == "Your target for Seal drafts is 2026-10-10. Habit streak 3 days; reply done to keep it."
+    with habits._con() as con:
+        con.execute("INSERT INTO habit_checkins VALUES ('u1', '2026-10-04', NULL, 'imessage', 'x')")
+    assert habits.reminder_hint(env["users"]["u1"]) == "Habit streak 4 days; today already counts."
+
+
+def test_inbound_says_which_reminder_it_answers_once(env):
+    """The agent words a bare "done" as a habit check-in only when it answers a task reminder (agent conversation.ts)."""
+    env["users"]["u1"]["reminder_prefs"]["cadence"] = "daily"
+    assert inbound(env).json()["replying_to"] is None
+    env["clock"][0] += timedelta(minutes=1)
+    shown = env["client"].post("/reminders/demo-send", headers=KEY, json={"user_id": "u1", "kind": "task"}).json()
+    advance(env, 0.25)  # 18:01 + 6 h = 00:01 local: a late reply counts for the reminder's own day
+    first = inbound(env).json()["replying_to"]
+    assert first == {"reminder_id": shown["reminder_id"], "kind": "task", "local_date": "2026-10-04", "commitment_id": "c1"}
+    assert inbound(env).json()["replying_to"] is None  # answered: the next text isn't a reply to it
+    advance(env, 0.75)
+    row = due(env)[0]
+    ack(env, row)
+    advance(env, 2)  # an unanswered reminder from two days ago is no longer "the" reminder
+    assert inbound(env).json()["replying_to"] is None

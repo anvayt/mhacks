@@ -34,6 +34,9 @@ Terminal identity defaults to the fictional `+12025550164`; override with `AGENT
 | `options` / `what can I do` | Suggested commitments. Modeled options show API $/yr, kg CO₂/yr and GRH points; placeholders are tips with no effect numbers. Thermostat safety note is quoted unchanged. |
 | `do 1 and 3 by 2026-11-01` | Accept commitments; target date optional. Only modeled selections enter `/projection`: **projected if completed**, current grade unchanged. |
 | `done 1` / `dismiss 1` | Update the commitment for that displayed option. A restart requires `options` again; the agent never guesses list order. Completion is reported, not verified. |
+| `done` / `did it` / `did it today` / `✅` / `yes` answering a task reminder; `done today` any time | `POST /habits/{user_id}/checkin` (the reminder's day and commitment from `/reminders/inbound` `replying_to`) → “Day N 🔥, best B. See you tomorrow.” with API numbers. `done 1` still completes commitment 1. |
+| `streak` | `GET /habits/{user_id}`: current and best daily habit streak |
+| `remind-now task` | Demo task reminder (`/reminders/demo-send {kind: task}`; needs a commitment with a target date) so a bare `done` can answer it |
 | `checkin` → `yes` | Inbound demo trigger asks “Still at …?” then requests a bill |
 | `120 therms`, `120 ccf`, `$85` | `/calibrate` with saved property and session. Missing dates mean the last full calendar month. CCF uses `gas_unit: ccf`; dollars use `amount_usd`, labeled **estimated from your bill amount**. Explicit dates: `120 therms 2026-09-01 to 2026-09-30`. |
 | Bill photo | In-memory JPEG/base64 (HEIC conversion when available), `/calibrate`, then fixes and a landlord email. Vision errors invite typing the numbers. No image is persisted. |

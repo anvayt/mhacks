@@ -84,6 +84,7 @@ export interface Me {
   current_grade?: { source: string; grade: string; score: number; bill_annual: Band; label?: string } | null;
   pending_checkin: Checkin | null; calendar_connected: boolean;
   timezone: string; reminder_prefs: { channel: string; cadence: string; hour_local: number; paused: boolean };
+  habit_streak?: { current: number; best: number; checked_in_today: boolean };
 }
 export interface Checkin { property_id: string; address: string; created_at: string; message_hint: string }
 export interface Suggestion {
@@ -100,7 +101,11 @@ export interface Projection {
   modeled: string[]; not_modeled: string[];
 }
 export interface Reminder { reminder_id: string; user_id: string; handle: string; kind: "checkin" | "task" | "weather"; text_hint: string; property_id: string; commitment_id?: string; demo?: boolean }
-export interface ReminderState { user_id?: string; stopped: boolean; paused: boolean; unanswered?: number; reminder_prefs?: Me["reminder_prefs"] }
+/** POST /reminders/inbound: the reminder this text answers (delivered since the last inbound, today or yesterday). */
+export interface ReplyingTo { reminder_id: string; kind: Reminder["kind"]; local_date: string; commitment_id?: string }
+export interface ReminderState { user_id?: string; stopped: boolean; paused: boolean; unanswered?: number; reminder_prefs?: Me["reminder_prefs"]; replying_to?: ReplyingTo | null }
+/** POST /habits/{user_id}/checkin and GET /habits/{user_id} (+ checkins): the daily habit streak. */
+export interface HabitStreak { current: number; best: number; checked_in_today: boolean; last_checkin_date: string | null; badges?: string[] }
 export interface CalendarConnection { auth_url: string; mock: boolean; message?: string }
 export interface CalendarReminder { reminder_id: string; event_id: string; html_link: string | null; mock: boolean }
 export type PropertyRequest = { user_id: string } & ({ session_id: string } | EstimateRequest);
@@ -152,7 +157,9 @@ export interface Api {
   reminderSent(id: string): Promise<ApiResult<ReminderState>>;
   reminderInbound(userId: string): Promise<ApiResult<ReminderState>>;
   reminderControl(userId: string, action: "stop" | "pause" | "resume"): Promise<ApiResult<ReminderState>>;
-  reminderDemo(userId: string): Promise<ApiResult<Reminder>>;
+  reminderDemo(userId: string, kind?: Reminder["kind"]): Promise<ApiResult<Reminder>>;
+  habitCheckin(userId: string, req: { date?: string; commitment_id?: string; source: "imessage" }): Promise<ApiResult<HabitStreak>>;
+  habits(userId: string): Promise<ApiResult<HabitStreak>>;
   calendarConnect(userId: string): Promise<ApiResult<CalendarConnection>>;
   calendarReminder(req: { user_id: string; commitment_id: string; start?: string; cadence: "once" | "daily" | "weekly" }): Promise<ApiResult<CalendarReminder>>;
 
@@ -206,6 +213,14 @@ export function checkFixes(f: unknown): { fatal: string[]; warnings: string[] } 
   if (typeof f.landlord_email !== "string") warnings.push("landlord_email missing");
   if (!isNum(f.grh_points_now) || !isNum(f.grh_points_after)) warnings.push("grh_points_now/after missing");
   return { fatal, warnings };
+}
+
+/** The agent words "Day N 🔥, best B" only from these numbers. */
+export function checkHabit(h: unknown): { fatal: string[]; warnings: string[] } {
+  if (!isObj(h)) return { fatal: ["body is not an object"], warnings: [] };
+  const fatal = ["current", "best"].filter((k) => !isNum(h[k]) || h[k] < 0).map((k) => `${k} missing`);
+  if (typeof h.checked_in_today !== "boolean") fatal.push("checked_in_today missing");
+  return { fatal, warnings: [] };
 }
 
 type Check = (body: unknown) => { fatal: string[]; warnings: string[] };
@@ -280,7 +295,9 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     reminderSent: (id) => accountCall("POST", `/reminders/${encodeURIComponent(id)}/sent`),
     reminderInbound: (user_id) => accountCall("POST", "/reminders/inbound", { user_id }),
     reminderControl: (id, action) => accountCall("POST", `/reminders/${encodeURIComponent(id)}/${action}`),
-    reminderDemo: (user_id) => accountCall("POST", "/reminders/demo-send", { user_id }),
+    reminderDemo: (user_id, kind) => accountCall("POST", "/reminders/demo-send", { user_id, ...(kind ? { kind } : {}) }),
+    habitCheckin: (id, req) => call<HabitStreak>("POST", `/habits/${encodeURIComponent(id)}/checkin`, req, 30_000, checkHabit),
+    habits: (id) => call<HabitStreak>("GET", `/habits/${encodeURIComponent(id)}`, undefined, 30_000, checkHabit),
     calendarConnect: (user_id) => accountCall("POST", "/calendar/connect", { user_id }),
     calendarReminder: (req) => accountCall("POST", "/calendar/reminders", req),
   };
