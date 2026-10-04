@@ -5,8 +5,8 @@
 
 **Live:** [hidden-rent-mhacks.vercel.app](https://hidden-rent-mhacks.vercel.app) · text it on iMessage: [hidden-rent-agents-mhacks.fly.dev](https://hidden-rent-agents-mhacks.fly.dev) · [ASI:One agent on Agentverse](https://agentverse.ai/agents/details/agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum/profile)
 
-Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
-in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
+Hidden Rent shows the energy bill a rental listing doesn't. `main` has everything: `/model` (P1), `/api` (P2), `/agent` (P4),
+`/web` (P3) and `/asi-agent`, plus the plan and API contract in `PLAN.md` (§10). Deploys: [`DEPLOY.md`](DEPLOY.md).
 
 model-data.zip: https://drive.google.com/file/d/1vPeqWjf1fGszt8odAUCstQ1Z1lUcO6ZS/view?usp=sharing
 
