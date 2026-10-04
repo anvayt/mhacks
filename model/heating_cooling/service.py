@@ -419,10 +419,6 @@ def metered_building(bid: str) -> dict:
             fh = changepoint.fit(tr, col, heating=heat, cooling=cool) if len(tr) >= 9 else None
             ho.append(fh.predict(g[g.year == yr]).total if fh is not None else pd.Series(np.nan, index=g[g.year == yr].index))
         out[f"{fuel}_heldout"] = pd.concat(ho).reindex(g.index).to_numpy()
-        price = r["price_by_month"]["gas" if fuel == "gas" else "electric"]
-        for c in ("actual", "fit", "heldout"):
-            if f"{fuel}_{c}" in out:
-                out[f"{fuel}_{c}_usd"] = out[f"{fuel}_{c}"] * out.month.map(price)
     t = r["targets"].loc[bid] if bid in r["targets"].index else None
     info = {"building_id": bid, "name": g.name.iloc[0], "address": g.address.iloc[0], "gfa_ft2": float(g.gfa_ft2.iloc[0]),
             "year_built": int(g.year_built.iloc[0]), "lat": float(g.lat.iloc[0]), "lon": float(g.lon.iloc[0])}
