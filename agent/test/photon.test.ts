@@ -66,18 +66,23 @@ test("redirectUrl pre-fills the text-only opener", () => {
   assert.doesNotMatch(OPENER, /https?:/);
 });
 
-test("replyFor: listings and addresses get NOT_LIVE, anything else the welcome, and no numbers are invented", () => {
-  assert.equal(replyFor("https://www.zillow.com/homedetails/123-Main-St-Ann-Arbor-MI-48104/1_zpid/"), NOT_LIVE);
-  assert.equal(replyFor("1100 S University Ave, Ann Arbor"), NOT_LIVE);
-  assert.equal(replyFor("hi"), WELCOME);
+// API unreachable: links and addresses get NOT_LIVE (replies.test.ts covers the API answering).
+const down = (async () => {
+  throw new TypeError("fetch failed");
+}) as typeof fetch;
+
+test("replyFor: listings and addresses get NOT_LIVE while the API is down, anything else the welcome, and no numbers are invented", async () => {
+  assert.equal(await replyFor("https://www.zillow.com/homedetails/123-Main-St-Ann-Arbor-MI-48104/1_zpid/", down), NOT_LIVE);
+  assert.equal(await replyFor("1100 S University Ave, Ann Arbor", down), NOT_LIVE);
+  assert.equal(await replyFor("hi", down), WELCOME);
   assert.doesNotMatch(WELCOME + NOT_LIVE, /\$\d/);
 });
 
-test("inboundText answers text and pasted links, ignores reactions and typing", () => {
+test("inboundText answers text and pasted links, ignores reactions and typing", async () => {
   assert.equal(inboundText({ type: "text", text: "hi" }), "hi");
   const url = "https://www.redfin.com/MI/Ann-Arbor/1-Main-St-48104/home/1";
   assert.equal(inboundText({ type: "richlink", url }), url);
-  assert.equal(replyFor(inboundText({ type: "richlink", url })!), NOT_LIVE);
+  assert.equal(await replyFor(inboundText({ type: "richlink", url })!, down), NOT_LIVE);
   assert.equal(inboundText({ type: "reaction" }), null);
   assert.equal(inboundText({ type: "typing" }), null);
 });
