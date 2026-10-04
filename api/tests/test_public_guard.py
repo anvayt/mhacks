@@ -13,6 +13,7 @@ from app.public_guard import PublicGuard
 def guarded(monkeypatch):
     monkeypatch.delenv('AGENT_API_KEY', raising=False)
     monkeypatch.delenv('PUBLIC_TUNNEL', raising=False)
+    monkeypatch.delenv('FLY_APP_NAME', raising=False)
     app = FastAPI()
     now = [1000.0]
     app.add_middleware(PublicGuard, limit=3, photo_limit=1, clock=lambda: now[0])
@@ -140,6 +141,40 @@ def test_cf_header_only_with_explicit_loopback_trust(monkeypatch):
     for _ in range(30): assert guard.allow('203.0.113.1', False)
     assert not guard.allow('203.0.113.1', False)
     assert guard.allow('203.0.113.2', False)
+
+
+def test_fly_client_ip_header_only_on_fly(monkeypatch):
+    monkeypatch.delenv('FLY_APP_NAME', raising=False)
+    monkeypatch.delenv('PUBLIC_TUNNEL', raising=False)
+    guard = PublicGuard(None, limit=2)
+    proxy = {'client': ('172.16.1.2', 10)}  # Fly's proxy, shared by every visitor
+    headers = {b'fly-client-ip': b'203.0.113.1', b'x-forwarded-for': b'203.0.113.2'}
+    assert guard.visitor(proxy, headers) == '172.16.1.2'
+    monkeypatch.setenv('FLY_APP_NAME', 'hidden-rent-api-mhacks')
+    assert guard.visitor(proxy, headers) == '203.0.113.1'
+    assert guard.visitor(proxy, {b'fly-client-ip': b'2001:db8::1'}) == '2001:db8::1'
+    assert guard.visitor(proxy, {b'fly-client-ip': b'not-an-ip'}) == '172.16.1.2'
+    assert guard.visitor(proxy, {b'x-forwarded-for': b'203.0.113.2'}) == '172.16.1.2'
+    # Two visitors behind the same proxy get separate budgets.
+    for _ in range(2): assert guard.allow(guard.visitor(proxy, {b'fly-client-ip': b'203.0.113.1'}), False)
+    assert not guard.allow(guard.visitor(proxy, {b'fly-client-ip': b'203.0.113.1'}), False)
+    assert guard.allow(guard.visitor(proxy, {b'fly-client-ip': b'203.0.113.3'}), False)
+
+
+def test_fly_header_end_to_end_keeps_agent_bypass(monkeypatch):
+    monkeypatch.setenv('FLY_APP_NAME', 'hidden-rent-api-mhacks')
+    monkeypatch.setenv('AGENT_API_KEY', 'k')
+    app = FastAPI()
+    app.add_middleware(PublicGuard, limit=1)
+
+    @app.post('/estimate')
+    async def estimate():
+        return {}
+
+    client = TestClient(app)
+    a, b = {'Fly-Client-IP': '203.0.113.1'}, {'Fly-Client-IP': '203.0.113.2'}
+    assert [client.post('/estimate', headers=h).status_code for h in (a, a, b)] == [200, 429, 200]
+    assert client.post('/estimate', headers={**a, 'X-Agent-Key': 'k'}).status_code == 200
 
 
 def test_cap_even_for_agent_and_declared_length(guarded, monkeypatch):
