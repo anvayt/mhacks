@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { ListingForm } from "./listing-form";
-import { apiFetch, load, save } from "./lib/api";
+import { apiFetch, ApiError, load, save } from "./lib/api";
 import { BillCheck } from "./board/bill-check";
-import { billRange, errorText, gradeSpan, money, type Calibration, type Commitment, type Estimate, type Position, type Projection, type PublicBoard, type Snapshot, type Suggestion, type VerifiedBoard } from "./board/api";
+import { billRange, errorText, gradeSpan, kg, money, type Calibration, type Commitment, type Estimate, type Position, type Projection, type PublicBoard, type Snapshot, type Suggestion, type VerifiedBoard } from "./board/api";
 import styles from "./board/board.module.css";
 
 function gradientStops(position: number): CSSProperties {
   const blueEnd = Math.round((75 - position * 60) * 100) / 100;
-  return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` } as CSSProperties;
+  return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` };
 }
 function backgroundColorAt(position: number) {
   const mix = Math.min(1, Math.max(0, position));
@@ -49,8 +49,8 @@ export function Leaderboard() {
   const calibrated = snapshot?.source === "bill_regrade" || position?.current_source === "bill_regrade";
   const currentBill = snapshot?.bill_annual ?? estimate?.bill.building_annual ?? estimate?.bill.annual;
 
-  async function fetchPosition(c: Context, catalogs: string[] = []) {
-    const path = c.propertyId ? `/leaderboard/position/${encodeURIComponent(c.propertyId)}` : `/leaderboard/position?session_id=${encodeURIComponent(c.sessionId)}${catalogs.length ? `&catalog_ids=${encodeURIComponent(catalogs.join(","))}` : ""}`;
+  async function fetchPosition(c: Context) {
+    const path = c.propertyId ? `/leaderboard/position/${encodeURIComponent(c.propertyId)}` : `/leaderboard/position?session_id=${encodeURIComponent(c.sessionId)}`;
     const next = await apiFetch<Position>(path); setPosition(next); return next;
   }
   async function fetchSuggestions(c: Context) {
@@ -73,9 +73,14 @@ export function Leaderboard() {
     try {
       const query = new URLSearchParams(window.location.search);
       let sid = query.get("session_id") ?? query.get("session") ?? load("session");
-      let pid = load("property"); const uid = load("user"); const signed = !!(uid && load("token"));
-      if (signed) {
-        const me = await apiFetch<{ current_property_id: string | null; current_estimate?: Estimate; calendar_connected?: boolean; properties: { id: string; session_id: string }[] }>(`/me/${encodeURIComponent(uid!)}`);
+      let pid = load("property"); const uid = load("user"); let signed = !!(uid && load("token"));
+      type Me = { current_property_id: string | null; current_estimate?: Estimate; calendar_connected?: boolean; properties: { id: string; session_id: string }[] };
+      const me = signed ? await apiFetch<Me>(`/me/${encodeURIComponent(uid!)}`).catch(e => {
+        // Expired or someone else's token: drop the stale sign-in and carry on anonymously with the stored session.
+        if (!(e instanceof ApiError) || (e.status !== 401 && e.status !== 403)) throw e;
+        save("token", null); save("user", null); save("property", null); signed = false; return null;
+      }) : null;
+      if (me) {
         setCalendarConnected(!!me.calendar_connected);
         const home = me.properties.find(p => p.id === me.current_property_id);
         // A different anonymous report must not borrow the signed home's history.
@@ -104,8 +109,10 @@ export function Leaderboard() {
     const next = chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id];
     setChosen(next); setBusy("projection"); setOptionError(""); setProjection(null);
     try {
+      // One model run per toggle: the ghost marker is /projection's own projected score/percentile. A saved home's
+      // position only reads that stored projection (no re-run) for the same-type rank; anonymous what-ifs show no rank.
       const result = await apiFetch<Projection>("/projection", { body: { ...(context.propertyId ? { property_id: context.propertyId } : { session_id: context.sessionId }), commitment_ids: next } });
-      await fetchPosition(context, next);
+      if (context.propertyId) await fetchPosition(context);
       setProjection(next.length ? result : null);
     } catch (e) { setOptionError(errorText(e)); } finally { setBusy(""); }
   }
@@ -140,15 +147,14 @@ export function Leaderboard() {
       setNotice(result.mock ? "Demo calendar reminder saved (mock; no real event created)." : "Calendar reminder saved."); setCalendarConnected(true);
     } catch (e) { setOptionError(errorText(e)); } finally { setBusy(""); }
   }
-  async function move(listing: string) {
+  // ListingForm already ran /estimate (and the unit-size ask): adopt that session, never look the address up again.
+  async function move(_listing: string, next: { session_id: string }) {
     if (busy) return; setBusy("move"); setMoveError("");
     try {
-      const input = /^https?:\/\//i.test(listing.trim()) ? { url: listing.trim() } : { address: listing.trim() };
-      let next: Estimate;
       if (context?.signed && context.userId) {
-        const home = await apiFetch<{ property_id: string; estimate: Estimate }>("/properties", { body: { user_id: context.userId, ...input } });
-        save("property", home.property_id); next = home.estimate;
-      } else { next = await apiFetch<Estimate>("/estimate", { body: input }); save("property", null); }
+        const home = await apiFetch<{ property_id: string }>("/properties", { body: { user_id: context.userId, session_id: next.session_id } });
+        save("property", home.property_id);
+      } else save("property", null);
       save("session", next.session_id); router.push(`/survey?session_id=${encodeURIComponent(next.session_id)}`);
     } catch (e) { setMoveError(errorText(e)); } finally { setBusy(""); }
   }
@@ -173,6 +179,7 @@ export function Leaderboard() {
     { id: "you", annual: currentBill.p50, rank: current.rank, you: true },
   ].sort((a, b) => a.annual - b.annual) : [];
   const highest = Math.max(1, ...rows.map(p => p.annual));
+  const heatIn = !!estimate?.bill.building_annual; // heat is in the rent: the renter's own $ is cooling only
   return <main className={`hero ranking board-screen ${styles.screen}`} style={gradientStops(1 - percentile)}>
     <div className="hero-decor" aria-hidden="true"><img className="halo" src="/hero/halo.svg" alt="" /><img className="orbit" src="/hero/orbit.svg" alt="" /><img className="texture" src="/hero/texture.svg" alt="" /></div>
     <div className="ranking-inner">
@@ -187,10 +194,10 @@ export function Leaderboard() {
         {current && estimate && currentBill && <>
           <div className={styles.summary} aria-live="polite"><span><strong>Predicted {gradeSpan(current.grade, snapshot?.grade_span ?? estimate.grade_span)}</strong><br />Score {current.score}/100</span><span><strong>#{current.rank.toLocaleString()}</strong> of {current.of.toLocaleString()}<br />same-type city homes</span><span><strong>{percent(current.percentile_city)}%</strong><br />of all city homes cost more per sq ft</span></div>
           <p className="board-note">Building heating + cooling: {billRange(currentBill)}. {!snapshot || snapshot.source === "initial_estimate" || snapshot.source === "questionnaire" ? "P10–P90 range returned with this saved model estimate; typical-weather heating + cooling." : "Current bill range from the saved score snapshot."} {estimate.bill.note}</p>
-          {estimate.bill.building_annual && <p className="board-note">Your heating + cooling bill: {billRange(estimate.bill.annual)}. {estimate.bill.note}</p>}
+          {heatIn && <p className="board-note">Your cooling bill (heat is in your rent): {billRange(estimate.bill.annual)}.</p>}
           {calibrated && <p className="board-note">Current monthly grade: from your bill, adjusted for weather. What-if projections are unavailable for this calibrated baseline; your current result remains visible.</p>}
           <ol className={`board-chart ${styles.chart}`} aria-label="Anonymized nearby ranks, annual cost at your unit size">{rows.map((p, i) => <li key={p.id} className={p.you ? "board-col you" : "board-col"}>
-            <span className="board-value">{money(p.annual)}</span><span className={`board-track ${styles.track}`}><span className="board-bar" style={{ height: `${p.annual / highest * 100}%`, background: backgroundColorAt(i / Math.max(1, rows.length - 1)) }} />{p.you && ghost && <span className={styles.ghostBar} style={{ height: `${Math.min(100, (ghost.building_annual_usd ?? ghost.bill_annual.p50) / highest * 100)}%` }} aria-label={`Projected if completed: score ${ghost.score}, ${money(ghost.building_annual_usd ?? ghost.bill_annual.p50)} per year`} />}</span><span className="board-label">{p.you ? "You" : "Peer"}<br />#{p.rank.toLocaleString()}</span>
+            <span className="board-value">{p.you ? money(p.annual) : <>≈ {money(p.annual)}<br />at your size</>}</span><span className={`board-track ${styles.track}`}><span className="board-bar" style={{ height: `${p.annual / highest * 100}%`, background: backgroundColorAt(i / Math.max(1, rows.length - 1)) }} />{p.you && ghost && <span className={styles.ghostBar} role="img" style={{ height: `${Math.min(100, (ghost.building_annual_usd ?? ghost.bill_annual.p50) / highest * 100)}%` }} aria-label={`Projected if completed: score ${ghost.score}, ${money(ghost.building_annual_usd ?? ghost.bill_annual.p50)} per year`} />}</span><span className="board-label">{p.you ? "You" : "Peer"}<br />#{p.rank.toLocaleString()}</span>
           </li>)}</ol>
           {ghost && <p className="board-note">Dashed overlay: projected if completed · {money(ghost.building_annual_usd ?? ghost.bill_annual.p50)}/yr · score {ghost.score}{position?.projected?.rank != null ? ` · same-type rank #${position.projected.rank.toLocaleString()}` : ""}. Your solid bar stays fixed.</p>}
           <p className="board-note">Nearby ranks come from the API&apos;s scored city footprints of your building type. Peer bars scale their annual cost per sq ft to your {estimate.building.sqft.toLocaleString()} sq ft. Your bar stays at the current building estimate. If heat is included in rent, the chart still rates the building; your own bill is shown separately.</p>
@@ -204,10 +211,10 @@ export function Leaderboard() {
           {optionError && <p role="alert" className={`${styles.status} ${styles.error}`}>{optionError} <button type="button" onClick={() => fetchSuggestions(context)} disabled={!!busy}>Retry options</button></p>}
           <div className={styles.choices}>{suggestions.map(item => <button key={item.catalog_id} type="button" className={`control choice ${styles.choice}`} aria-pressed={chosen.includes(item.catalog_id)} disabled={item.pending_model || !item.projected || !!busy || calibrated || rankMismatch} onClick={() => toggle(item.catalog_id)}>
             <span>{item.title}</span><small>{item.who_acts}</small>
-            {item.pending_model || !item.projected ? <small>Tip · savings not modeled yet</small> : <small>Projected if completed: {money(item.projected.usd_saved_yr)}/yr saved · {Math.round(item.projected.co2_kg_saved_yr)} kg CO₂/yr · {item.grh_points ?? "—"} GRH points</small>}
+            {item.pending_model || !item.projected ? <small>Tip · savings not modeled yet</small> : <small>Projected if completed: {money(item.projected.usd_saved_yr)}/yr saved · {kg(item.projected.co2_kg_saved_yr)} CO₂/yr · {item.grh_points ?? "—"} GRH points</small>}
             {item.note && <small>{item.note}</small>}
           </button>)}</div>
-          <div aria-live="polite">{busy === "projection" && <p>Re-running the model for your selected changes…</p>}{ghost && <div className={styles.card}><strong>Projected if completed: grade {ghost.grade} · score {ghost.score}/100{position?.projected?.rank != null ? ` · rank #${position.projected.rank.toLocaleString()}` : ""}</strong><span>{billRange(ghost.bill_annual)}</span><span>{money(projection!.delta.usd_saved_yr)}/yr and {Math.round(projection!.delta.co2_kg_saved_yr)} kg CO₂/yr saved</span><span className="board-note">{projection!.model_version}. Your current grade and “You” marker have not changed.</span></div>}</div>
+          <div aria-live="polite">{busy === "projection" && <p>Re-running the model for your selected changes…</p>}{ghost && <div className={styles.card}><strong>Projected if completed: grade {ghost.grade} · score {ghost.score}/100{position?.projected?.rank != null ? ` · rank #${position.projected.rank.toLocaleString()}` : ""}</strong>{heatIn ? <><span>Your cooling bill (heat is in your rent): {billRange(ghost.bill_annual)}</span>{ghost.building_annual_usd != null && <span>Building heating + cooling: {money(ghost.building_annual_usd)}/yr</span>}</> : <span>{billRange(ghost.bill_annual)}</span>}<span>{money(projection!.delta.usd_saved_yr)}/yr {heatIn ? "off your cooling bill" : "saved"} and {kg(projection!.delta.co2_kg_saved_yr)} CO₂/yr saved</span><span className="board-note">{projection!.model_version}. Your current grade and “You” marker have not changed.</span></div>}</div>
           {context.propertyId && context.userId ? <><label className={styles.input}>Target date (optional)<input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} /></label><button type="button" className="action" disabled={!chosen.length || !!busy || calibrated || rankMismatch} onClick={commitChosen}>{busy === "commit" ? "Saving…" : "Commit"}</button></> : <Link href="/signin" className="board-note">Sign in to save your commitments ↗</Link>}
           {accepted.filter(c => c.status !== "dismissed").map(item => <div className={styles.card} key={item.id}><strong>{item.title}</strong><span className="board-note">{item.status === "completed" ? "Reported done · awaiting bill evidence" : "Accepted"}{item.target_date ? ` · target ${item.target_date}` : ""}</span><div className={styles.actions}>{item.status === "accepted" && <button type="button" className="control choice" onClick={() => done(item)} disabled={!!busy}>Done</button>}{item.status === "accepted" && (calendar || calendarConnected) && <button type="button" className="control choice" onClick={() => calendarReminder(item)} disabled={!!busy}>Add calendar reminder</button>}</div></div>)}
           {!!accepted.length && context.signed && <div className={styles.actions}><button type="button" className="control choice" onClick={connectCalendar} disabled={!!busy}>Connect calendar (optional)</button>{calendar && <a href={calendar.auth_url} target="_blank" rel="noreferrer">{calendar.mock ? "Open demo calendar connection" : "Continue calendar connection"} ↗</a>}</div>}
@@ -215,7 +222,7 @@ export function Leaderboard() {
         </section>}
         <section className={styles.section}><h2 className="eyebrow">Change address?</h2><div className="choice-row"><button type="button" className="control choice" aria-pressed={monthly === "address"} onClick={() => setMonthly("address")}>Yes</button><button type="button" className="control choice" aria-pressed={monthly === "bill"} onClick={() => setMonthly("bill")} disabled={!context}>No</button></div>
           {monthly === "address" && <><ListingForm onPicked={move} submitLabel={busy === "move" ? "Looking it up…" : "Find my hidden rent"} />{moveError && <p role="alert" className={`${styles.status} ${styles.error}`}>{moveError}</p>}{context?.signed && <p className="board-note">Saving the new address archives your previous home and starts a new baseline.</p>}</>}
-          {monthly === "bill" && context && <BillCheck key={context.sessionId} sessionId={context.sessionId} propertyId={context.propertyId} onChecked={checked} />}
+          {monthly === "bill" && context && <BillCheck key={context.sessionId} sessionId={context.sessionId} propertyId={context.propertyId} currentGrade={current ? gradeSpan(current.grade, snapshot?.grade_span ?? estimate?.grade_span) : estimate ? gradeSpan(estimate.grade, estimate.grade_span) : null} onChecked={checked} />}
         </section>
         <section className={styles.section}><h2 className="eyebrow">Hall of fame</h2><p className="board-note">Predicted scores. Names appear only for buildings in Ann Arbor&apos;s public energy benchmarking data.</p>{publicBoard && <ol className={styles.list}>{publicBoard.best.map(b => <li key={b.benchmark_id}>{b.name} · {b.grade} · score {b.score}{b.demo ? " · demo data" : ""}{b.source && <> · <a href={b.source} target="_blank" rel="noreferrer">Source ↗</a></>}</li>)}</ol>}
           <h3 className="eyebrow">Highest excess cost by block</h3>{publicBoard && <ul className={styles.list}>{publicBoard.worst_blocks.map(b => <li key={b.geoid}>{b.area_type.replaceAll("_", " ")} {b.geoid} · {b.building_count} buildings · ${b.excess_usd_per_sqft.toFixed(2)}/sq ft above type median{b.demo ? " · demo data" : ""}</li>)}</ul>}
