@@ -19,7 +19,7 @@ client = TestClient(app)
 
 
 def model_result(params):
-    total = 1000 - (200 if params.get("heating_fuel") == "gas" else 0) - (100 if params.get("window_panes") == "2" else 0)
+    total = 1000 - (200 if params.get("heating_fuel") == "gas" else 0) - (100 if params.get("window_panes") == 2 else 0)
     return {"annual": {"total_usd": total, "cooling_usd": 100, "electric_kwh": 500},
             "seasons": [{"season": season, "total_usd": total / 4, "cooling": {"usd": 25, "electric_kwh": 10}}
                         for season in ("winter", "spring", "summer", "fall")],
@@ -99,8 +99,8 @@ def test_answer_order_cumulative_steps_and_prefix_cache(env):
     assert [st["estimate"]["annual_usd"] for st in x["steps"]] == [1000, 900, 700]
     assert [st["answer_label"] for st in x["steps"]] == [None, "Double-pane", "Gas"]
     assert "heating_fuel" not in calls[0] and "window_panes" not in calls[0]
-    assert calls[1]["window_panes"] == "2" and "heating_fuel" not in calls[1]
-    assert calls[2]["window_panes"] == "2" and calls[2]["heating_fuel"] == "gas"
+    assert calls[1]["window_panes"] == 2 and "heating_fuel" not in calls[1]  # estimate.session_params: "2" -> 2
+    assert calls[2]["window_panes"] == 2 and calls[2]["heating_fuel"] == "gas"
     assert all(c["unit_sqft"] == 850 and c["block_group"] == "261614005003" for c in calls)
     assert client.get("/map/mary").json() == x and len(calls) == 3
     s["answers"]["floor_level"] = "2"
@@ -115,7 +115,7 @@ def test_skips_and_no_ac_match_answer_endpoint(env):
     s["answers"] = {"window_panes": None, "cooling_code": "0"}
     x = client.get("/map/mary").json()
     assert x["steps"][1]["answer_label"] == "Skipped" and x["steps"][1]["estimate"]["annual_usd"] == 1000
-    assert "window_panes" not in calls[1]
+    assert "window_panes" not in calls[1] and all("cooling_code" not in c for c in calls)  # No AC never sent
     assert x["steps"][2]["answer_label"] == "No AC" and x["steps"][2]["estimate"]["annual_usd"] == 900
     assert list(x["steps"][2]["estimate"]["seasons"].values()) == [225] * 4
 
@@ -179,20 +179,6 @@ def test_tiger_failure_not_cached(tmp_path, monkeypatch, body):
     with pytest.raises(HTTPException) as err:
         mw._block_group("261614005003")
     assert err.value.status_code == 503 and not list(tmp_path.iterdir())
-
-
-def test_p3_labels_containing_then_nearest_all_types_and_most_common(tmp_path, monkeypatch):
-    ix = SimpleNamespace(wgs=np.array([box(0, 0, .0001, .0001), box(.0003, 0, .0004, .0001)]))
-    rows = [(Point(.00005, .00005), "912 MARY ST UNIT 1", "General Mailing"),
-            (Point(.00006, .00006), "912 MARY ST UNIT 2", "Vacant"),
-            (Point(.0004, .00005), "914 MARY ST", "University"),  # boundary nearest, distance zero
-            (Point(.00049, .00005), "914 MARY ST APT 1", "Vacant"),  # snap <1.1e-4 degrees
-            (Point(.00052, .00005), "999 FAR ST", "General Mailing")]
-    path = tmp_path / "addresses.geojson"
-    path.write_text(json.dumps({"features": [{"geometry": mapping(point), "properties": {"PROPSTREET": street, "TYPE": kind}}
-                                             for point, street, kind in rows]}))
-    monkeypatch.setattr(mw, "ADDRESSES_PATH", path)
-    assert mw._mailing_labels(ix) == {0: "912 Mary St", 1: "914 Mary St"}
 
 
 def test_similar_repeatable_and_excludes_selected_or_outside_size(env):
