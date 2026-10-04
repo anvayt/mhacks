@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { apiFetch, ApiError } from "../lib/api";
-import { billRange, errorText, gradeSpan, money, type Calibration, type Fixes } from "./api";
+import { billRange, errorText, gradeSpan, kg, money, type Calibration, type Fixes } from "./api";
 import styles from "./board.module.css";
 
 function lastMonth() {
@@ -27,7 +27,8 @@ async function jpeg(file: File): Promise<string> {
     throw new Error("That photo is too large. Try a closer crop, or type the gas usage instead.");
   } finally { URL.revokeObjectURL(url); }
 }
-export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: string; propertyId: string | null; onChecked: (result: Calibration) => Promise<void> }) {
+const article = (grade: string) => /^[AEF]/.test(grade) ? `an ${grade}` : `a ${grade}`;
+export function BillCheck({ sessionId, propertyId, currentGrade, onChecked }: { sessionId: string; propertyId: string | null; currentGrade: string | null; onChecked: (result: Calibration) => Promise<void> }) {
   const [mode, setMode] = useState<"therms" | "ccf" | "amount">("therms");
   const [usage, setUsage] = useState(""); const [kwh, setKwh] = useState("");
   const [dates, setDates] = useState(lastMonth); const [photo, setPhoto] = useState<string | null>(null);
@@ -40,7 +41,7 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
     event.preventDefault(); setBusy(true); setError(""); setFixes(null); setResult(null); setCopied(false);
     try {
       const input = photo ? { bill_image_base64: photo } : mode === "amount" ? { amount_usd: Number(usage) } : { therms: Number(usage), gas_unit: mode };
-      const checked = await apiFetch<Calibration>("/calibrate", { body: { session_id: sessionId, ...(propertyId ? { property_id: propertyId } : {}), ...input, ...dates, ...(kwh ? { kwh: Number(kwh) } : {}) } });
+      const checked = await apiFetch<Calibration>("/calibrate", { body: { session_id: sessionId, ...(propertyId ? { property_id: propertyId } : {}), ...input, ...dates, ...(kwh && propertyId ? { kwh: Number(kwh) } : {}) } });
       setResult(checked); setAmountResult(checked.extracted?.estimated_from_amount === true);
       await onChecked(checked); await loadFixes();
     } catch (e) {
@@ -48,6 +49,8 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
       setError(errorText(e) + (typing ? " You can remove the photo and type the gas usage and dates instead." : ""));
     } finally { setBusy(false); }
   }
+  // A one-bill regrade inside P1's month-to-month noise: show its grade as a signal only, never as verified.
+  const early = !!result?.bill_signal && (result.bill_signal.provisional ?? result.snapshot?.provisional) === true;
   const email = typeof fixes?.landlord_email === "string" ? fixes.landlord_email : fixes?.landlord_email ? [fixes.landlord_email.subject, fixes.landlord_email.body].filter(Boolean).join("\n\n") : "";
   return <section className={styles.section} aria-label="Monthly bill check">
     <form onSubmit={submit} className={styles.section}>
@@ -56,7 +59,8 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
       {mode === "amount" && <p className="board-note">Estimated from your bill amount. Exact therms or ccf give a better check; fixed charges and other services can affect the estimate.</p>}
       <div className={styles.grid}>
         <label className={styles.input}>{mode === "amount" ? "Gas bill amount ($)" : `Gas usage (${mode})`}<input id="gas-usage" type="number" inputMode="decimal" min="0.01" step="any" required={!photo} disabled={!!photo} value={usage} onChange={e => setUsage(e.target.value)} /></label>
-        <label className={styles.input}>Electricity kWh (optional; stored, not compared)<input type="number" inputMode="decimal" min="0" step="any" value={kwh} onChange={e => setKwh(e.target.value)} /></label>
+        {/* kWh is only kept with a saved home (never compared), so anonymous checks don't ask for it. */}
+        {propertyId && <label className={styles.input}>Electricity kWh (optional; saved to your home, not compared)<input type="number" inputMode="decimal" min="0" step="any" value={kwh} onChange={e => setKwh(e.target.value)} /></label>}
         <label className={styles.input}>Billing start<input id="bill-start" type="date" required value={dates.start} onChange={e => setDates({ ...dates, start: e.target.value })} /></label>
         <label className={styles.input}>Billing end<input id="bill-end" type="date" required min={dates.start} value={dates.end} onChange={e => setDates({ ...dates, end: e.target.value })} /></label>
       </div>
@@ -71,16 +75,17 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
     {error && <p role="alert" className={`${styles.status} ${styles.error}`}>{error}</p>}
     <div aria-live="polite">{result && <div className={styles.section}>
       <p><strong>{Math.abs(result.pct_vs_expected_for_weather).toLocaleString("en-US", { maximumFractionDigits: 1 })}% {result.pct_vs_expected_for_weather < 0 ? "below" : "above"} normal for this weather</strong></p>
-      <p>{result.streak_months} months in a row below normal 🔥</p>
+      {result.streak_months >= 1 && <p>{result.streak_months} {result.streak_months === 1 ? "month" : "months"} in a row below normal 🔥</p>}
       {amountResult && <p className="board-note">{result.extracted?.note ?? "Estimated from your bill amount."}</p>}
-      <p className="board-note">{result.verified ? "Verified gas reduction." : "Early signal, not verified savings."} {result.note}</p>
+      {early ? <p><strong>Early signal from one bill: this month looks like {article(result.bill_signal!.grade)}, but one bill is inside normal month-to-month variation, so your grade stays {currentGrade ?? "unchanged"}.</strong></p>
+        : <p className="board-note">{result.verified ? "Verified gas reduction." : "Early signal, not verified savings."} {result.note}</p>}
       {result.impact && <p>{result.impact.co2_kg_avoided.toLocaleString()} kg CO₂ avoided · {money(result.impact.usd_saved)} saved in this verified period.</p>}
       {!!result.badges?.length && <p>Badges: {result.badges.map(b => b.replaceAll("-", " ")).join(" · ")}</p>}
-      {result.snapshot?.source === "bill_regrade" && <p><strong>{result.snapshot.provisional ? "Provisional bill signal" : "Monthly grade"} {gradeSpan(result.snapshot.grade, result.snapshot.grade_span)}</strong> · {result.snapshot.label ?? (result.snapshot.provisional ? "Early signal; current grade unchanged" : "from your bill, adjusted for weather")}<br />{billRange(result.snapshot.bill_annual)}{result.snapshot.provisional && <><br />Your current grade and rank stay unchanged.</>}</p>}
+      {!early && result.snapshot?.source === "bill_regrade" && <p><strong>{result.snapshot.provisional ? "Provisional bill signal" : "Monthly grade"} {gradeSpan(result.snapshot.grade, result.snapshot.grade_span)}</strong> · {result.snapshot.label ?? (result.snapshot.provisional ? "Early signal; current grade unchanged" : "from your bill, adjusted for weather")}<br />{billRange(result.snapshot.bill_annual)}{result.snapshot.provisional && <><br />Your current grade and rank stay unchanged.</>}</p>}
       {!result.snapshot && <p className="board-note">Your predicted grade stays unchanged. Sign in to save this home and its monthly bill history.</p>}
     </div>}</div>
     {fixError && <p role="alert">Fixes: {fixError} <button type="button" onClick={loadFixes}>Retry fixes</button></p>}
-    {fixes && <section className={styles.section}><h2 className="eyebrow">Fixes for this home</h2><ul className={styles.list}>{fixes.fixes.map(f => <li key={f.item}>{f.item} · {f.grh_points} GRH points{!f.unpriced && f.usd_saved_yr != null && f.co2_kg_saved != null ? ` · projected ${money(f.usd_saved_yr)}/yr and ${Math.round(f.co2_kg_saved)} kg CO₂/yr saved` : " · tip; savings not modeled"}</li>)}</ul>
+    {fixes && <section className={styles.section}><h2 className="eyebrow">Fixes for this home</h2><ul className={styles.list}>{fixes.fixes.map(f => <li key={f.item}>{f.item} · {f.grh_points} GRH points{!f.unpriced && f.usd_saved_yr != null && f.co2_kg_saved != null ? ` · projected ${money(f.usd_saved_yr)}/yr and ${kg(f.co2_kg_saved)} CO₂/yr saved` : " · tip; savings not modeled"}</li>)}</ul>
       {email && <><h3 className="eyebrow">Landlord email draft</h3><pre className={styles.email}>{email}</pre><button className="control choice" type="button" onClick={async () => { try { await navigator.clipboard.writeText(email); setCopied(true); } catch { setFixError("Copy is unavailable. Select the draft text and copy it."); } }}>{copied ? "Copied" : "Copy email draft"}</button></>}
     </section>}
   </section>;
