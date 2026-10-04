@@ -24,6 +24,8 @@ from shapely import STRtree
 from shapely.geometry import Point, mapping, shape
 from shapely.ops import transform
 
+from model.data_sources import footprints as fp_source
+from model.data_sources.arcgis import fetch_all
 from model.heating_cooling import service as hc
 from model.heating_cooling.building_model import TAU_C, TAU_H_ELEC, TAU_H_GAS
 from model.heating_cooling.resstock_model import MULTIFAMILY
@@ -34,7 +36,6 @@ SIMPLIFY_DEG = 4e-6  # ~0.4 m; keeps the citywide layer small without visibly ch
 ADDR_SNAP_DEG = 1.1e-4  # ~12 m
 CLOUD_SAMPLE = 400
 OUT = Path(__file__).resolve().parents[1] / "mocks" / "map" / "912-mary-st.json"
-RAW = PROCESSED.parent / "raw" / "arcgis"
 WEB = Path(__file__).resolve().parents[1]
 CITY_OUT = WEB / "public" / "data" / "a2-buildings.geojson"
 ADDR_CACHE = WEB / "scripts" / ".cache" / "a2_mailing_addresses.json"
@@ -65,8 +66,9 @@ def to_m(geom):
     return transform(lambda x, y, z=None: (x * kx, y * 110_574), geom)
 
 
-def load_geojson(name):
-    return json.loads((RAW / name).read_text())["features"]
+def footprints():
+    """City footprints via P1's cached ArcGIS pager (downloads to model/data/raw/arcgis/ on first run)."""
+    return fetch_all(fp_source.URL, "a2_footprints", out_fields=fp_source.FIELDS, page=2000)
 
 
 def mailing_addresses():
@@ -98,7 +100,7 @@ def street_line(s: str) -> str:
 
 def city_buildings(lat, lon):
     """Every Ann Arbor footprint with its LiDAR height and the mailing addresses that fall inside it."""
-    feats = [f for f in load_geojson("a2_footprints.geojson") if f.get("geometry")]
+    feats = [f for f in footprints() if f.get("geometry")]
     geoms = [shape(f["geometry"]) for f in feats]
     tree = STRtree(geoms)
     lines: list[Counter] = [Counter() for _ in feats]
