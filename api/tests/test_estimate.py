@@ -1,0 +1,68 @@
+"""POST /estimate glue (api/app/estimate.py). Error paths need at most the footprint cache; the full path needs
+P1's model server (make -C model dashboard, MODEL_BASE_URL) and skips without it. No mocks: real services only."""
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from app.estimate import MODEL_BASE_URL
+from app.geo import FOOTPRINTS_PATH
+from app.main import app
+
+client = TestClient(app)
+CONTRACT = {"session_id", "building", "bill", "co2_t", "score", "grade", "grade_span", "locked",
+            "percentile_peers", "percentile_city", "hidden_rent_usd_mo", "badges", "questions"}  # PLAN.md §10
+
+
+def _model_up() -> bool:
+    try:
+        return httpx.get(f"{MODEL_BASE_URL}/hc/answers", timeout=2).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+needs_data = pytest.mark.skipif(not FOOTPRINTS_PATH.exists(), reason="run: uv run python scripts/fetch_footprints.py")
+needs_model = pytest.mark.skipif(not _model_up(), reason=f"model server not running at {MODEL_BASE_URL}")
+
+
+def _code(r) -> str:
+    assert r.status_code == 422, r.text
+    return r.json()["detail"]["code"]
+
+
+def test_needs_input():
+    assert _code(client.post("/estimate", json={})) == "missing_input"
+
+
+def test_link_without_address_asks_for_it():  # hint-only site; never auto-geocoded (team decision)
+    r = client.post("/estimate", json={"url": "https://www.zumper.com/apartment-buildings/p23039/715-arbor-st-ann-arbor-mi"})
+    assert _code(r) == "needs_address" and "Arbor St" in r.json()["detail"]["hint"]
+
+
+@needs_data
+def test_not_a_home():  # UM LSA Building: Public footprint, no residential address
+    assert _code(client.post("/estimate", json={"address": "500 S State St, Ann Arbor, MI 48109"})) == "not_a_home"
+
+
+@needs_data
+def test_outside_ann_arbor():
+    r = client.post("/estimate", json={"address": "1600 Pennsylvania Ave NW, Washington, DC 20500"})
+    assert _code(r) == "not_found"
+
+
+@needs_data
+@needs_model
+@pytest.mark.parametrize("body", [
+    {"address": "912 Mary St, Ann Arbor, MI 48104"},
+    {"url": "https://www.zillow.com/homedetails/1514-Morton-Ave-Ann-Arbor-MI-48104/12345_zpid/"},
+])
+def test_real_estimate(body):
+    r = client.post("/estimate", json=body)
+    assert r.status_code == 200, r.text
+    e = r.json()
+    assert CONTRACT <= set(e)
+    b, bill = e["building"], e["bill"]
+    assert b["type"] and b["sqft"] > 0 and b["footprint_geojson"] and 42.2 < b["lat"] < 42.33
+    assert list(bill["seasonal"]) == ["winter", "spring", "summer", "fall"]
+    assert bill["annual"]["p50"] > 0 and bill["seasonal"]["winter"]["p50"] > bill["seasonal"]["summer"]["p50"]
+    assert e["heating_cooling"]["method"] in {"metered", "meter_model+resstock", "resstock"}
