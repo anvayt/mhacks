@@ -12,6 +12,7 @@ URL shapes, checked against public listing URLs on Oct 3, 2026 (web search resul
   Redfin          /MI/Ann-Arbor/813-E-Kingsley-St-48104/unit-C1/home/99358421
                   /MI/Ann-Arbor/Arbor-Club-Apartments-Ann-Arbor-MI/apartment/177432919
   Apartments.com  /willowtree-apartments-towers-ann-arbor-mi/jlbtfv5/   (property name)
+                  /1218-washtenaw-ct-ann-arbor-mi-unit-1/9r3c5n5/       (unit comes after the state)
 Street suffix abbreviations follow USPS Publication 28, Appendix C1.
 """
 
@@ -66,7 +67,7 @@ def parse_listing_url(url: str) -> dict:
     if _on(host, "redf.in"):
         return _needs("redfin")  # share short link: expanding it would need a network call
     if _on(host, "apartments.com"):
-        return _from_tokens("apartments", _tokens(segs[0])) if segs else _needs("apartments")
+        return _apartments(segs)
     return _needs("unknown")
 
 
@@ -98,16 +99,30 @@ def _redfin(segs: list[str]) -> dict:
     return _needs("redfin", _name_hint(t, city, state))
 
 
-def _from_tokens(source: str, tokens: list[str]) -> dict:
-    """Slug tokens '[street.. (unit) city.. ST (ZIP)]' -> found address, else a name hint."""
+def _apartments(segs: list[str]) -> dict:
+    """/<slug>/<id>/. Unit listings put 'unit-<x>' after the state: 1218-washtenaw-ct-ann-arbor-mi-unit-1."""
+    t = _tokens(segs[0]) if segs else []
+    r = _from_tokens("apartments", t)
+    k = next((i for i in range(len(t) - 1, 0, -1) if t[i].lower() == "unit" and t[i - 1].upper() in STATES), None)
+    if not r["needs_address"] or k is None:
+        return r
+    # One token after 'unit' is the unit; more is free text ('unit-3-bedroom-15-bath'), so drop it.
+    return _from_tokens("apartments", t[:k], "Unit " + t[k + 1].upper() if len(t) == k + 2 else None)
+
+
+def _from_tokens(source: str, tokens: list[str], unit: str | None = None) -> dict:
+    """Slug tokens '[street.. (unit) city.. ST (ZIP)]' -> found address, else a name hint.
+
+    `unit` is used when the slug has no unit marker of its own (Apartments.com puts it after the state).
+    """
     t = list(tokens)
     zip_ = t.pop() if t and ZIP.fullmatch(t[-1]) else None
     if len(t) >= 3 and t[-1].upper() in STATES and t[0][0].isdigit():
         split = _street_unit_city(t[:-1])
         # Without a ZIP, also demand a street suffix: names like "411 Lofts" start with digits too.
         if split and (zip_ or split[1] or any(x.lower() in SUFFIXES for x in split[0][1:])):
-            street, unit, city = split
-            return _found(source, _fmt_street(street), unit, _title(city), t[-1].upper(), zip_)
+            street, slug_unit, city = split
+            return _found(source, _fmt_street(street), slug_unit or unit, _title(city), t[-1].upper(), zip_)
     return _needs(source, _name_hint(tokens))
 
 
