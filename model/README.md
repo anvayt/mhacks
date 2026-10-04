@@ -166,3 +166,52 @@ request is logged to `data/cache/requests.log`.
 | `heating_cooling/service.py`, `server.py`, `dashboard.html` | `estimate_hc` and friends; FastAPI app; explorer UI |
 | `scripts/build_all.py` | what `make build` runs |
 | `scripts/reproduce_resstock.py` | 10:30 PM checkpoint (R² 0.548 → 0.764) |
+
+## 6. Air leakage (blower-door) model for Ann Arbor houses (P1-09)
+
+Predicts a house's air leakage, meaning its **blower-door result (CFM50: airflow at 50 Pa)**, without a test, from
+public data only. No landlord or renter survey answers are used, in training or in evaluation.
+
+```python
+from model.leakage.predict import predict_leakage
+predict_leakage(lat=42.2756, lon=-83.7408)      # or address="…"
+# → {"estimate": {"cfm50", "cfm50_per_ft2", "ach50_at_8ft_ceiling"}, "inputs": {... each with a source},
+#    "in_training_range", "scope_note", "model", "accuracy"}
+```
+
+`make -C model leakage` trains it and writes `data/processed/leakage_ann_arbor.{parquet,csv}`: one row per Ann Arbor
+residential building with an address (17,286 rows; 15,416 one-to-four-unit houses get an estimate).
+
+**Training data (real tests):** 947 blower-door tests from NYSERDA's public New York home surveys (2014–15 RSBS and
+2018 RBSA, data.ny.gov `8wa7-87p5`, `3drn-bhzv`), in climate zones 4–6, after QC (completed test at about 50 Pa,
+ACH50 0.5–60). LBNL ResDB raw data isn't public (contact-only) and NEEA RBSA requires registration, so neither is used.
+
+**Inputs** (available for every Ann Arbor house):
+- **Year built:** in Ann Arbor, the ACS block-group renter median, because per-house year built isn't public.
+- **Floor area:** footprint × stories.
+- **Stories:** recorded where present, otherwise from LiDAR height (87.7% accurate on labelled houses).
+- **Home type:** number of city mailing addresses inside the footprint.
+- **Climate zone.**
+
+**How it was tested** (`results/leakage_validation.json`): target log(CFM50/ft²); hyperparameters tuned by inner
+GroupKFold by region; the outer test holds out one of 10 NY regions at a time. Median absolute error on CFM50:
+
+| | Error |
+|---|---|
+| Random forest (chosen; neural net, XGBoost tie at 23.7–23.8%; linear models 24.6–25.0%) | **23.6%** |
+| Baseline (median) | 42.9% |
+| ResStock lookup by vintage (simulated) | 39.4%, and biased 33% too leaky |
+| Train on the 2014–15 survey → test on 2018 / reverse | 26.0% / 24.3% |
+| With Ann Arbor's real year-built uncertainty (block-group median vs true; typically ±12 years) | **27.3%** |
+| With no year built at all | 32.3% |
+
+Extra survey-only fields (foundation, style, ceiling height) didn't improve it (23.7%).
+
+**Limitations for Ann Arbor:**
+- **New York houses, not Michigan ones.** Same climate zones, but Ann Arbor isn't in the training data.
+- **Floor area is overstated.** Footprints include garages and porches: the median detached floor area is 2,741 ft² vs
+  2,010 ft² in training. That biases per-ft² and ACH50 low (about 18% if true area is 25% lower); total CFM50 is much
+  less affected.
+- **Predictions are compressed.** Block-group year built hides individual houses' age, so the leakiest houses are
+  under-flagged.
+- **1–4 unit homes only.** Buildings with 5+ units get no estimate.
