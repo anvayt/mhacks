@@ -113,4 +113,5 @@ def links(session_id, web_base, onboard_base):
     local = any(urlsplit(url).hostname in ('localhost', '127.0.0.1') for url in (web_base, onboard_base))
     return ('Local preview links; public website/onboarding URLs are not configured.\n' if local else '') + (f'Web report: {web_base.rstrip("/")}/share?session={sid}\n'
             f'Compare listings: {web_base.rstrip("/")}/compare?a={sid}\n'
+            f'Watch your report: {web_base.rstrip("/")}/watch?session={sid}\n'
             f'Continue in iMessage: {onboard_base.rstrip("/")}/?session={sid}')

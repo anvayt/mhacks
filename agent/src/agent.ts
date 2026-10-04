@@ -5,6 +5,7 @@ import { httpApi } from "./api.ts";
 import { Conversations } from "./conversation.ts";
 import { mockApi } from "./mockApi.ts";
 import { inbound } from "./replies.ts";
+import { LoginCodeSender } from "./loginCodes.ts";
 import { ReceiptStore, ReminderPoller } from "./reminders.ts";
 import { phoneTransport } from "./transport.ts";
 
@@ -29,7 +30,9 @@ if (env.agentTerminal) {
   lines.close();
 } else {
   const { app, send } = await phoneTransport();
-  const stop = new ReminderPoller(api, send, new ReceiptStore(env.reminderReceipts)).start();
+  const stopReminders = new ReminderPoller(api, send, new ReceiptStore(env.reminderReceipts)).start();
+  const stopCodes = new LoginCodeSender(api, send).start(); // web sign-in codes, texted within seconds
+  const stop = () => { stopReminders(); stopCodes(); };
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => { stop(); void app.stop(); });
   for await (const [space, message] of app.messages) {
     if (message.direction === "outbound") continue;
