@@ -3,18 +3,17 @@
 Every number in the fixture comes from data or P1's model; nothing is typed in by hand. When P2 serves the same
 shape from /api, the widget switches from this file to the endpoint (see components/hidden-rent-map/data.ts).
 
-Run from a built P1 checkout (model artifacts present) with P1's environment. The block-group shapes are cached by
-p1/leakage-model; point BLOCK_GROUPS_GEOJSON at that file if this checkout doesn't have it:
+Run from a built P1 heating-cooling checkout (model artifacts present) with P1's environment. The block-group
+outline is fetched once from Census TIGERweb (public, no key):
 
-    cd ../mhacks-heating-cooling && PYTHONPATH=. \
-      BLOCK_GROUPS_GEOJSON=../mhacks-leakage/model/data/raw/arcgis/washtenaw_block_groups.geojson \
-      .venv/bin/python ../mhacks-map-widget/web/scripts/build_map_fixture.py
+    cd ../mhacks-heating-cooling && PYTHONPATH=. .venv/bin/python ../mhacks-map-widget/web/scripts/build_map_fixture.py
 """
 from __future__ import annotations
 
 import json
-import os
 import sys
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -32,12 +31,12 @@ NEIGHBOR_RADIUS_M = 160
 CLOUD_SAMPLE = 400
 OUT = Path(__file__).resolve().parents[1] / "mocks" / "map" / "912-mary-st.json"
 RAW = PROCESSED.parent / "raw" / "arcgis"
-BLOCK_GROUPS = Path(os.environ.get("BLOCK_GROUPS_GEOJSON", RAW / "washtenaw_block_groups.geojson"))
+TIGERWEB_BG = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/10/query"
 
 FOOTPRINTS_SRC = ("City of Ann Arbor building footprints (ABG_BLD_HG: above-ground height from aerial LiDAR; STORIES)",
                   "https://a2maps.a2gov.org/a2arcgis/rest/services/OSI/BuildingFootprints/FeatureServer/0")
-BG_SRC = ("US Census TIGER block groups (Washtenaw County) + ACS 5-year via Census Reporter",
-          "https://api.censusreporter.org")
+BG_SRC = ("US Census block groups (TIGERweb ACS 2023 outline; ACS 5-year year built and heating fuel)",
+          "https://tigerweb.geo.census.gov/")
 RESSTOCK_SRC = ("NREL ResStock 2024.2, Michigan baseline (18,756 simulated homes)",
                 "https://resstock.nrel.gov/")
 
@@ -86,10 +85,12 @@ def building_and_neighbors(lat, lon):
 
 
 def block_group(geoid):
-    for f in json.loads(BLOCK_GROUPS.read_text())["features"]:
-        if f["properties"]["GEOID"] == geoid:
-            return f["geometry"]
-    raise SystemExit(f"block group {geoid} not in cache")
+    q = urllib.parse.urlencode({"where": f"GEOID='{geoid}'", "outFields": "GEOID", "outSR": 4326, "f": "geojson"})
+    with urllib.request.urlopen(f"{TIGERWEB_BG}?{q}", timeout=30) as r:
+        feats = json.load(r)["features"]
+    if not feats:
+        raise SystemExit(f"block group {geoid} not found in TIGERweb")
+    return feats[0]["geometry"]
 
 
 def lookalike_pool(building, unit_sqft):
