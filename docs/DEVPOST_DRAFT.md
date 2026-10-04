@@ -1,8 +1,9 @@
 <!--
-P4 public Devpost draft, Oct 4, 2026 (~8:15 AM). Paste everything between the two "PASTE" markers into Devpost.
-Facts come from docs/DEVPOST.md (fact-checked evidence log), demo/DEMO_PICKS.md, docs/WAVE7_VERIFICATION.md and notes/*.md.
-Structure follows docs/PRESENTATION_STRATEGY.md §7: rubric-visible, numbers not adjectives, honest limitations, no hidden text.
-Before posting: fill every [TODO], drop media into each 🎞 slot, delete this comment and the "Recording checklist" at the end.
+Devpost draft, Oct 4, 2026: the team's story version merged with the fact-checked P4 draft. Sections follow Devpost's
+fields in order; paste each into its box. Facts come from docs/DEVPOST.md, demo/DEMO_PICKS.md, model/README.md, the code.
+Corrected from the story version: sign-in is a texted code (OAuth is only the optional Google Calendar reminders);
+reminders are opt-in and at most one a day; the monthly check is the gas bill; Grok is voice + Imagine + bill photos.
+Before posting: fill every [TODO], drop media into each 🎞 slot, delete this comment and the checklist at the end.
 -->
 
 <!-- ===== PASTE START ===== -->
@@ -11,121 +12,96 @@ Before posting: fill every [TODO], drop media into each 🎞 slot, delete this c
 
 **Rent is on the listing. The energy bill isn't.**
 
-Hidden Rent makes the hidden energy cost of renting visible, so renters can choose better homes, push for the fixes that cut the most carbon, and keep the habits that lower their bills.
+Hidden Rent makes the hidden energy cost of renting visible, so renters can choose better homes, push for the fixes that cut the most carbon, and turn lower bills into a habit.
 
 ## 🎬 Watch the 3-minute demo
 [TODO: YouTube link]
-
-**What you'll see:** 0:00 two similar apartments, $265 vs $2,179 a year · 0:20 one answer locks the grade · 0:50 how we know it works · 1:05 pick a fix and watch the projected score move · 1:35 every building in Ann Arbor · 1:55 the same thing in iMessage · 2:35 it remembers you: monthly check-ins and a daily habit streak.
 
 ---
 
 ## Inspiration
 
-Renters compare rent, bedrooms and location, but not what a place costs to heat and cool, until the first winter bill. In Ann Arbor, most households rent and buildings are about two-thirds of the city's emissions. Since January 2026, the **Green Rental Housing** ordinance requires landlords to earn efficiency points. We wanted to give renters the information, and the leverage, to use it.
+I used to leave my heater on all day by accident: I'd leave my apartment at 7 AM, get back at 1 AM, and watch my DTE bill climb month after month without knowing why. Living in an older building showed me how much heat simply leaks out. Heating is the biggest hidden cost of renting, and nobody sees it until the first winter bill arrives. We built Hidden Rent so students like me can make saving on it a subconscious habit instead of an occasional good intention.
+
+It matters beyond one apartment. In Ann Arbor, **54.5% of households rent** and **buildings make up about 68% of the city's emissions**. Since January 2026, the city's **Green Rental Housing** ordinance requires landlords to earn efficiency points. We wanted renters to have the information, and the leverage, to use it.
+
+We also wanted the app to have character. The bold, editorial design is inspired by sites like [mhacks.org](https://www.mhacks.org) and [nousresearch.com](https://nousresearch.com): a cut-out collage look in black, white, red and blue, a homepage where you tap a house to start, and a grade screen whose red/blue split moves with your score.
 
 ---
 
-## What it does: feature by feature
+## What it does
 
-### 1. 🏠 The Hidden Rent report
-Paste an Ann Arbor address or a listing link. In seconds you get the home's predicted **heating and cooling cost** as a range, an **A–F grade**, its **CO₂**, and how it ranks against same-type homes across the city.
+**1. 🏠 Your Hidden Rent score.** Paste an Ann Arbor address or a listing link. A short questionnaire asks **only the questions that narrow the estimate most** (heating fuel, windows, air conditioning), then reveals the home's predicted **heating and cooling cost**, its **CO₂**, and an **A–F grade** that ranks it against **same-type homes across the city**. *Example: 2322 Arrowwood Trl starts at A–B; answering "Central AC" locks it at B.*
 
-🎞 *[TODO: 5-second clip, address typed → report appears]*
+🎞 *[TODO: clip, address → questions → grade]*
 
-**Try it:** `2322 Arrowwood Trl, Ann Arbor, MI`
+**2. ⚔️ Listing battle.** Two listings side by side. **624 Church St** is predicted at **$265 a year** to heat and cool; **1022 S Forest Ave** at **$2,179**: a **$1,914 a year** gap neither listing shows.
 
-### 2. 🔒 Lock in your grade
-We don't pretend to know everything about your unit. The grade starts as a range, and Hidden Rent asks **only the questions that narrow it most** (heating fuel, windows, air conditioning). Answer one, and watch the range shrink until the grade locks.
+**3. 🔧 Pledge commitments and see the impact first.** Sign in with your phone (Hidden Rent texts you a code through **Photon**) and pledge one-time fixes or repeated habits. Each one shows how much it would change your **energy use, bill, CO₂ and score** before you commit. Fixes are ranked by **CO₂ avoided per dollar**, and one tap drafts an email to your landlord with the Green Rental Housing points each fix earns. *Example: at 1514 Morton Ave, upgrading the windows is projected to save **699 kg of CO₂ and $125 a year**, worth **4 Green Rental Housing points**.*
 
-🎞 *[TODO: clip, "Central AC" tapped → A–B becomes B 🔒]*
+🎞 *[TODO: clip, pick a fix → projected score moves]*
 
-**Example:** 2322 Arrowwood Trl starts at **A–B**; answering "Central AC" locks it at **B**.
+**4. 💬 An AI agent in iMessage keeps you on track.** Our agent, built on **Photon Spectrum**, texts you reminders for what you pledged. If you committed to turning the heat down before you leave in the morning, it checks in and you reply "done". Your **daily habit streak** grows ("Day 4 🔥, best 6"), and you can climb an opt-in streak leaderboard under an alias. Reminders are opt-in, at most one a day, and "stop" works any time. The whole report also works by text: send an address and get the same numbers, with no app.
 
-### 3. ⚔️ Listing battle
-Two listings side by side, one clear winner. **624 Church St** is predicted at **$265 a year** to heat and cool; **1022 S Forest Ave** at **$2,179**. That's a **$1,914 a year** difference that neither listing shows.
+🎞 *[TODO: real phone filmed in real life, reminder → "done" → Day N 🔥]*
 
-🎞 *[TODO: clip, the two cards and the gap]*
+**5. 📅 Monthly check-in: did your bill actually go down, and stay down?** Each month the agent asks for your new gas bill (a photo or typed numbers) and compares your use with **what the weather predicts**, so a mild month doesn't count as a saving. If you've moved, your old home's history is kept and you start a fresh baseline. That's the game: **how consistently can you answer the texts so your energy use not only goes down, but stays down, month after month?**
 
-### 4. 🔧 Fix it: see the impact before you commit
-Hidden Rent suggests improvements ranked by **CO₂ avoided per dollar**. Pick one and a **projected** marker moves on your leaderboard bar. Your current grade stays put until real bills prove the change. One tap drafts an email to your landlord, with the Green Rental Housing points each fix earns.
+**6. 🎧 Watch your report.** Your report read aloud by **Grok Voice** over **Grok Imagine** clips of your building type. The script is built from our API's numbers, so Grok never invents a figure.
 
-🎞 *[TODO: clip, windows toggled → ghost marker moves; landlord email]*
-
-**Example:** at 1514 Morton Ave (gas heat, single-pane windows), upgrading the windows is projected to save **699 kg of CO₂ and $125 a year**, worth **4 Green Rental Housing points**.
-
-### 5. 🗺️ Every building in Ann Arbor
-Zoom out from one home to the whole city: **25,704 buildings scored**, shaded by grade, with leaderboards. Only buildings in the city's public energy benchmarking are named; everything else is aggregated by area.
-
-🎞 *[TODO: clip, map fly-out from one building to the city]*
-
-### 6. 💬 Hidden Rent in iMessage: no app
-Text an address to our agent (built on **Photon Spectrum**) and run the same interview by iMessage, with the same numbers. Start on the web and tap **"Continue in iMessage"**, and the conversation picks up your exact report.
-
-🎞 *[TODO: real phone filmed in real life, text an address → grade arrives; answer a question]*
-
-### 7. 📅 Monthly check-in: did your bill actually drop?
-Hidden Rent remembers your home. Each month it asks if you still live there; if you've moved, your history is kept and you start a fresh baseline. Send your bill (photo or typed numbers) and we compare your gas use with **what the weather predicts**. A mild month doesn't count as a saving, and an uncertain result is labelled an early signal, not verified savings.
-
-🎞 *[TODO: clip, typed bill → "X% vs normal for this weather"]*
-
-### 8. 🔥 Daily habit streak
-Pick a daily habit from your commitments. Reply **"done"** to a reminder (or text "done today") and your streak grows: **"Day 4 🔥, best 6. See you tomorrow."** Badges at 3 and 7 days, and an opt-in **habit-streak leaderboard** under an alias. Reminders are opt-in, at most one a day, "stop" works any time. Streaks are self-reported, so we never count them as carbon saved.
-
-🎞 *[TODO: clip, reminder → "done" → Day N 🔥]*
-
-### 9. 📤 Share card
-Share your home's grade, rank and hidden cost as an image, with a QR code so friends can check theirs.
-
-🎞 *[TODO: screenshot]*
-
----
-
-## Why it matters
-
-**Innovation.** Energy tools give one falsely precise number, after you've moved in. Hidden Rent works at the moment of decision, turns uncertainty into the interaction (your answers lock the grade), and closes the loop by checking real bills against the weather, keeping **current**, **projected** and **verified** separate.
-
-**Technical complexity.** No language model invents our numbers. City footprints, census data, local weather and Michigan prices feed our own heating and cooling model, with paths for metered buildings, large unmetered buildings, and small buildings modeled from **18,756 DOE-simulated Michigan homes**. We checked it against **real meters at 101 Ann Arbor buildings**. One backend serves the web and the iMessage agent.
-
-**Usability.** An address is enough; no account is needed for a grade. Plain questions, phone browser or iMessage, every assumption sourced, and states labelled in words, not just colors.
-
-**Sustainability.** **CO₂ next to dollars** everywhere; fixes ranked by **carbon avoided per dollar** and tied to a city ordinance; a map of the leakiest buildings. Our impact metric is **verified, weather-normalized CO₂ avoided at the same home**. Moving or pledging never counts as savings.
+**7. 🗺️ Every building in Ann Arbor.** Zoom out to the whole city: **25,704 buildings scored**, shaded by grade, with leaderboards. Only buildings in the city's public energy benchmarking are named; everything else is grouped by area.
 
 ---
 
 ## How we built it
-- **Model (Python):** weather-normalized fits on Ann Arbor's public meter data; ResStock-based models for small buildings; PRISM and Open-Meteo weather; EIA Michigan prices; EPA and eGRID2023 carbon factors.
-- **API (FastAPI + SQLite):** estimates, questions, sessions, accounts and saved homes, comparisons, the city layer, bills, commitments and projections, leaderboards, reminders and habit streaks.
-- **Web (Next.js, React, MapLibre):** report, battle, leaderboard with a projected marker, city map, share card.
-- **iMessage (TypeScript, Photon Spectrum):** the full conversation, including grade, answers, commitments, monthly check-ins, bills and streaks. It only repeats numbers the API returns.
-- **Bill photos:** xAI Grok reads the bill; two reads must agree, and the API validates them before any comparison.
+
+- **Web (Next.js, React, MapLibre):** questionnaire, grade reveal, listing battle, commitments with projected scores, leaderboards, city map. Every animation respects reduced-motion settings.
+- **iMessage agent (TypeScript, Photon Spectrum):** texted sign-in codes, the full report by text, commitment reminders, monthly bill check-ins and habit streaks. It only repeats numbers our API returns.
+- **API (FastAPI + SQLite):** estimates, sessions, accounts and saved homes, bills, commitments and projections, leaderboards, reminders.
+- **Model (Python, scikit-learn, XGBoost):** our own heating and cooling model. Ann Arbor buildings with public meter data use weather-normalized fits on their own history. Smaller buildings use an **XGBoost model trained on 18,756 DOE-simulated Michigan homes** (NREL ResStock), calibrated to real Ann Arbor meters. Carbon uses EPA and eGRID2023 factors; prices are EIA Michigan averages.
+- **Data:** [NREL ResStock](https://resstock.nrel.gov) · [City of Ann Arbor GIS: building footprints and energy benchmarking](https://a2maps.a2gov.org) · U.S. Census ACS · [PRISM](https://prism.oregonstate.edu) and [Open-Meteo](https://open-meteo.com) weather · [EIA](https://www.eia.gov) prices · EPA eGRID.
+- **xAI Grok:** Grok Voice narration, Grok Imagine clips, and Grok vision to read bill photos (two reads must agree, and the API validates them before any comparison).
 
 ## What we measured
 | | Result |
 |---|---|
 | Seasonal gas error vs real Ann Arbor meters (101 buildings) | **7.4%** median for buildings with their own meter history; **[TODO P1: 29.2%]** for our blended model on buildings it never saw |
 | Buildings scored | **25,704** of 35,007 city footprints |
-| Example: two similar apartments | **$265 vs $2,179 a year** (a $1,914 gap) |
-| Example: one fix | **699 kg CO₂ and $125 a year** saved, projected |
-| Automated checks | **633** API tests, **79** agent tests, **444** browser smoke checks, Phase 2 end-to-end check **16/16** |
+| Two similar apartments | **$265 vs $2,179 a year** (a $1,914 gap) |
+| One fix | **699 kg CO₂ and $125 a year** saved, projected |
 
-## Challenges, accomplishments and what we learned
-Address points miss buildings and garages inflate sizes, so we added matching and plausibility checks and ask for unit size when unsure. The hardest part was **honesty under uncertainty**: a range that shrinks, a projection that never pretends to be achieved, a bill result that says "early signal" when weather noise outweighs the change. We're proud that a renter can go from a listing to a locked grade, a ranked fix, a landlord email and a monthly bill check, on the web or entirely by iMessage, with every number traceable to data. We learned that uncertainty can be a feature, not a disclaimer.
+---
+
+## Challenges we ran into
+
+- We wanted **SpacetimeDB** to make the game more real-time, so you could see other renters checking in live. It would have meant a major rewrite of the existing architecture, so we left it out.
+- **Messy city data:** address points miss buildings and garages inflate floor areas, so we added footprint matching and plausibility checks, and ask for the unit's size when we're unsure.
+- **Honesty under uncertainty:** the grade starts as a range that shrinks as you answer; a projection never pretends to be achieved; a bill result says "early signal" when weather noise outweighs the change.
+
+## Accomplishments that we're proud of
+
+- **The UI design!** A distinct visual identity down to small details: the tap-the-house intro, fact slides with sourced numbers, and a grade screen whose red/blue split eases to your score.
+- We used **Grok** to make reports feel alive: **Grok Voice** reads each report aloud and **Grok Imagine** generated the clips behind it.
+- A renter can go from a listing to a grade, a ranked fix, a landlord email, daily reminders and a monthly bill check, on the web or entirely by iMessage, and **every number traces back to data**. No language model invents our numbers.
+
+## What we learned
+
+Uncertainty can be a feature, not a disclaimer: showing a range and letting your answers lock the grade earned more trust than a falsely precise number. We also learned that habits stick when the reminder comes to you. A text you answer in two seconds beats an app you have to remember to open.
+
+## What's next for Hidden Rent
+
+Collect consenting renters' bills across a full winter to measure real, weather-normalized reductions; model the effect of more fixes; bring in real-time check-ins (the SpacetimeDB idea); and give landlords and the city a view of which buildings to fix first.
 
 ## Limitations
-- Covers **heating and cooling only**, not hot water, appliances or a full utility tariff; prices are Michigan averages.
-- Real-meter validation is on larger buildings; small rentals are modeled from DOE simulations, so ranges are wider there.
+- Heating and cooling only, not hot water, appliances or a full utility tariff; prices are Michigan averages.
 - Grades are predictions, not official Green Rental Housing inspections.
-- Bill checks are gas-only and often within the model's noise today, so we label them early signals; verified reductions need more months of evidence.
-- Some fixes don't have a modeled effect yet and appear as tips without numbers.
-
-## What's next
-Collect consenting renters' bills across a full winter to measure real reductions, add modeled effects for more fixes, and offer landlords and the city a view of which buildings to fix first.
+- Bill checks are gas-only and often within the model's noise after one month, so we label them early signals.
+- Streaks are self-reported, so we never count them as carbon saved.
 
 ## Built with
-Python · scikit-learn · XGBoost · pandas · FastAPI · SQLite · TypeScript · Next.js · React · MapLibre GL · Photon Spectrum · xAI Grok · NREL ResStock · City of Ann Arbor GIS and benchmarking data · U.S. Census · PRISM · Open-Meteo · EIA · EPA eGRID
+Python · scikit-learn · XGBoost · pandas · FastAPI · SQLite · TypeScript · Next.js · React · MapLibre GL · Photon Spectrum · xAI Grok (Voice, Imagine, vision) · Cursor · Vercel · Fly.io · NREL ResStock · City of Ann Arbor GIS and benchmarking data · U.S. Census · PRISM · Open-Meteo · EIA · EPA eGRID
 
-**Try it:** [TODO: public URL, only if it works] · **Code:** https://github.com/anvayt/mhacks
+**Try it:** https://hidden-rent-mhacks.vercel.app · **Code:** https://github.com/anvayt/mhacks
 
 <!-- ===== PASTE END ===== -->
 
