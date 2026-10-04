@@ -1,0 +1,118 @@
+INFO:     [Hidden Rent acceptance client]: Starting agent with address: agent1qvekg6gah4wft5kq4twkkau2t8kr37fn3s7x4n84r574jngepauhx8sy76q
+INFO:     [Hidden Rent acceptance client]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8131&address=agent1qvekg6gah4wft5kq4twkkau2t8kr37fn3s7x4n84r574jngepauhx8sy76q
+INFO:     [Hidden Rent acceptance client]: Starting server on http://127.0.0.1:8131 (Press CTRL+C to quit)
+USER: 1514 Morton Ave, Ann Arbor, MI
+AGENT: 🏠 1514 MORTON AVE, ANN ARBOR, MI, 48104
+Grade B–F (predicted)
+Score 50/100 (predicted)
+Top 52.9% citywide by predicted efficiency (from API percentile)
+Predicted heating + cooling: $1,198–$14,599 (most likely $2,117)/year
+Hidden rent: $0/month vs a typical same-size unit
+Predicted heating + cooling CO₂: 11.39 tonnes/year
+
+Is the heat gas or electric, or included in your rent?
+1) Gas
+2) Electric
+3) Heat is included in my rent
+Reply with an option number, the answer, or skip.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: 1
+AGENT: 🏠 1514 MORTON AVE, ANN ARBOR, MI, 48104
+Grade B–D (predicted)
+Score 50/100 (predicted)
+Top 52.9% citywide by predicted efficiency (from API percentile)
+Predicted heating + cooling: $1,198–$3,070 (most likely $2,117)/year
+Hidden rent: $0/month vs a typical same-size unit
+Predicted heating + cooling CO₂: 11.39 tonnes/year
+
+What air conditioning does the unit have?
+1) No AC
+2) Window/room AC
+3) Central AC
+4) Heat pump
+Reply with an option number, the answer, or skip.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: 3
+AGENT: 🏠 1514 MORTON AVE, ANN ARBOR, MI, 48104
+Grade C–D (predicted)
+Score 41/100 (predicted)
+Top 62.7% citywide by predicted efficiency (from API percentile)
+Predicted heating + cooling: $1,583–$3,070 (most likely $2,287)/year
+Hidden rent: $14/month vs a typical same-size unit
+Predicted heating + cooling CO₂: 11.73 tonnes/year
+
+Are the windows single-, double- or triple-pane?
+1) Single-pane
+2) Double-pane
+3) Triple-pane
+Reply with an option number, the answer, or skip.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: 1
+AGENT: 🏠 1514 MORTON AVE, ANN ARBOR, MI, 48104
+Grade D 🔒 locked (predicted)
+Score 37/100 (predicted)
+Top 65.8% citywide by predicted efficiency (from API percentile)
+Predicted heating + cooling: $1,670–$3,070 (most likely $2,382)/year
+Hidden rent: $22/month vs a typical same-size unit
+Predicted heating + cooling CO₂: 12.33 tonnes/year
+Say options for projected improvements.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: options
+AGENT: Your options (effects are projected if completed):
+1) Switch to a cold-climate heat pump — landlord: costs $1,674/year more, 3286 kg CO₂/year less, 35 GRH points.
+2) Insulate the walls — landlord: $405/year saved, 2454 kg CO₂/year less, 9 GRH points.
+3) Professional whole-home air sealing — landlord: $221/year saved, 1339 kg CO₂/year less, 9 GRH points.
+4) Add storm windows or double-pane windows — landlord: $124/year saved, 718 kg CO₂/year less, 4 GRH points.
+5) Insulate the attic to R-50 — landlord: $111/year saved, 673 kg CO₂/year less, 9 GRH points.
+6) Turn the heat down at night and when you're out — renter: $52/year saved, 316 kg CO₂/year less, 0 GRH points.
+7) Send your landlord the drafted email: add storm windows or double-pane windows — renter→landlord. Tip only; this model cannot price its effect here.
+Reply "try" plus option numbers to choose a what-if; then "ff" plus days to simulate it. No commitment is saved.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: try 2
+AGENT: Selected a what-if only: Insulate the walls.
+Projected if completed; nothing is saved as a commitment. Send ff followed by days.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+USER: ff 30
+AGENT: Simulation, not real usage — projected if completed and kept.
+Assumed actions: Insulate the walls
+Over 30 days:
+Projected $23 saved
+141.5 kg CO₂ avoided (simulated)
+Your current grade and real streak have not changed. No savings are verified.
+
+Local preview links; public website/onboarding URLs are not configured.
+Web report: http://localhost:3000/share?session=bf1ba1abab
+Compare listings: http://localhost:3000/compare?a=bf1ba1abab
+Continue in iMessage: http://localhost:8787/?session=bf1ba1abab
+
+PASS chat transcript: /private/tmp/mhacks-asi/asi-agent/evidence/local-chat.json
