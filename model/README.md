@@ -63,7 +63,7 @@ e["annual"]    # yearly totals
 | `GET /hc/bill_check?year=&month=&gas_ccf=&unit_sqft=&address=` (or `lat`, `lon`) | a real gas bill vs what that month's weather predicts |
 | `GET /hc/buildings` | the 591 pre-scored Ann Arbor apartment buildings (same as `buildings_hc.csv`) |
 | `GET /hc/metered`, `GET /hc/metered/{building_id}` | metered properties; monthly actual vs model for one |
-| `GET /hc/heldout?fuel=gas` or `elec` | held-out predicted-vs-actual rows for every estimate path |
+| `GET /hc/heldout?fuel=gas` or `elec` | held-out predicted-vs-actual **energy** rows for every estimate path |
 | `GET /hc/validation` | every validation result file |
 | `GET /hc/answers` | renter answers the model accepts, with their codes |
 
@@ -91,9 +91,13 @@ e["annual"]    # yearly totals
 }
 ```
 
-Units: gas in **ccf** (1 ccf ≈ 1.04 therms), electricity in **kWh**, money in **USD**. Gas is priced at the EIA
-Michigan *marginal* price by month (fixed charges removed), electricity at the EIA-861M Michigan average price by
-month. Building totals are scaled to the unit by floor area.
+Units: gas in **ccf** (1 ccf ≈ 1.04 therms), electricity in **kWh**, money in **USD**. Building totals are scaled to
+the unit by floor area.
+
+**Dollars are estimates, not measurements.** `usd` = estimated energy × the Michigan statewide residential price by
+month (US EIA: gas at the marginal price with fixed charges removed, derived by regression from EIA revenue and
+volume; electricity at the EIA-861M average price). No cost or bill data exists for any building. Only **energy** is
+validated against real meters, and every accuracy figure refers to energy.
 
 ### Whole-city table: no calls needed
 
