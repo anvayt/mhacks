@@ -1,7 +1,7 @@
 # MHacks 2026: Hidden Rent
 
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
-in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), `/web` (P3, not yet).
+in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), `/web` (P3, landing screen so far).
 
 ## Run the whole thing
 
@@ -14,10 +14,12 @@ Secrets go only in git-ignored `.env` files; every variable name is in [`.env.ex
 | `/api` FastAPI (P2) | 8000 | `cd api && uv sync && uv run python scripts/fetch_footprints.py` (~30 s, city GIS into `/data/`) | `cd api && uv run uvicorn app.main:app --port 8000` |
 | `/agent` iMessage agent (P4) | | `cd agent && npm ci && cp .env.example .env` (Photon creds for real iMessage) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
 | onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
-| `/web` (P3) | | not on `dev` yet | |
+| `/web` Next.js (P3) | 3000 | `cd web && npm ci` | `cd web && npm run dev` |
 
-Start order: model, then api, then agent. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
-`http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` (default `http://localhost:8000`).
+Start order: model, then api, then agent / web. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
+`http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` and the web form at `NEXT_PUBLIC_API_BASE_URL`
+(both default `http://localhost:8000`; `/api` allows the browser origin in `WEB_ORIGINS`, default `http://localhost:3000`).
+The web "start by iMessage" link opens P4's onboarding page (`NEXT_PUBLIC_ONBOARD_URL`, default `http://localhost:8787`).
 
 ```bash
 curl -s localhost:8000/estimate -H 'content-type: application/json' -d '{"address": "912 Mary St, Ann Arbor, MI"}'
@@ -31,11 +33,13 @@ Tests (each from the repo root):
 make -C model test                       # needs make -C model build first
 (cd api && uv run pytest -q)             # /estimate end-to-end tests skip unless the model server is up
 (cd agent && npm test && npm run typecheck)
+(cd web && npm run build)                # type-checks /web; it has no tests yet
+make -C model leakage && make -C model test   # P1-09 leakage tests need its model trained first
 ```
 
-`POST /estimate` today returns real `building` fields and heating + cooling `bill` p50s (annual + per season, from
-P1's model; `heating_cooling` has P1's full answer). Not yet filled (null/empty): `session_id`, `bill` p10/p90 and
-`monthly`, `co2_t`, score/grade/percentiles/hidden rent, badges, questions. Errors are 422
+`POST /estimate` today returns real `building` fields and heating + cooling `bill` p50s (annual, per season, per month,
+from P1's model; `heating_cooling` has P1's full answer). Not yet filled (null/empty): `session_id`, `bill` p10/p90,
+`co2_t`, score/grade/percentiles/hidden rent, badges, questions. Errors are 422
 `{"detail": {"code", "message"}}` with codes `missing_input`, `needs_address` (+ `hint`), `not_found` (outside Ann
 Arbor), `not_a_home`; 503 when the model or the address lookup is down.
 
