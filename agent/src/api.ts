@@ -59,12 +59,39 @@ export interface Api {
   answer(req: AnswerRequest): Promise<ApiResult>;
 }
 
+export const CONTRACT_ERROR = "Something went wrong on our side reading that answer. Try again in a bit.";
+
+const isObj = (x: unknown): x is Record<string, any> => typeof x === "object" && x !== null && !Array.isArray(x);
+const isNum = (x: unknown) => typeof x === "number" && Number.isFinite(x);
+
+/** Check an /estimate or /answer body against PLAN.md §10. `fatal` problems mean the agent can't word a reply. */
+export function checkEstimate(e: unknown): { fatal: string[]; warnings: string[] } {
+  const fatal: string[] = [];
+  const warnings: string[] = [];
+  if (!isObj(e)) return { fatal: ["body is not an object"], warnings };
+  if (!isObj(e.building)) fatal.push("building missing");
+  if (!isObj(e.bill) || !isObj(e.bill.annual) || !isNum(e.bill.annual.p50)) fatal.push("bill.annual.p50 missing");
+  if (!("session_id" in e)) warnings.push("session_id key missing");
+  if (e.questions != null && !Array.isArray(e.questions)) warnings.push("questions is not an array");
+  if (Array.isArray(e.questions)) {
+    e.questions.forEach((q: any, i: number) => {
+      if (!isObj(q) || typeof q.id !== "string" || typeof q.text !== "string" || !Array.isArray(q.options)) {
+        warnings.push(`questions[${i}] needs {id, text, options[]}`);
+      }
+    });
+  }
+  if (e.grade_span != null && !Array.isArray(e.grade_span)) warnings.push("grade_span is not an array");
+  return { fatal, warnings };
+}
+
+export type Logger = (msg: string) => void;
+
 export const UNREACHABLE =
   "Got it! Our estimate engine isn't reachable right now. " +
   "Send it again in a bit and you'll get the heating and cooling cost for that place.";
 
 /** The real /api over HTTP. 422/503 bodies are {detail: {code, message, hint?}}. */
-export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
+export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Logger = console.warn): Api {
   async function post(path: string, body: unknown, timeoutMs: number): Promise<ApiResult> {
     let res: Response;
     try {
@@ -78,7 +105,15 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       return { ok: false, code: "unreachable", message: UNREACHABLE };
     }
     const data = await res.json().catch(() => null);
-    if (res.ok && data) return { ok: true, data };
+    if (res.ok) {
+      const { fatal, warnings } = checkEstimate(data);
+      for (const w of warnings) log(`[contract] POST ${path}: ${w} (PLAN.md §10)`);
+      if (fatal.length) {
+        log(`[contract] POST ${path}: ${fatal.join("; ")} (PLAN.md §10); not replying with numbers`);
+        return { ok: false, code: "contract_mismatch", message: CONTRACT_ERROR };
+      }
+      return { ok: true, data: data as Estimate };
+    }
     const d = data?.detail;
     if (d && typeof d === "object" && typeof d.message === "string") {
       return { ok: false, code: d.code ?? String(res.status), message: d.message, hint: d.hint ?? undefined };
