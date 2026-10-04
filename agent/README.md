@@ -36,6 +36,7 @@ Terminal identity defaults to the fictional `+12025550164`; override with `AGENT
 | `done 1` / `dismiss 1` | Update the commitment for that displayed option. A restart requires `options` again; the agent never guesses list order. Completion is reported, not verified. |
 | `done` / `did it` / `did it today` / `✅` / `yes` answering a task reminder; `done today` any time | `POST /habits/{user_id}/checkin` (the reminder's day and commitment from `/reminders/inbound` `replying_to`) → “Day N 🔥, best B. See you tomorrow.” with API numbers. `done 1` still completes commitment 1. |
 | `streak` | `GET /habits/{user_id}`: current and best daily habit streak |
+| `fast forward 30` / `ff 30` (1–365) | `POST /simulate/fast-forward` for the saved home: “Simulation, not real usage: if you keep …, in 30 days you'd save about $X and Y kg CO₂ (projected). Your real streak stays N.” Stores nothing. |
 | `remind-now task` | Demo task reminder (`/reminders/demo-send {kind: task}`; needs a commitment with a target date) so a bare `done` can answer it |
 | `checkin` → `yes` | Inbound demo trigger asks “Still at …?” then requests a bill |
 | `120 therms`, `120 ccf`, `$85` | `/calibrate` with saved property and session. Missing dates mean the last full calendar month. CCF uses `gas_unit: ccf`; dollars use `amount_usd`, labeled **estimated from your bill amount**. Explicit dates: `120 therms 2026-09-01 to 2026-09-30`. |
