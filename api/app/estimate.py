@@ -6,6 +6,7 @@ Every body is saved as the session's latest (app/sessions.py), with co2_t (app/c
 Python environments (api: uv, py3.12; model: root .venv with xgboost/lightgbm/rasterio and pickled models) stay apart.
 """
 
+import logging
 import os
 import re
 import secrets
@@ -24,6 +25,9 @@ from app.links import resolve_link
 from app.score import GRADES, score_for
 
 MODEL_BASE_URL = os.environ.get("MODEL_BASE_URL", "http://localhost:8001")
+MODEL_DOWN = "Our cost model is starting up. Try again in a minute."  # details go to the server log only
+LOOKUP_DOWN = "The address lookup isn't answering right now. Try again in a minute."
+log = logging.getLogger(__name__)
 # ponytail: one process-wide cap on calls to P1's shared server (/compare runs two estimates of 4 calls each, /fixes
 # and concurrent users add more); per-endpoint pools stay as they are. Raise if P1's server idles.
 MODEL_SLOTS = threading.BoundedSemaphore(4)
@@ -67,13 +71,13 @@ def _hc(params: dict) -> dict:
             r = httpx.get(f"{MODEL_BASE_URL}/hc/estimate", params={k: v for k, v in params.items() if v is not None},
                           timeout=180)  # a never-seen weather cell downloads its 1991+ history once
     except httpx.HTTPError as e:
-        raise _fail(503, "model_unavailable", f"The heating/cooling model isn't reachable at {MODEL_BASE_URL} "
-                    f"(start it: make -C model dashboard). {type(e).__name__}")
+        log.warning("model unreachable at %s (start it: make -C model dashboard): %r", MODEL_BASE_URL, e)
+        raise _fail(503, "model_unavailable", MODEL_DOWN)
     if r.status_code == 422:
         raise _fail(422, "not_found", r.json().get("detail", "The model couldn't place this building."))
     if r.is_error:  # any other model failure is a friendly 503, never a bare 500
-        raise _fail(503, "model_unavailable", f"The heating/cooling model failed on this building (HTTP {r.status_code}); "
-                    "try again or send another address.")
+        log.warning("model /hc/estimate HTTP %s: %s", r.status_code, r.text[:500])
+        raise _fail(503, "model_unavailable", MODEL_DOWN)
     return r.json()
 
 
@@ -222,7 +226,8 @@ def estimate(url: str | None = None, address: str | None = None, unit_sqft: floa
         raise _fail(422, "not_found", "We couldn't find that building. Hidden Rent covers homes in the City of "
                     "Ann Arbor, MI; send a street address there.", address=address)
     except httpx.HTTPError as e:  # Census geocoder / Census Reporter down; cached addresses still work
-        raise _fail(503, "lookup_unavailable", f"Address lookup is down right now ({type(e).__name__}); try again.")
+        log.warning("address lookup failed for %r: %r", address, e)
+        raise _fail(503, "lookup_unavailable", LOOKUP_DOWN)
     if f["in.geometry_building_type_recs"] is None:
         raise _fail(422, "not_a_home", NOT_A_HOME, address=f["matched_address"])
 
