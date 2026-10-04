@@ -194,10 +194,12 @@ def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[lis
 # ------------------------------------------------------------------ public API
 def estimate_hc(address: str | None = None, lat: float | None = None, lon: float | None = None,
                 unit_sqft: float | None = None, mode: str | int = "normal", answers: dict | None = None,
-                heating_fuel: str | None = None, building_type: str | None = None) -> dict:
+                heating_fuel: str | None = None, building_type: str | None = None, block_group: str | None = None) -> dict:
+    """block_group: 12-digit census block-group GEOID for a lat/lon caller (e.g. /api, which already geocoded),
+    so year built and heating fuel come from ACS instead of the metered-building median / gas default."""
     r = _res()
     answers = answers or {}
-    loc = {"lat": lat, "lon": lon, "matched_address": None, "block_group": None}
+    loc = {"lat": lat, "lon": lon, "matched_address": None, "block_group": block_group}
     if address:
         g = census.geocode(address)
         if g is None:
