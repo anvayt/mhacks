@@ -65,7 +65,7 @@ export function MapStory({ data, step: rawStep, onStepChange, onFocus, className
           <Stat value={`${num(b.floor_area_sqft)} sq ft`} label="floor area" />
           <Stat
             value={`${num(b.unit_sqft)} sq ft`}
-            label={b.unit_sqft_source.includes("median") ? "this unit (estimated)" : "this unit"}
+            label={/median|estimat|not measured/i.test(b.unit_sqft_source) ? "this unit (estimated)" : "this unit"}
           />
         </div>
         <p className={styles.fine}>Treated as {buildingTypeLabel(b.building_type)}.</p>

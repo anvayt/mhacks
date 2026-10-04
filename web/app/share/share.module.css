@@ -34,3 +34,5 @@
 @media(max-width:600px) { .page { padding:20px 16px 40px; } .nav { font-size:10px; } .header { margin-top:44px; } .header h1 { font-size:64px; } .card { padding:22px; box-shadow:5px 5px 0 var(--ink); } .card h2 { font-size:26px; } .grade { font-size:148px; } .cardTop { font-size:9px; } .cardTop strong { font-size:24px; } .bill strong { font-size:54px; } .stats dd { font-size:22px; } .qr { width:106px; height:106px; } .qrRow { gap:10px; } .qrRow h3 { font-size:27px; } .qrRow p { font-size:10px; } .actions button { font-size:12px; padding:18px 12px; } }
 
 .billNote { font: 12px/1.6 var(--font-sans); border-left: 3px solid var(--blue); padding-left: 12px; }
+
+.nav a { color: inherit; }

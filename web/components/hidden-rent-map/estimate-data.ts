@@ -8,7 +8,7 @@ export interface Estimate {
   locked?: boolean;
   score: number;
   percentile_peers: number;
-  hidden_rent_usd_mo: number;
+  hidden_rent_usd_mo: number | null;
   bill: { annual: { p10: number | null; p50: number; p90: number | null }; note?: string };
   co2_t: { p10: number | null; p50: number; p90: number | null } | null;
   badges?: string[];
@@ -24,9 +24,10 @@ export function annualRange(e: Estimate): string {
   return a.p10 != null && a.p90 != null ? `${money(a.p10)}–${money(a.p90)}/yr` : "Range not available";
 }
 export function peerLabel(e: Estimate): string {
-  return `More efficient than ${Math.round(e.percentile_peers * 100)}% of same-type homes`;
+  return `More efficient than ${Math.floor(e.percentile_peers * 100)}% of same-type homes`;
 }
 export function hiddenRent(e: Estimate): string {
+  if (e.hidden_rent_usd_mo == null) return "Unavailable";
   return `${e.hidden_rent_usd_mo > 0 ? "+" : e.hidden_rent_usd_mo < 0 ? "−" : ""}${money(Math.abs(e.hidden_rent_usd_mo))}/mo`;
 }
 export function carbon(e: Estimate): string {

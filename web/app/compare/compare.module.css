@@ -38,3 +38,5 @@
 .reveal p { max-width:760px; font-size:13px; line-height:1.6; }
 .reveal p:first-child { font:12px var(--font-mono); }
 @media(max-width:600px) { .page { padding:20px 16px 40px; } .nav { font-size:10px; flex-wrap:wrap; } .header { margin-top:44px; } .header h1 { font-size:64px; } .grid { grid-template-columns:1fr; } .card { padding:22px; } .grade { font-size:92px; } .gradeRow { gap:14px; } .submit { font-size:14px; } .reveal { padding:24px; } }
+
+.nav a { color: inherit; }
