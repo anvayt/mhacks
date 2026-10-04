@@ -20,7 +20,7 @@ import httpx
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from app import accounts, badges, bills, sessions
+from app import accounts, badges, bills, sessions, model_capabilities
 from app.estimate import MODEL_BASE_URL, MODEL_SLOTS, _fail
 
 router = APIRouter()
@@ -249,6 +249,8 @@ def calibrate(req: CalibrateRequest, request: Request) -> dict:
         if old:
             return old
     params = {"year": year, "month": month, "gas_ccf": gas_ccf, "lat": mp["lat"], "lon": mp["lon"], "unit_sqft": sqft}
+    if "within_building" in model_capabilities.capabilities().get("bill_noise_bases", []):
+        params["noise_basis"] = "within_building"
     try:
         with MODEL_SLOTS:
             r = httpx.get(f"{MODEL_BASE_URL}/hc/bill_check", params=params, timeout=180)
@@ -271,9 +273,11 @@ def calibrate(req: CalibrateRequest, request: Request) -> dict:
         # additive
         "year": year, "month": month,
         "actual_gas_ccf": chk["actual_gas_ccf"], "expected_gas_ccf": chk["expected_gas_ccf"],
-        # percent like pct; P1 judges winter months only, so null outside Dec-Feb (meaningful too)
+        # Percent like pct; legacy model judges winter only, capability-enabled residuals cover each season.
         "noise_floor": None if noise is None else round(noise * 100, 1),
         "meaningful": chk.get("meaningful"),
+        "noise_basis": chk.get("noise_basis"), "noise_detail": chk.get("noise_detail"),
+        "estimate_error_floor": None if chk.get("estimate_error_floor") is None else round(chk["estimate_error_floor"] * 100, 1),
         "extracted": bill,
         "note": NOTE,
     }

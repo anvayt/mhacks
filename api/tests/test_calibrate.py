@@ -44,6 +44,7 @@ def _bill_check(params):  # same keys and rounding as service.bill_check
 def fakes(monkeypatch, tmp_path):
     """Fresh streak DB, a fake key, and fake model/xAI calls. Returns the recorded calls; set `vision` to change the read."""
     monkeypatch.setattr(calibrate, "DB", tmp_path / "calibrate.sqlite")
+    monkeypatch.setattr(calibrate.model_capabilities, "capabilities", lambda: {})
     monkeypatch.setenv("XAI_API_KEY", "test-key")
     calls = {"model": [], "xai": [], "vision": {
         "is_utility_bill": True, "gas_usage_visible": True, "gas_usage_evidence": "Gas Usage 95 CCF",
@@ -262,3 +263,19 @@ def test_live_xai_blank_image_is_unreadable(monkeypatch, fakes):
     r = client.post("/calibrate", json={"session_id": _session(), "bill_image_base64": _blank_png()})
     assert _err(r, 422) == "unreadable_bill", r.json()
     assert set(r.json()["detail"]["extracted"]) == set(calibrate.BILL_SCHEMA["required"]) and not fakes["model"]
+
+
+def test_temporal_noise_is_capability_gated_and_old_floor_retained(monkeypatch, fakes):
+    monkeypatch.setattr(calibrate.model_capabilities, 'capabilities', lambda: {'bill_noise_bases':['within_building']})
+    def model(url, params=None, timeout=None):
+        assert params['noise_basis']=='within_building'
+        fakes['model'].append(params)
+        body={**_bill_check(params), 'noise_floor':.25, 'estimate_error_floor':1.183,
+              'noise_basis':'same-building held-out-year residuals', 'noise_detail':{'n_buildings':67}, 'meaningful':True}
+        return httpx.Response(200,json=body,request=httpx.Request('GET',url))
+    monkeypatch.setattr(calibrate.httpx,'get',model)
+    r=_manual(_session(),50,'2026-02-01','2026-02-28')
+    assert r.status_code==200,r.text
+    b=r.json()
+    assert b['noise_floor']==25 and b['estimate_error_floor']==118.3
+    assert b['noise_basis']=='same-building held-out-year residuals' and b['meaningful'] is True

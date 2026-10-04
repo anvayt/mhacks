@@ -22,6 +22,7 @@ SID, PID = "saved-session", "home-1"
 def state(monkeypatch, tmp_path):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "app.sqlite")
     monkeypatch.setattr(calibrate, "DB", tmp_path / "calibrate.sqlite")
+    monkeypatch.setattr(calibrate.model_capabilities, "capabilities", lambda: {})
     monkeypatch.setattr(sessions, "DB", str(tmp_path / "sessions.sqlite"))
     session = {"session_id": SID, "building": {"sqft": 850, "type": "Multi-Family with 5+ Units"},
                "bill": {"annual": {"p10": 700, "p50": 1000, "p90": 1400}}, "score": 40, "grade": "C",

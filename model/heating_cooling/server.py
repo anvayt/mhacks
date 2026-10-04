@@ -53,11 +53,23 @@ def weather(lat: float, lon: float, mode: str = "normal"):
 
 @app.get("/hc/bill_check")
 def bill_check(year: int, month: int = Query(ge=1, le=12), gas_ccf: float = Query(gt=0), unit_sqft: float = Query(gt=0),
-               address: str | None = None, lat: float | None = None, lon: float | None = None):
+               address: str | None = None, lat: float | None = None, lon: float | None = None,
+               noise_basis: str = "estimate_error"):
     try:
-        return service.bill_check(year, month, gas_ccf, unit_sqft, address=address, lat=lat, lon=lon)
+        return service.bill_check(year, month, gas_ccf, unit_sqft, address=address, lat=lat, lon=lon, noise_basis=noise_basis)
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.get("/hc/capabilities")
+def capabilities():
+    from model.heating_cooling.uncertainty import products
+    ready = bool(products())
+    return {"version": 1, "estimate_params": [], "endpoints": [],
+            "bill_check_params": ["noise_basis"] if ready else [],
+            "bill_noise_bases": ["within_building"] if ready else [],
+            "details": {"estimate_params": {}, "legacy_requests_unchanged": True,
+                        "bill_noise": "Opt in with noise_basis=within_building; default retains legacy values."}}
 
 
 @app.get("/hc/answers")
