@@ -3,7 +3,7 @@ import { SurveyGate } from "../survey-gate";
 
 export const metadata: Metadata = {
   title: "Hidden Rent survey",
-  description: "Answer the numeric questions that narrow a rental's energy estimate.",
+  description: "Answer the questions that narrow a rental's energy estimate.",
 };
 
 export default function SurveyPage() {
