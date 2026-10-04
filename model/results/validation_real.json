@@ -132,12 +132,95 @@
       "blend": 0.94,
       "null": 1.417
     },
+    "p90_abs_pct_error_summer": {
+      "metered": 0.514,
+      "meter_model": 1.657,
+      "resstock": 1.693,
+      "blend": 1.673,
+      "null": 1.663
+    },
     "median_signed_error": {
       "metered": 0.005,
       "meter_model": -0.067,
       "resstock": 0.021,
       "blend": -0.023,
       "null": 0.003
+    },
+    "r2_log": {
+      "metered": 0.975,
+      "meter_model": 0.71,
+      "resstock": 0.694,
+      "blend": 0.711,
+      "null": 0.657
+    }
+  },
+  "seasonal_elec_vs_real_meters": {
+    "n_building_season_years": 764,
+    "n_buildings": 87,
+    "median_abs_pct_error": {
+      "metered": {
+        "all": 0.045,
+        "winter": 0.038,
+        "spring": 0.043,
+        "summer": 0.047,
+        "fall": 0.05
+      },
+      "meter_model": {
+        "all": 0.303,
+        "winter": 0.329,
+        "spring": 0.336,
+        "summer": 0.282,
+        "fall": 0.313
+      },
+      "resstock": {
+        "all": 0.296,
+        "winter": 0.329,
+        "spring": 0.332,
+        "summer": 0.272,
+        "fall": 0.316
+      },
+      "blend": {
+        "all": 0.299,
+        "winter": 0.329,
+        "spring": 0.331,
+        "summer": 0.273,
+        "fall": 0.315
+      },
+      "null": {
+        "all": 0.296,
+        "winter": 0.329,
+        "spring": 0.335,
+        "summer": 0.273,
+        "fall": 0.309
+      }
+    },
+    "p90_abs_pct_error_winter": {
+      "metered": 0.104,
+      "meter_model": 0.689,
+      "resstock": 0.689,
+      "blend": 0.689,
+      "null": 0.689
+    },
+    "p90_abs_pct_error_summer": {
+      "metered": 0.146,
+      "meter_model": 0.573,
+      "resstock": 0.552,
+      "blend": 0.559,
+      "null": 0.576
+    },
+    "median_signed_error": {
+      "metered": 0.001,
+      "meter_model": -0.046,
+      "resstock": -0.056,
+      "blend": -0.049,
+      "null": -0.048
+    },
+    "r2_log": {
+      "metered": 0.988,
+      "meter_model": 0.695,
+      "resstock": 0.695,
+      "blend": 0.695,
+      "null": 0.696
     }
   }
 }

@@ -53,14 +53,18 @@ The urban station matches within 2.5% in every season. The airport is a cold ope
    | meter-trained regression | 31.2% | 30.0% | 86% | −6.7% |
    | null (median slope) | 35.4% | 35.1% | 142% | +0.3% |
 
+   Electricity, same test (results/validation_real.json): metered 4.5%; every unmetered path ≈ 30% (blend 29.9%, null 29.6%).
+   Change-point fitter searches all term subsets (heating only / cooling only / both); before that fix, buildings where one term
+   came out negative fell back to baseload only (electric median R² 0.54 → 0.82 after the fix).
+
    Model choice (building level, repeated 5-fold CV, `results/building_model_validation.json`):
    - **Heating intensity:** multiple regression (ridge) 0.34 median APE, random forest 0.34, XGBoost 0.34, null 0.42.
-   - **Cooling intensity:** random forest 0.40, null 0.41. Building features barely predict cooling.
+   - **Cooling intensity (n=96):** no model beats the no-skill median (0.35), so the served meter-trained cooling intensity *is* the median.
    - The monthly-panel versions (`results/hc_validation.json`) were worse at building level (heating MAPE 0.33–0.42) and are kept only for comparison.
 3. **resstock**: smaller buildings (houses, 2–4 units), where Ann Arbor has no meters. A per-degree-day XGBoost on ResStock with optional renter answers.
    - **Accuracy with answers:** heating median APE improves from 0.248 (public record only) to 0.211 with all 5 answers; cooling from 0.380 to 0.319.
    - **Inputs:** only answers a renter can know before signing (window panes, floor level, foundation, cooling type, occupants). Air leakage and insulation R-values are *not* inputs, because a renter can't know them.
-   - **Multifamily calibration to meters:** heating ×1.14 (metered median 0.0618 vs ResStock 0.0541 ccf per 1,000 ft² per HDD60). Cooling ×0.63 (0.815 vs 1.298 kWh per 1,000 ft² per CDD65); ResStock over-predicts apartment cooling.
+   - **Multifamily calibration to meters:** heating ×1.14 (metered median 0.0618 vs ResStock 0.0541 ccf per 1,000 ft² per HDD60). Cooling ×0.70; ResStock over-predicts apartment cooling.
 
 **Heating fuel:** for metered buildings it is read from the meters (a gas heating response vs an electric one). Otherwise it is the block-group majority from ACS B25040 (the share is returned). Electric-heat intensity uses the median of only 8 all-electric metered buildings, so it is weak.
 
@@ -90,7 +94,7 @@ The urban station matches within 2.5% in every season. The airport is a cold ope
 Median heating ≈ **$313/yr**, cooling ≈ **$65/yr** (IQR heating $271–332, cooling $57–83; 108 metered, 464 blend, 19 ResStock). Example metered complex, GreenBrier Campus (850 ft², typical year): heating $356, cooling $73, winter alone $188. The ResStock cross-check gives $401/$80.
 
 ## 8. Known gaps
-- Cooling is the weakest part: per-building cooling fits have median R² 0.54, and building features barely beat the median.
+- Cooling is the weakest part for unmetered buildings: per-building electric fits are good (median R² 0.82), but building features don't beat the median, and held-out seasonal electricity error is ~30% for every unmetered path (metered: 4.5%).
 - Benchmarked properties are ≥ 10,671 ft². Small rentals rely on simulation (ResStock); the only real-meter check of that path is on large buildings.
 - Unit allocation is by floor-area share. It ignores unit position; `floor_level` affects only the ResStock half of the estimate.
 - Footprint coverage = City of Ann Arbor only. Weather and ResStock work statewide.

@@ -73,15 +73,15 @@
   },
   "calibration_to_meters": {
     "heat_gas": 1.141,
-    "cool": 0.628,
+    "cool": 0.702,
     "heat_elec": 1.0,
     "evidence": {
       "metered_median_heat_ccf_per_1000ft2_per_hdd60": 0.0618,
       "resstock_mf5_median_heat": 0.0541,
-      "metered_median_cool_kwh_per_1000ft2_per_cdd65": 0.815,
+      "metered_median_cool_kwh_per_1000ft2_per_cdd65": 0.912,
       "resstock_mf5_median_cool": 1.298,
       "n_metered_heat": 101,
-      "n_metered_cool": 69
+      "n_metered_cool": 96
     },
     "applies_to": [
       "Multi-Family with 2 - 4 Units",

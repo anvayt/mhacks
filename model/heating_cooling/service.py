@@ -282,10 +282,12 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
             im = _intensity_meter_model(feat)
             it = {k: float(np.sqrt(im[k] * it_rs[k])) for k in ("heat_ccf_per_hdd", "cool_kwh_per_cdd")}
             it["heat_kwh_per_hdd"] = im["heat_kwh_per_hdd"]
+            parts = {"meter_model": im, "resstock": it_rs, "blend": it}
             method = "meter_model+resstock"
             sources.append("City of Ann Arbor energy benchmarking (101 metered buildings, building-level model)")
         else:
             it = it_rs
+            parts = {"resstock": it_rs}
             method = "resstock"
         area = float(feat["gfa_ft2"])
         monthly = _monthly_from_intensity(it, w, area, fuel)
@@ -297,12 +299,14 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
     # building totals → this unit (floor-area share)
     scale = unit_sqft / area
     seasons, annual = _seasonal(monthly, w, scale)
+    detail = _model_detail(method, bid, parts if method != "metered" else None, fuel, area, unit_sqft, w, answers)
     out = {
         "location": loc,
         "building": building,
         "unit_sqft": unit_sqft, "unit_sqft_source": unit_src,
         "mode": str(mode), "method": method,
         "seasons": seasons, "annual": annual,
+        "model_detail": detail,
         "weather_source": w.level_source.iloc[0] if "level_source" in w else None,
         "prices": {"gas_usd_per_ccf": "EIA MI residential marginal (fixed charges removed), by month",
                    "electricity_usd_per_kwh": "EIA-861M MI residential average, by month"},
@@ -329,6 +333,102 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         out["accuracy"]["simulation_heldout_median_abs_error"] = {
             "heating": rv["heat_gas_per_hdd"][key]["test_median_ape"], "cooling": rv["cool_per_cdd"][key]["test_median_ape"]}
     return out
+
+
+def _model_detail(method, bid, parts, fuel, area, unit_sqft, w, answers) -> dict:
+    """The numbers behind the estimate, so a reader can redo the arithmetic:
+    season energy = intensity (per 1,000 ft² per degree-day) × season degree-days × building ft²/1,000 × unit share."""
+    r = _res()
+    rnd = lambda x: None if x is None or (isinstance(x, float) and not np.isfinite(x)) else round(float(x), 5)
+    d = {"method": method, "building_ft2": round(area, 0), "unit_ft2": unit_sqft, "unit_share": rnd(unit_sqft / area),
+         "heating_fuel": fuel, "degree_days_year": {f"hdd{TAU_H_GAS}": round(float(w[f"hdd{TAU_H_GAS}"].sum()), 0),
+                                                     f"hdd{TAU_H_ELEC}": round(float(w[f"hdd{TAU_H_ELEC}"].sum()), 0),
+                                                     f"cdd{TAU_C}": round(float(w[f"cdd{TAU_C}"].sum()), 0)}}
+    if method == "metered":
+        row = r["cps"].loc[bid]
+        gfa = float(r["targets"].loc[bid, "gfa_ft2"])
+        g = {k: rnd(row.get(f"gas_{k}")) for k in ("alpha", "beta_h", "tau_h", "r2", "cv_rmse", "n")}
+        e = {k: rnd(row.get(f"elec_{k}")) for k in ("alpha", "beta_h", "beta_c", "tau_h", "tau_c", "r2", "cv_rmse", "n")}
+        d["equation"] = "monthly use = base/day × days + heating slope × HDD(τh) + cooling slope × CDD(τc)  (fit to this building's 2021–23 meters)"
+        d["gas_fit"] = {**g, "unit": "ccf", "heat_ccf_per_1000ft2_per_hdd": rnd((g["beta_h"] or 0) / gfa * 1000)}
+        d["elec_fit"] = {**e, "unit": "kWh", "cool_kwh_per_1000ft2_per_cdd": rnd((e["beta_c"] or 0) / gfa * 1000)}
+        return d
+    names = {"meter_model": "meter-trained model (" + {"mlr": "ridge regression", "random_forest": "random forest", "xgboost": "XGBoost",
+                                                         "null_median": "median of metered buildings"}.get(r["bldg_heat"].get("name"), r["bldg_heat"].get("name")) + " heating / "
+                            + {"mlr": "ridge regression", "random_forest": "random forest", "xgboost": "XGBoost", "null_median": "median of metered buildings"}.get(r["bldg_cool"].get("name"), r["bldg_cool"].get("name")) + " cooling)",
+             "resstock": "ResStock XGBoost" + (" (calibrated to meters)" if parts["resstock"].get("calibrated_to_meters") else ""),
+             "blend": "blend = √(meter model × ResStock)"}
+    d["equation"] = (f"season energy = intensity × season degree-days × {round(area):,} ft² / 1,000 × unit share "
+                     f"{unit_sqft / area:.5f}; heating uses HDD{TAU_H_GAS if fuel == 'gas' else TAU_H_ELEC}, cooling uses CDD{TAU_C}")
+    d["intensities"] = [{"model": names[k], "heat_ccf_per_1000ft2_per_hdd": rnd(v.get("heat_ccf_per_hdd")),
+                         "heat_kwh_per_1000ft2_per_hdd": rnd(v.get("heat_kwh_per_hdd")),
+                         "cool_kwh_per_1000ft2_per_cdd": rnd(v.get("cool_kwh_per_cdd")), "used": k == ("blend" if "blend" in parts else "resstock")}
+                        for k, v in parts.items()]
+    d["renter_answers_used"] = answers or {}
+    return d
+
+
+def heldout(fuel: str | None = None) -> list[dict]:
+    """Held-out building-season rows (real meters vs every estimate path), from model.heating_cooling.validate."""
+    d = pd.read_parquet(RESULTS / "heldout_seasonal.parquet")
+    if fuel:
+        d = d[d.fuel == fuel]
+    return json.loads(d.round(2).to_json(orient="records"))
+
+
+def metered_list() -> list[dict]:
+    r = _res()
+    t = r["targets"]
+    return [{"building_id": bid, "name": b["name"], "address": b.address, "gfa_ft2": float(b.gfa_ft2),
+             "year_built": int(b.year_built), "gas_r2": None if pd.isna(b.gas_r2) else round(float(b.gas_r2), 3),
+             "elec_r2": None if pd.isna(b.elec_r2) else round(float(b.elec_r2), 3)}
+            for bid, b in t.sort_values("name").iterrows()]
+
+
+def metered_building(bid: str) -> dict:
+    """Month by month for one metered property: actual meter readings vs the change-point model.
+    'fit' = fitted on all of 2021–23 (in-sample); 'heldout' = fitted on the other two years only (what the
+    model would have predicted for a year it never saw). Dollars = usage × the same monthly prices the
+    estimates use (gas marginal, electricity average), so they exclude fixed customer charges."""
+    from model.heating_cooling import changepoint
+    r = _res()
+    m = pd.read_parquet(PROCESSED / "meters_weather.parquet")
+    g = m[m.building_id == bid].sort_values(["year", "month"])
+    if g.empty:
+        raise ValueError(f"unknown metered building {bid}")
+    row = r["cps"].loc[bid] if bid in r["cps"].index else None
+    out = g[["year", "month", "days", "hdd60", "hdd65", "cdd65", "tmean_c"]].copy()
+    out["tmean_f"] = climate.c_to_f(out.tmean_c)
+    for fuel, col, ok, outl, heat, cool in (("gas", "gas_ccf", "gas_ok", "gas_ccf_outlier", True, False),
+                                             ("elec", "elec_kwh", "elec_ok", "elec_kwh_outlier", True, True)):
+        good = g[ok] & ~g[outl]
+        out[f"{fuel}_actual"] = g[col].where(good)
+        f = cp_object(row, fuel) if row is not None else None
+        if f is not None:
+            p = f.predict(g)
+            out[f"{fuel}_fit"] = p.total.to_numpy()
+            out[f"{fuel}_fit_base"] = p.base.to_numpy()
+            out[f"{fuel}_fit_heat"] = np.asarray(p.heating, dtype=float) if np.ndim(p.heating) else 0.0
+            out[f"{fuel}_fit_cool"] = np.asarray(p.cooling, dtype=float) if np.ndim(p.cooling) else 0.0
+        ho = []
+        for yr in sorted(g.year.unique()):
+            tr = g[(g.year != yr) & good]
+            fh = changepoint.fit(tr, col, heating=heat, cooling=cool) if len(tr) >= 9 else None
+            ho.append(fh.predict(g[g.year == yr]).total if fh is not None else pd.Series(np.nan, index=g[g.year == yr].index))
+        out[f"{fuel}_heldout"] = pd.concat(ho).reindex(g.index).to_numpy()
+        price = r["price_by_month"]["gas" if fuel == "gas" else "electric"]
+        for c in ("actual", "fit", "heldout"):
+            if f"{fuel}_{c}" in out:
+                out[f"{fuel}_{c}_usd"] = out[f"{fuel}_{c}"] * out.month.map(price)
+    t = r["targets"].loc[bid] if bid in r["targets"].index else None
+    info = {"building_id": bid, "name": g.name.iloc[0], "address": g.address.iloc[0], "gfa_ft2": float(g.gfa_ft2.iloc[0]),
+            "year_built": int(g.year_built.iloc[0]), "lat": float(g.lat.iloc[0]), "lon": float(g.lon.iloc[0])}
+    if row is not None:
+        for fuel in ("gas", "elec"):
+            f = cp_object(row, fuel)
+            info[f"{fuel}_fit"] = None if f is None else {k: (None if v is None else round(float(v), 4))
+                                                            for k, v in f.to_dict().items()}
+    return {"building": info, "monthly": json.loads(out.drop(columns=["tmean_c"]).round(3).to_json(orient="records"))}
 
 
 def weather(lat: float, lon: float, mode: str | int = "normal") -> dict:
