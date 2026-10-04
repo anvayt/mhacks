@@ -37,11 +37,24 @@ function keep(e: Estimate): Estimate {
   return e;
 }
 
-export async function estimate(listing: string, unitSqft?: number): Promise<Estimate> {
-  const input = /https?:\/\//i.test(listing) ? { url: listing } : { address: listing };
-  const e = keep(await apiFetch<Estimate>("/estimate", { body: { ...input, ...(unitSqft ? { unit_sqft: unitSqft } : {}) } }));
-  save("property", null); // a new session isn't the saved home until sign-in adopts it (POST /properties)
-  return e;
+export const listingInput = (listing: string) => (/https?:\/\//i.test(listing) ? { url: listing } : { address: listing });
+
+/** A new lookup becomes the current session; the saved home (`property`) only moves on an explicit save. */
+export const estimate = async (listing: string, unitSqft?: number) =>
+  keep(await apiFetch<Estimate>("/estimate", { body: { ...listingInput(listing), ...(unitSqft ? { unit_sqft: unitSqft } : {}) } }));
+
+// Outages get plain copy; never the API's internal detail (model URLs, exception names).
+const OUTAGE: Record<string, string> = {
+  model_unavailable: "Our cost model is starting up. Try again in a minute.",
+  lookup_unavailable: "The address lookup isn't answering right now. Try again in a minute.",
+};
+
+/** What to show for a failed call: outage copy, the listing's hint for needs_address, else the API's message. */
+export function errorText(err: unknown): string {
+  if (!(err instanceof ApiError)) return "Something went wrong. Try again.";
+  if (OUTAGE[err.code]) return OUTAGE[err.code];
+  if (err.code === "needs_address" && err.hint) return `${err.message} The listing only says: ${err.hint}.`;
+  return err.message;
 }
 
 export const answer = async (questionId: string, value: string) =>
@@ -68,11 +81,16 @@ export function usdRange(b: Band | null | undefined): string | null {
   return b.p10 != null && b.p90 != null ? `${usd(b.p10)}–${usd(b.p90)}` : usd(b.p50);
 }
 
-/** Next to the grade: "🔒 locked" or "range B–D · answer more to lock it". */
-export function gradeStatus(e: Estimate): string {
+/** The grade as the API can stand behind it: "B", or the span "D–F" whenever more than one grade is possible. */
+export function gradeText(e: Estimate): string {
   const span = e.grade_span ?? [];
-  if (e.locked || span.length < 2) return "🔒 locked";
-  return `range ${span[0]}–${span[span.length - 1]} · answer more to lock it`;
+  return span.length > 1 ? `${span[0]}–${span[span.length - 1]}` : (e.grade ?? "—");
+}
+
+/** Next to the grade: "🔒 locked", "answer more to lock it", or a span no answer can narrow. */
+export function gradeStatus(e: Estimate): string {
+  if ((e.grade_span ?? []).length < 2) return "🔒 locked";
+  return e.locked ? "locked: no answer narrows it" : "answer more to lock it";
 }
 
 // Phone login (POST /auth/web/start → text "login <code>" → poll GET /auth/web/{login_id}).
@@ -89,11 +107,24 @@ export type WebLoginStatus = { status: "pending" | "verified" | "expired"; user_
 export const startLogin = (phone: string) => apiFetch<WebLogin>("/auth/web/start", { body: { phone } });
 export const loginStatus = (id: string) => apiFetch<WebLoginStatus>(`/auth/web/${encodeURIComponent(id)}`);
 
-/** Make the current session the signed-in user's home (wave 6: POST /properties {user_id, session_id}). */
+/** Make the current session the signed-in user's home (wave 6: POST /properties {user_id, session_id}).
+ *  This archives their previous home, so it runs only right after a fresh sign-in or on "Save this as my home". */
 export async function adoptSession(): Promise<void> {
   const user_id = load("user");
   const session_id = load("session");
   if (!user_id || !session_id) return;
   const p = await apiFetch<{ property_id: string }>("/properties", { body: { user_id, session_id } });
   save("property", p.property_id);
+}
+
+/** Signed in, and is the current session already their saved home? null when not signed in. */
+export async function sessionIsHome(): Promise<boolean | null> {
+  const user_id = load("user");
+  if (!load("token") || !user_id) return null;
+  const me = await apiFetch<{ current_property_id: string | null; properties: { id: string; session_id: string }[] }>(
+    `/me/${encodeURIComponent(user_id)}`,
+  );
+  const home = me.properties.find((p) => p.id === me.current_property_id);
+  save("property", home?.id ?? null);
+  return home?.session_id === load("session");
 }

@@ -2,29 +2,33 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { answer, billCovers, currentEstimate, gradeStatus, usdRange, type Estimate, type Option, type Question } from "./flow-api";
-import { ApiError } from "./lib/api";
+import {
+  answer,
+  billCovers,
+  currentEstimate,
+  errorText,
+  gradeStatus,
+  gradeText,
+  usdRange,
+  type Estimate,
+  type Option,
+  type Question,
+} from "./flow-api";
 import styles from "./survey-fields.module.css";
-
-// P3's option for renters whose heat is in the rent (team decision 4); the API serves it from wave 6.
-const HEAT_INCLUDED: Option = { value: "included", label: "Heat is included in my rent" };
-
-function withIncluded(q: Question): Question {
-  if (q.id !== "heating_fuel" || q.options.some((o) => o.value === HEAT_INCLUDED.value)) return q;
-  return { ...q, options: [...q.options, HEAT_INCLUDED] };
-}
 
 function SurveyChoices({
   id,
   text,
   options,
   value,
+  disabled,
   onChange,
 }: {
   id: string;
   text: string;
   options: readonly Option[];
   value: string;
+  disabled?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -37,6 +41,7 @@ function SurveyChoices({
             type="button"
             className="control choice"
             aria-pressed={value === option.value}
+            disabled={disabled}
             onClick={() => onChange(option.value)}
           >
             {option.label}
@@ -96,7 +101,7 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
     setEstimate(e);
     setShown((current) => {
       const live = new Set([...Object.keys(e.answers ?? {}), ...e.questions.map((q) => q.id)]);
-      const added = e.questions.filter((q) => !current.some((c) => c.id === q.id)).map(withIncluded);
+      const added = e.questions.filter((q) => !current.some((c) => c.id === q.id));
       return [...current.filter((q) => live.has(q.id)), ...added];
     });
   }
@@ -107,7 +112,7 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
         take(e);
         setValues(e.answers ?? {});
       })
-      .catch((err: ApiError) => setMessage(err.message));
+      .catch((err) => setMessage(errorText(err)));
   }, []);
 
   async function pick(questionId: string, value: string) {
@@ -120,7 +125,7 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
       take(await answer(questionId, value));
     } catch (err) {
       setValues((current) => ({ ...current, [questionId]: previous ?? "" }));
-      setMessage((err as ApiError).message);
+      setMessage(errorText(err));
     } finally {
       setPending(false);
     }
@@ -137,7 +142,7 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
     ? "Updating your estimate…"
     : message ??
       (estimate
-        ? `Predicted grade ${estimate.grade ?? "—"}, ${gradeStatus(estimate)}${range ? ` · ${billCovers(estimate)} ${range} a year` : ""}`
+        ? `Predicted grade ${gradeText(estimate)} · ${gradeStatus(estimate)}${range ? ` · ${billCovers(estimate)} ${range} a year` : ""}`
         : "Loading your questions…");
 
   return (
@@ -150,11 +155,16 @@ export function SurveyFields({ onNext, leaving = false }: { onNext: () => void; 
             text={question.text}
             options={question.options}
             value={values[question.id] ?? ""}
+            disabled={pending}
             onChange={(value) => pick(question.id, value)}
           />
         ))}
         {estimate && shown.length === 0 ? (
-          <p className="eyebrow">No questions for this home: no answer would change its estimate.</p>
+          <p className="eyebrow">
+            {Object.keys(estimate.answers ?? {}).length
+              ? "You've answered every question that changes this estimate."
+              : "No questions for this home: no answer would change its estimate."}
+          </p>
         ) : null}
         <div className="actions">
           <div className="action-row">
