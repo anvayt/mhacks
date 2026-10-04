@@ -1,4 +1,7 @@
-.PHONY: demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
+.PHONY: install demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
+
+install:
+	@bash scripts/install.sh
 
 demo:
 	@bash scripts/demo.sh
