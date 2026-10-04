@@ -20,5 +20,8 @@
     "@types/qrcode": "1.5.6",
     "tsx": "4.23.15",
     "typescript": "6.0.3"
+  },
+  "optionalDependencies": {
+    "heif2jpeg": "0.1.6"
   }
 }
