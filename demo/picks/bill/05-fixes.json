@@ -1,0 +1,105 @@
+{
+  "captured_at_utc": "2026-10-04T06:25:27.888027+00:00",
+  "api_revision": "fd8c31c0b40148b1940d9dddd36c4fdfd6bf3691",
+  "request": {
+    "method": "GET",
+    "path": "/fixes/1d07ee17b7"
+  },
+  "status": 200,
+  "elapsed_seconds": 0.017,
+  "response": {
+    "fixes": [
+      {
+        "item": "ENERGY STAR low-e storm windows or windows",
+        "grh_points": 4,
+        "grh_item": "Energy Efficient Windows",
+        "cost_usd": null,
+        "rebate_usd": null,
+        "cost_note": "Low-e storm windows cost $60-$200 per window installed (DOE Energy Saver). DTE pays $15 per replacement window in homes it heats (2026).",
+        "sources": [
+          "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf",
+          "http://web.archive.org/web/20260501010625/https://www.energy.gov/energysaver/do-it-yourself-savings-project-install-exterior-storm-windows-low-e-coating",
+          "https://www.dteenergy.com/us/en/residential/save-money-energy/rebates-and-offers/insulation-and-windows.html"
+        ],
+        "unpriced": false,
+        "co2_kg_saved": 699,
+        "usd_saved_yr": 125,
+        "new_grade": "C"
+      },
+      {
+        "item": "Cold-climate heat pump (all-electric heat and cooling)",
+        "grh_points": 35,
+        "grh_item": "Electricity is the Primary Type of Energy Used for Space Heating (15) + Medium-Efficiency Cold-Climate Heat Pump with Electric Backup Heat (20)",
+        "cost_usd": 15400,
+        "rebate_usd": 4000,
+        "cost_note": "Midpoint of $11,300-$19,500, where most Midwest heat pump retrofits fall (DOE/LBNL, Dec 2024). Rebate: A2ZERO cold-climate heat pump $4,000 ($5,500 income-qualified). The federal 25C tax credit ended Dec 31, 2025.",
+        "sources": [
+          "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf",
+          "https://bsesc.energy.gov/sites/default/files/2024-12/Heat%20Pumps%20Regional%20Factsheet%20Midwest.pdf",
+          "https://www.a2gov.org/sustainability-innovations-home/sustainability-me/for-families-individuals/a2zero-rebates/",
+          "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/hkvjrimf/ann-arbor-her-application-updated-2026-2027-81326.pdf"
+        ],
+        "unpriced": true,
+        "co2_kg_saved": null,
+        "usd_saved_yr": null,
+        "new_grade": null
+      },
+      {
+        "item": "Air sealing (blower-door tested)",
+        "grh_points": 9,
+        "grh_item": "Air Sealing",
+        "cost_usd": null,
+        "rebate_usd": 500,
+        "cost_note": "Rebate: A2ZERO air sealing $500 ($1,000 income-qualified), plus a $1,500 bonus with two insulation measures.",
+        "sources": [
+          "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf",
+          "https://www.a2gov.org/sustainability-innovations-home/sustainability-me/for-families-individuals/a2zero-rebates/",
+          "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/hkvjrimf/ann-arbor-her-application-updated-2026-2027-81326.pdf"
+        ],
+        "unpriced": true,
+        "co2_kg_saved": null,
+        "usd_saved_yr": null,
+        "new_grade": null
+      },
+      {
+        "item": "Attic insulation to R-50",
+        "grh_points": 9,
+        "grh_item": "Attic or Non-attic Roof Areas are Insulated",
+        "cost_usd": null,
+        "rebate_usd": 500,
+        "cost_note": "Rebate: A2ZERO attic insulation $500 ($1,000 income-qualified). DTE pays $600 for 500+ sq ft of attic in DTE-heated homes of up to 2 units (2026).",
+        "sources": [
+          "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf",
+          "https://www.a2gov.org/sustainability-innovations-home/sustainability-me/for-families-individuals/a2zero-rebates/",
+          "https://media-001-us.cdn.govstack.com/a2gov-002-us/media/hkvjrimf/ann-arbor-her-application-updated-2026-2027-81326.pdf",
+          "https://www.dteenergy.com/us/en/residential/save-money-energy/rebates-and-offers/insulation-and-windows.html"
+        ],
+        "unpriced": true,
+        "co2_kg_saved": null,
+        "usd_saved_yr": null,
+        "new_grade": null
+      },
+      {
+        "item": "ENERGY STAR smart thermostat",
+        "grh_points": 4,
+        "grh_item": "Use a Programmable Thermostat (2) + Use an ENERGY STAR Certified Smart Thermostat (2)",
+        "cost_usd": null,
+        "rebate_usd": 50,
+        "cost_note": "Rebate: DTE $50 per household (2026).",
+        "sources": [
+          "https://www.a2gov.org/media/dxxnmkyt/green-rental-housing-checklist.pdf",
+          "https://www.dteenergy.com/us/en/residential/save-money-energy/rebates-and-offers/wi-fi-enabled-thermostats.html"
+        ],
+        "unpriced": true,
+        "co2_kg_saved": null,
+        "usd_saved_yr": null,
+        "new_grade": null
+      }
+    ],
+    "grh_points_now": 0,
+    "grh_points_after": 61,
+    "grh_points_now_note": "from what you told us: checklist items we can confirm from your answers only",
+    "grh_points_required": 70,
+    "landlord_email": "Subject: Energy upgrades for 1514 MORTON AVE, ANN ARBOR, MI, 48104\n\nHi,\n\nI rent 1514 MORTON AVE, ANN ARBOR, MI, 48104. Hidden Rent (estimates from NREL ResStock and local weather) suggests these upgrades:\n\n1. ENERGY STAR low-e storm windows or windows: about $125/yr less to heat and cool, 699 kg less CO2 a year; +4 Green Rental Housing points (Energy Efficient Windows)\n2. Cold-climate heat pump (all-electric heat and cooling): +35 Green Rental Housing points (Electricity is the Primary Type of Energy Used for Space Heating (15) + Medium-Efficiency Cold-Climate Heat Pump with Electric Backup Heat (20)); rebate $4,000\n3. Air sealing (blower-door tested): +9 Green Rental Housing points (Air Sealing); rebate $500\n\nAnn Arbor's Green Rental Housing ordinance (in effect since Jan 6, 2026) asks rentals to reach 70 checklist points at inspection (110 after Jul 5, 2028). From what I know of the unit, it has 0 confirmed points; these fixes would bring it to 61.\n\nCould we talk about scheduling them?\n\nThanks,"
+  }
+}
