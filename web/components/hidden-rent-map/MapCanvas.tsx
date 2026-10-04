@@ -25,6 +25,8 @@ interface Props {
   homeColor: string;
   /** Building id to highlight (from outside the map, or the map's own hover). */
   highlightId: number | null;
+  /** Glide the camera to the highlighted building (when the highlight comes from outside the map, e.g. a peer bar). */
+  followHighlight?: boolean;
   onHoverBuilding: (id: number | null) => void;
   reducedMotion: boolean;
 }
@@ -72,7 +74,7 @@ function buttonGroup<T extends string>(options: readonly (readonly [T, string])[
   return { onAdd: () => group, onRemove: () => group.remove() };
 }
 
-export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding, reducedMotion }: Props) {
+export function MapCanvas({ data, focus, homeColor, highlightId, followHighlight = false, onHoverBuilding, reducedMotion }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
   const popupRef = useRef<Popup | null>(null);
@@ -331,13 +333,13 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
           const p = f?.properties as CityBuildingProps | undefined;
           return f ? { center: centroid(f.geometry), address: p?.a ?? "" } : null;
         })();
-    if (feature && !map.getBounds().contains(feature.center)) map.easeTo({ center: feature.center, duration: 600 });
+    if (feature && followHighlight) map.easeTo({ center: feature.center, zoom: Math.max(map.getZoom(), 16), duration: 600 });
     if (feature?.address) popupRef.current?.setLngLat(feature.center).setText(feature.address).addTo(map);
     return () => {
       for (const source of sources) map.setFeatureState({ source, id: highlightId }, { hover: false });
       popupRef.current?.remove();
     };
-  }, [highlightId, ready, data]);
+  }, [highlightId, followHighlight, ready, data]);
 
   if (failed) {
     return <div role="alert" className={styles.mapFallback}>{failed}</div>;

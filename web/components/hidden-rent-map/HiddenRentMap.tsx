@@ -74,6 +74,7 @@ export function HiddenRentMap({
         focus={focus}
         homeColor={homeColorFor(data, step)}
         highlightId={highlightId ?? mapHover}
+        followHighlight={highlightId != null}
         onHoverBuilding={(id) => {
           setMapHover(id);
           onHoverBuilding?.(id);
