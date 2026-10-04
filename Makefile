@@ -1,4 +1,31 @@
-.PHONY: demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
+.PHONY: install deps gis model demo demo-public demo-public-check demo-warm demo-warm-city demo-check phase2-check
+
+# One-step setup. Each step is skipped when its output already exists:
+#   deps  -> .venv, api/.venv, web/ and agent/ node_modules
+#   gis   -> data/a2_footprints.geojson, data/a2_mailing_addresses.geojson
+#   model -> model/artifacts/resstock_hc.pkl (first build downloads ~1 h of data)
+MODEL_PKL  := model/artifacts/resstock_hc.pkl
+
+install: deps gis model
+
+deps:
+	@bash scripts/install.sh
+
+gis: deps
+	@if [ -s data/a2_footprints.geojson ] && [ -s data/a2_mailing_addresses.geojson ]; then \
+		echo '==> gis: footprints already downloaded'; \
+	else \
+		echo '==> gis: downloading Ann Arbor footprints (~30 s)'; \
+		cd api && .venv/bin/python scripts/fetch_footprints.py; \
+	fi
+
+model: deps
+	@if [ -f $(MODEL_PKL) ]; then \
+		echo '==> model: already built ($(MODEL_PKL))'; \
+	else \
+		echo '==> model: building (first run downloads ~1 h of data)'; \
+		$(MAKE) -C model build; \
+	fi
 
 demo:
 	@bash scripts/demo.sh
