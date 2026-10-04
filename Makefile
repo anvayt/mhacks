@@ -1,4 +1,4 @@
-.PHONY: demo demo-warm demo-check
+.PHONY: demo demo-warm demo-check phase2-check
 
 demo:
 	@bash scripts/demo.sh
@@ -8,3 +8,6 @@ demo-warm:
 
 demo-check:
 	@bash scripts/demo-check.sh
+
+phase2-check:
+	@bash scripts/phase2-e2e.sh
