@@ -1,0 +1,9 @@
+[project]
+name = "hidden-rent-snow-melt-research"
+version = "0.1.0"
+description = "Exploratory roof snow persistence versus metered heating intensity"
+requires-python = ">=3.11"
+dependencies = ["pystac-client", "rasterio", "numpy", "pandas", "shapely", "pyproj", "matplotlib", "pyarrow"]
+
+[tool.uv]
+package = false
