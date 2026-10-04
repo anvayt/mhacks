@@ -135,7 +135,9 @@ def test_works_offline_after_first_fetch(monkeypatch):
 @needs_data
 def test_api_endpoints():
     c = TestClient(app)
-    assert c.get("/health").json() == {"status": "ok"}
+    health = c.get("/health").json()
+    assert health["status"] in {"ok", "degraded"}
+    assert isinstance(health["model"]["available"], bool)
     r = c.get("/debug/features", params={"address": "912 Mary St, Ann Arbor, MI"})
     assert r.status_code == 200 and r.json()["est_units"] == 4
     assert c.get("/debug/features", params={"address": "123 Fake Street, Nowhere, MI"}).status_code == 404

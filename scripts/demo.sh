@@ -21,24 +21,17 @@ export NEXT_PUBLIC_ONBOARD_URL=${NEXT_PUBLIC_ONBOARD_URL:-http://localhost:8787}
 export ONBOARD_PORT=8787
 export WEB_ORIGINS=${WEB_ORIGINS:-http://localhost:3000}
 
-if healthy "$API_BASE_URL/health"; then printf 'Reusing healthy API on :8000.\n'
-else
-    port_used 8000 && fail 'Port 8000 is occupied but /health failed; leaving it untouched.'
-    start_owned api "$ROOT/api" "$API_PY" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-    wait_healthy api "$API_BASE_URL/health" "$LAST_PID"
-fi
-if healthy 'http://localhost:3000'; then printf 'Reusing healthy web on :3000.\n'
-else
-    port_used 3000 && fail 'Port 3000 is occupied but the web health check failed; leaving it untouched.'
-    start_owned web "$ROOT/web" npm run dev -- --hostname 127.0.0.1 --port 3000
-    wait_healthy web 'http://localhost:3000' "$LAST_PID" 120
-fi
-if healthy 'http://localhost:8787'; then printf 'Reusing healthy onboarding on :8787.\n'
-else
-    port_used 8787 && fail 'Port 8787 is occupied but onboarding failed; leaving it untouched.'
-    start_owned onboard "$ROOT/agent" npm run onboard
-    wait_healthy onboard 'http://localhost:8787' "$LAST_PID"
-fi
+# This child owns the three restartable services and accepts cooperative public
+# URL updates while the agent keeps its terminal/Photon connection.
+start_owned services "$ROOT" bash "$ROOT/scripts/demo-services.sh"
+SERVICE_PID=$LAST_PID
+for ((attempt=0; attempt<180; attempt++)); do
+    [[ ! -s "$ROOT/data/demo/services.lock/ready" || $(cat "$ROOT/data/demo/services.lock/owner" 2>/dev/null) != "$SERVICE_PID" ]] || break
+    kill -0 "$SERVICE_PID" 2>/dev/null || fail "Service supervisor exited; see $DEMO_LOG_DIR/services.log"
+    sleep 1
+done
+[[ -s "$ROOT/data/demo/services.lock/ready" && $(cat "$ROOT/data/demo/services.lock/owner" 2>/dev/null) == "$SERVICE_PID" ]] || fail 'Services did not become ready.'
+printf 'API, web and onboarding ready. Public URL updates: make demo-public in another terminal.\n'
 
 # Explicit terminal mode always wins. Missing either credential selects terminal
 # even if the copied .env example contains AGENT_TERMINAL=0.
