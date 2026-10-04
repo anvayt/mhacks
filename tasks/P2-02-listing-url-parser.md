@@ -2,7 +2,7 @@
 id: P2-02
 title: Listing URL → address parser (Zillow, Redfin, Apartments.com)
 owner: P2
-status: review
+status: done
 branch: p2/listing-parser
 type: build
 checkpoint: 10:30 PM checkpoint
@@ -41,3 +41,4 @@ Turn a pasted listing link into a street address **from the URL text only, never
 - **Run tests:** `cd api && uv run --no-project --with pytest python -m pytest tests/test_listing.py -q` → `44 passed`.
 - **Known gaps:** short links (`redf.in/…`) and `/homedetails/<id>_zpid/` with no slug return `needs_address: true, hint: None` (expanding them needs a network call, which is out of scope). Property-name slugs only split off the city for cities in `KNOWN_CITIES` (Ann Arbor area + a few MI cities); otherwise the hint is e.g. `"Willow Tree Apartments Southfield, MI"`. Zillow slugs with a bare unit and no APT/UNIT/# marker aren't detected. Street/city split for cities outside `KNOWN_CITIES` uses the last street suffix, so a city like "St Clair Shores" would need adding to the list.
 - **Next:** P2-04 calls `parse_listing_url(url)` in `POST /estimate`; if `needs_address` is true, ask the user for the address (show `hint` when present) or try geocoding the hint.
+- **Merged into dev** at `d010260` (Oct 3, ~9:55 PM): P2-02; all P2 tests together: 160 passed, 1 skipped.

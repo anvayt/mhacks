@@ -2,7 +2,7 @@
 id: P2-01
 title: Address → building features (geocoder + Ann Arbor footprints + year built)
 owner: P2
-status: review
+status: done
 branch: p2/address-features
 type: build
 checkpoint: 10:30 PM checkpoint
@@ -97,3 +97,4 @@ Given any Ann Arbor street address, return the building features the bill model 
 - Open: North Oaks sq ft includes the tuck-under garage (listing says 2,117 for 2877 Rayfield); condo townhouses numbered `... UNIT n` stay multi-family; no ResStock SFA sq ft bounds are checked.
 
 **Who acts next**: P2-04 (`/estimate`: call `get_features`, decide what to do with `null` type), P2-06 (city batch: reuse `footprints._index()` / unit counts).
+- **Merged into dev** at `d010260` (Oct 3, ~9:55 PM): P2-01 + follow-ups; all P2 tests together: 160 passed, 1 skipped.
