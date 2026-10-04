@@ -1,0 +1,102 @@
+{
+  "n_buildings": 125,
+  "targets": {
+    "heat_gas": {
+      "n": 101,
+      "unit": "ccf/1000ft\u00b2/yr",
+      "p10_p50_p90": [
+        130.5,
+        324.6,
+        627.1
+      ],
+      "cv": {
+        "null_median": {
+          "median_ape": 0.419,
+          "mean_ape": 3.055,
+          "within_25pct": 0.25,
+          "r2_log": -0.036
+        },
+        "mlr": {
+          "median_ape": 0.338,
+          "mean_ape": 2.384,
+          "within_25pct": 0.347,
+          "r2_log": 0.061
+        },
+        "random_forest": {
+          "median_ape": 0.339,
+          "mean_ape": 2.394,
+          "within_25pct": 0.339,
+          "r2_log": 0.093
+        },
+        "xgboost": {
+          "median_ape": 0.343,
+          "mean_ape": 2.662,
+          "within_25pct": 0.337,
+          "r2_log": 0.003
+        }
+      },
+      "chosen": "mlr",
+      "feature_importance": null
+    },
+    "cool_elec": {
+      "n": 69,
+      "unit": "kWh/1000ft\u00b2/yr",
+      "p10_p50_p90": [
+        100.9,
+        516.2,
+        887.8
+      ],
+      "cv": {
+        "null_median": {
+          "median_ape": 0.409,
+          "mean_ape": 5.057,
+          "within_25pct": 0.315,
+          "r2_log": -0.122
+        },
+        "mlr": {
+          "median_ape": 0.459,
+          "mean_ape": 2.914,
+          "within_25pct": 0.236,
+          "r2_log": 0.05
+        },
+        "random_forest": {
+          "median_ape": 0.403,
+          "mean_ape": 2.313,
+          "within_25pct": 0.337,
+          "r2_log": 0.105
+        },
+        "xgboost": {
+          "median_ape": 0.441,
+          "mean_ape": 2.177,
+          "within_25pct": 0.333,
+          "r2_log": 0.016
+        }
+      },
+      "chosen": "random_forest",
+      "feature_importance": {
+        "log_gfa": 0.161,
+        "year_built": 0.217,
+        "stories_max": 0.096,
+        "height_ft_max": 0.093,
+        "surface_to_volume": 0.132,
+        "fp_count": 0.062,
+        "fp_area_per_gfa": 0.239
+      }
+    },
+    "heat_elec": {
+      "n": 8,
+      "unit": "kWh/1000ft\u00b2/yr",
+      "p10_p50_p90": [
+        1668.3,
+        4316.7,
+        7448.3
+      ],
+      "note": "too few metered buildings for a feature model: the service uses the median"
+    }
+  },
+  "pooled_balance_points_F": {
+    "heat_gas": 60,
+    "heat_elec": 55,
+    "cool": 65
+  }
+}
