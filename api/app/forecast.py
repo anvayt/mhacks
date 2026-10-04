@@ -20,7 +20,7 @@ import httpx
 from fastapi import APIRouter
 
 from app import sessions
-from app.estimate import MODEL_BASE_URL, _fail, _hc_ac, session_params
+from app.estimate import MODEL_BASE_URL, _fail, _hc_ac, renter_usd_key, session_params
 from app.geo import DATA_DIR
 
 router = APIRouter()
@@ -164,6 +164,7 @@ def forecast(session_id: str) -> dict:
     hist = _history(lat, lon)
 
     hb, cb = _bases(hc)
+    hb = None if renter_usd_key(s) == "cooling_usd" else hb  # heat included in the rent: the renter pays no heating
     usd = {m["month"]: m for m in hc["months"]}  # 12 consecutive months, so the month number is unique
     # ponytail: P1 rounds month $ to whole dollars, so a month of a few $ carries a few % to tens of % rounding
     rate = {}  # month -> ($ per heating degree-day, $ per cooling degree-day, PRISM offset deg C)

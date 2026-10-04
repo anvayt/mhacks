@@ -95,10 +95,11 @@ def _candidates(s: dict) -> list[dict]:
     return out
 
 
-def _priced(fix: dict, base: dict, new: dict, b: dict) -> dict:
+def _priced(fix: dict, base: dict, new: dict, b: dict, key: str = "total_usd") -> dict:
+    """key: the $ the renter pays (estimate.renter_usd_key: cooling only when heat is included in the rent)."""
     d_gas, d_kwh = base["gas_ccf"] - new["annual"]["gas_ccf"], base["electric_kwh"] - new["annual"]["electric_kwh"]
     return dict(fix, unpriced=False, co2_kg_saved=round(co2_kg(d_gas, d_kwh)),
-                usd_saved_yr=round(base["total_usd"] - new["annual"]["total_usd"]),
+                usd_saved_yr=round(base[key] - new["annual"][key]),
                 new_grade=score_for(new["annual"]["total_usd"], b["sqft"], b["type"])["grade"])
 
 
@@ -160,7 +161,7 @@ def fixes_for(session_id: str) -> dict:
     with ThreadPoolExecutor(max_workers=max(len(todo), 1)) as ex:
         # _hc_ac: same model call as /estimate (No AC never sends cooling_code=0; cooling stays $0)
         runs = list(ex.map(lambda f: estimate._hc_ac({**estimate.session_params(s), **f["change"]}), todo))
-    out = [_priced(f, hc["annual"], new, b) for f, new in zip(todo, runs)]
+    out = [_priced(f, hc["annual"], new, b, estimate.renter_usd_key(s)) for f, new in zip(todo, runs)]
     # model says it doesn't cut CO₂ here (noise: double-pane on 912 Mary St's electric path came out +$29/yr): keep
     # the points and rebate, not the numbers
     out = [f if f["co2_kg_saved"] > 0 else _unpriced(f) for f in out]
