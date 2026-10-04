@@ -6,7 +6,7 @@ status: todo
 branch: p4/calendar-reminders
 type: build
 checkpoint: NEW_CHANGES Phase 2 (after the existing P4 flow is verified on a real phone)
-depends_on: ['P4-NC-05']
+depends_on: [P4-NC-05]
 blocks: []
 merges: []
 services_touched:
