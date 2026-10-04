@@ -1,726 +1,565 @@
-# NEW_CHANGES.md: Hidden Rent Phase 2 (accounts, commitments, verified carbon reductions)
+# NEW_CHANGES.md: Hidden Rent Phase 2 system design
 
-**Status:** proposed design. It is additive to `PLAN.md` and doesn't replace it.
-**Merges:** "NEW_CHANGES: persistent accounts, commitments, progress and reminders", the Phase 2 flow sketch, and `web/HOUSE_SCHEMA.md` (on `p3/map-widget`), all as of Oct 4, 2026.
-**Audience:** P1–P4 agents and teammates. An agent with zero context should be able to start from this file plus `PLAN.md`, `DEV_STRATEGY.md`, its task file and `notes/`.
+**Status:** proposed design, additive to `PLAN.md` (it doesn't replace it). Decisions in §11 carry a proposed default so work can start; the named owner can overturn them.
+**Merges:** the "NEW_CHANGES" accounts/commitments note, the Phase 2 flow sketch, `web/HOUSE_SCHEMA.md` (on `p3/map-widget`), the integration findings in `notes/integration.md` and `notes/P*.md`, and P4's open checks, all as of Oct 4, 2026, ~2:30 AM EDT.
+**Audience:** P1–P4 agents and teammates. Read with `PLAN.md`, `DEV_STRATEGY.md`, your task file and `notes/`.
 
-> **Rules that still apply.** `PLAN.md` §0 (no secrets, no invented numbers, the agent only says API numbers), the §10 contract (additive changes only, via `notes/contract-changes.md`), directory ownership (P1 `/model`, P2 `/api`, P3 `/web`, P4 `/agent`), mocks-first behind one switch, and the `main`/`dev` branch rules in `DEV_STRATEGY.md`.
-
-> **About numbers in this file.** Every figure is either cited (§24 lists the sources) or written as a placeholder like `‹from /projection›`. Example messages show *shape*, never real values. Anything shown to a user must come from code and data.
+> **Rules that still apply.** `PLAN.md` §0 (no secrets, no invented numbers, the agent only says API numbers), the §10 contract (additive only, through `notes/contract-changes.md`), directory ownership (P1 `/model`, P2 `/api`, P3 `/web`, P4 `/agent`), mocks-first behind one switch, and the `main`/`dev` rules in `DEV_STRATEGY.md`.
+>
+> **Numbers in this file** are either cited (§17) or placeholders like `‹from /projection›`. Example messages show shape, never values.
 
 ---
 
 ## Contents
-0. [The idea in one page](#0-the-idea-in-one-page)
-1. [Why: the sustainability case](#1-why-the-sustainability-case)
-2. [Principles](#2-principles)
-3. [What exists today and what's missing](#3-what-exists-today-and-whats-missing)
-4. [The user journey](#4-the-user-journey)
-5. [Identity and accounts](#5-identity-and-accounts)
-6. [Building data: footprints, addresses and sources](#6-building-data-footprints-addresses-and-sources)
-7. [Data model](#7-data-model)
-8. [Commitments](#8-commitments)
-9. [Projection: what a commitment *could* do](#9-projection-what-a-commitment-could-do)
-10. [Verification and carbon accounting: what actually happened](#10-verification-and-carbon-accounting-what-actually-happened)
-11. [Leaderboard: reward reductions, not privilege](#11-leaderboard-reward-reductions-not-privilege)
-12. [Messaging cadence: monthly check-ins and task reminders](#12-messaging-cadence-monthly-check-ins-and-task-reminders)
-13. [Google Calendar (optional)](#13-google-calendar-optional)
-14. [API additions (additive)](#14-api-additions-additive)
-15. [Ownership and tasks](#15-ownership-and-tasks)
-16. [Mocks and switches](#16-mocks-and-switches)
-17. [Integration order and checkpoints](#17-integration-order-and-checkpoints)
-18. [Acceptance criteria](#18-acceptance-criteria)
-19. [Error states](#19-error-states)
-20. [Security and privacy](#20-security-and-privacy)
-21. [Language guide](#21-language-guide)
-22. [Priorities, cut list and the demo-safe minimum](#22-priorities-cut-list-and-the-demo-safe-minimum)
-23. [Decisions needed and open questions](#23-decisions-needed-and-open-questions)
-24. [Sources](#24-sources)
+1. [Summary](#1-summary)
+2. [Goals, non-goals and the north-star metric](#2-goals-non-goals-and-the-north-star-metric)
+3. [Requirements](#3-requirements)
+4. [Constraints we can't design away](#4-constraints-we-cant-design-away)
+5. [Architecture](#5-architecture)
+6. [Core flows](#6-core-flows)
+7. [Data model and invariants](#7-data-model-and-invariants)
+8. [State machines](#8-state-machines)
+9. [Domain logic: commitments, projection, verification, carbon](#9-domain-logic-commitments-projection-verification-carbon)
+10. [Interfaces (additive API)](#10-interfaces-additive-api)
+11. [Decision log](#11-decision-log)
+12. [Assumptions and verification plan](#12-assumptions-and-verification-plan)
+13. [Risk register](#13-risk-register)
+14. [Delivery plan: horizons, ownership, checkpoints](#14-delivery-plan-horizons-ownership-checkpoints)
+15. [Acceptance criteria](#15-acceptance-criteria)
+16. [Language guide](#16-language-guide)
+17. [Sources](#17-sources)
 - [Appendix A: TypeScript shapes](#appendix-a-typescript-shapes)
-- [Appendix B: how the three source notes map into this file](#appendix-b-how-the-three-source-notes-map-into-this-file)
+- [Appendix B: building data pipeline (from HOUSE_SCHEMA)](#appendix-b-building-data-pipeline-from-house_schema)
+- [Appendix C: where each source note's content went](#appendix-c-where-each-source-notes-content-went)
 
 ---
 
-## 0. The idea in one page
+## 1. Summary
 
-Phase 1 of Hidden Rent answers one question: **how much energy, money and carbon does this rental hide?** Phase 2 turns that one-time answer into a **loop that cuts real emissions and proves it**.
+Phase 1 answers **"what does this rental hide in energy, money and carbon?"** Phase 2 turns that one-time answer into a loop that **cuts real emissions and proves it**:
 
 ```text
-phone number ─▶ account ─▶ current home ─▶ baseline (grade, $ range, CO₂)
-      ▲                                              │
-      │                                              ▼
- moved? new baseline         commitments ranked by CO₂ avoided per net dollar
-      ▲                                              │
-      │                                              ▼
- monthly check-in ◀── reminders ◀── projected effect (labelled "projected")
-      │
-      ▼
- new bill ─▶ weather-normalized check ─▶ verified CO₂ avoided ─▶ progress + leaderboard
+phone → account → current home → baseline (grade, $ range, CO₂)
+   → commitments ranked by CO₂ avoided per net $ → projected effect (labelled)
+   → reminders → monthly check-in → bill → weather-normalized check
+   → verified CO₂ avoided → progress + leaderboard → (moved? new baseline)
 ```
 
-**The north-star metric is verified, weather-normalized CO₂ avoided at the same home (kg per year).** The grade, streaks and leaderboard are the motivation layer on top. They're useful only to the extent that they produce that number.
+Three states are kept apart everywhere (API, web, agent, database):
 
-Three states must never be confused, in the API, the web or the agent:
-
-| State | Meaning | Where it comes from | How we word it |
+| State | Meaning | Produced by | Wording |
 |---|---|---|---|
-| **Current** | Our best estimate of the home today | `/estimate`, `/answer`, latest bill check | "Your grade is C" |
-| **Projected** | What the model predicts *if* the selected commitments are done | `/projection` (P1's model or ResStock upgrade deltas) | "If you do these, your projected grade is B" |
-| **Verified** | A reduction the bills actually show, after adjusting for weather | `/calibrate` history (degree-day fit) | "Your bills show `‹kg›` kg CO₂ less than the weather predicts" |
+| **Current** | Best estimate of the home today | `/estimate`, `/answer`, latest bill check | "Your grade is C" |
+| **Projected** | Model prediction *if* the selected commitments are done | `/projection` | "If you do these, your projected grade is B" |
+| **Verified** | A reduction the bills show after adjusting for weather | `/calibrate` history | "Your bills show ‹kg› kg CO₂ less than the weather predicts" |
 
-The product promise:
-
-> **Hidden Rent remembers where you live, shows which fixes cut the most carbon for the money, predicts what they'd do, reminds you to follow through, and then checks your real bills to see whether emissions actually fell.**
+The design's shape follows from three facts covered later: the biggest carbon levers belong to landlords (§2), weather swings hide or fake reductions (§9.3), and our messaging channel punishes spammy behavior (§4).
 
 ---
 
-## 1. Why: the sustainability case
+## 2. Goals, non-goals and the north-star metric
 
-### 1.1 The facts we build on (all from `PLAN.md`; see §24)
-- **Buildings are about 68% of Ann Arbor's emissions** (A2ZERO).
-- Ann Arbor has about **31,500 rental units**, with a **median build year of 1964**, before Michigan's first energy code (1977). That's **27,544 renter households, 54.5%** of the city.
-- **70.7% of Ann Arbor homes heat with gas**, so heating is mostly direct combustion at the home, which is exactly what envelope fixes reduce.
-- Same-size homes differ a lot: for 800–1,200 sq ft gas-heated Michigan rentals, simulated annual energy bills run **$1,052 (P10) to $2,254 (P90)** (NREL ResStock). In Ann Arbor's real benchmarking meters, **energy use per sq ft varies about 3×, and heating slope about 6×**.
-- **Ann Arbor's Green Rental Housing (GRH) ordinance** took effect Jan 6, 2026. Units need **70 of 308 checklist points through Jul 5, 2028, then 110**. Landlords now have a legal reason to make exactly the fixes renters would ask for.
+### 2.1 North-star metric
+**Verified, weather-normalized CO₂ avoided at the same home, in kg per year.** Grades, streaks and leaderboards are motivation; they matter only insofar as they move this number.
 
-### 1.2 Theory of impact
-1. **Renters don't control most of the carbon.** The biggest levers are the building envelope (air sealing, insulation, windows) and heating equipment, which belong to the landlord. So the most valuable commitment a renter can make is often **"ask my landlord for X"**, backed by a drafted email, the GRH points it earns and the rebates available.
-2. **Behavior still matters, but it's smaller and harder to verify.** Thermostat setbacks and similar habits count, but they're ranked honestly below envelope fixes and verified only through bills.
-3. **Measurement turns intentions into reductions.** Most "green" apps stop at a pledge. Hidden Rent closes the loop: a bill photo plus degree-day normalization (already in P1's `bill_check`) separates a real reduction from a mild winter.
-4. **Scale comes from aggregation.** Each verified reduction feeds a citywide total by neighborhood. That tells the city and landlords where fixes pay off, which supports A2ZERO and GRH enforcement without naming small landlords.
+### 2.2 Why this is the right metric (sourced, §17)
+- Buildings are about **68%** of Ann Arbor's emissions (A2ZERO).
+- About **31,500** Ann Arbor rental units, median build year **1964** (before Michigan's first energy code, 1977); **27,544** renter households (**54.5%**).
+- **70.7%** of Ann Arbor homes heat with gas, so heating is mostly on-site combustion, which envelope fixes reduce.
+- Same-size homes differ a lot: **$1,052 (P10) to $2,254 (P90)** a year for 800–1,200 sq ft gas-heated Michigan rentals (ResStock); real Ann Arbor meters show energy per sq ft varying about **3×** and heating slope about **6×**.
+- Ann Arbor's **Green Rental Housing** ordinance (effective Jan 6, 2026) requires **70 of 308** checklist points through Jul 5, 2028, then **110**, so landlords now have a reason to make the fixes renters ask for.
 
-### 1.3 Pitfalls we design against
-| Pitfall | Why it matters | Design response |
+### 2.3 Goals
+1. Persistent identity (phone) with one current home and full history.
+2. Commitments ranked by **CO₂ avoided per net dollar**, with effects from the model.
+3. Honest projection, clearly labelled.
+4. Verification from real bills, normalized for weather.
+5. Leaderboards that reward **reductions at the same home**, not already living somewhere efficient.
+6. A citywide total of verified reductions by neighborhood (the A2ZERO / GRH story).
+
+### 2.4 Non-goals
+Devpost, video, pitch, submission; replacing Photon or the ML stack; production-grade auth; a social network; tokens or offsets; any game mechanic not backed by model output; breaking changes to the §10 contract.
+
+---
+
+## 3. Requirements
+
+### 3.1 Functional
+| ID | Requirement |
+|---|---|
+| F1 | A normalized phone resolves to exactly one account; a web session can be linked to it |
+| F2 | One current property per account; moving archives the old one and starts a new baseline |
+| F3 | Anyone can get a grade without an account (decision D1); saving needs one |
+| F4 | Commitments come from a catalog whose effects the model can represent |
+| F5 | `/projection` returns current vs projected grade, $ and CO₂ from one composed model run |
+| F6 | A bill (photo or typed) is checked against weather-normalized expectation; reductions are "early signal" until they meet the verification rule (D3) |
+| F7 | Verified reductions are recorded per property with their emission factors |
+| F8 | Leaderboards rank verified reductions; projections appear only as a labelled ghost marker |
+| F9 | Monthly check-in (manual trigger is enough for the demo) and opt-in task reminders |
+| F10 | Optional Google Calendar reminders that never block the core flow |
+
+### 3.2 Non-functional
+| ID | Requirement | Why |
 |---|---|---|
-| **Moving to an efficient unit looks like progress** | Your grade improves, but nobody's emissions fell (the PLAN.md objection "picking a better unit just moves emissions") | Reductions only count **within one property**. Moving starts a new baseline; history is kept but never summed as savings. |
-| **A mild winter looks like a fix** | Gas use falls with the weather, not with any action | Every comparison is **weather-normalized** with degree-days (§10). Raw bill drops are never called reductions. |
-| **Projected savings presented as achieved** | Greenwashing, and it erodes trust | Three labelled states (§0). Projections never reach leaderboards. |
-| **Under-heating to win** | Health risk, and it rewards discomfort, not efficiency | Thermostat commitments have safe bounds (§8.4). No leaderboard metric rewards using less heat than the safe bound. |
-| **Electrification that raises the bill** | A heat pump can cut CO₂ while costing more at Michigan prices | Always show **CO₂ and dollars side by side**, and rank by CO₂ avoided per net dollar, so dollars never hide carbon. |
-| **Shaming small landlords** | Unfair, and against PLAN.md's honesty rules | Leaderboards name only buildings in the city's public benchmarking data; everything else is aggregated by block or neighborhood. |
+| N1 | **Honesty:** every displayed number traces to code and data; projected and verified are labelled | PLAN.md §0 |
+| N2 | **Deliverability:** inbound-first, few proactive texts, never at night, stop on request | Photon/Apple rules (§4) |
+| N3 | **Privacy:** phone numbers masked, no exact addresses on boards, bill images short-lived | Personal data |
+| N4 | **Demo safety:** every judge-facing flow has a mock and an offline fallback; a flow that can't be verified tonight is cut, not faked | PLAN.md §10 demo checklist |
+| N5 | **Latency:** replies within a few seconds when cached; first lookup in a new area can take up to ~3 min (model downloads weather history once), so the agent keeps a typing indicator and never times out early | `notes/integration.md` |
+| N6 | **Observability:** contract mismatches are logged (`[contract] …`, already in `/agent`); every API response carries `model_version` | Integration debugging |
+| N7 | **Reproducibility:** cached data has a manifest (URL, query, fetch time, count, sha256); factors carry a year | HOUSE_SCHEMA §6 |
 
 ---
 
-## 2. Principles
+## 4. Constraints we can't design away
 
-1. **Carbon first, money alongside.** Every recommendation shows CO₂ avoided and dollars saved together. The default sort is CO₂ avoided per net dollar after rebates (PLAN.md §4 step 7 already ranks fixes this way).
-2. **Three states, three words:** current, projected, verified (§0). If the evidence isn't there, the word isn't either.
-3. **Every number comes from code and data,** with its source. Placeholders in mocks are labelled as demo data (the agent already prefixes "[demo data, not a real estimate]").
-4. **Effects come from the model, not from a points table.** A commitment changes model inputs or applies a ResStock upgrade delta, and the model re-scores. No "+5 points for sealing windows".
-5. **Improvement beats privilege.** Leaderboards rank reductions relative to your own baseline, not how efficient your apartment already was.
-6. **The account is optional until it's useful.** Anyone can get a grade. An account is needed to save commitments, progress and reminders (§5.4).
-7. **Respect attention.** Messages are opt-in, few and timely. Photon's deliverability rules are product rules (§12).
-8. **Privacy by default.** Phone numbers, addresses and bill images are personal data (§20).
-
----
-
-## 3. What exists today and what's missing
-
-| Area | Built | Partial | Not built |
+| # | Constraint | Source | Design consequence |
 |---|---|---|---|
-| **Web (P3)** | Start button, address selection, questionnaire, grade screen; map widget with citywide footprints (`p3/map-widget`) | Leaderboard bars (mock data); "Sign in to save your scores" (generic OpenID Connect button, no provider configured) | Commitments UI, projected-vs-current bar, change address, enter a new bill, progress history |
-| **API (P2)** | `POST /estimate` (real heating + cooling p50 from P1) | Additive fields (`building.address`, `bill.seasonal`, `heating_cooling`, …) | Sessions, `/answer`, score/grade/percentiles, `/calibrate`, `/fixes`, accounts, properties, commitments, projection, history |
-| **Model (P1)** | Heating/cooling model (metered, blended and ResStock paths), monthly split, EIA pricing, `bill_check` (degree-day fit), 591-building table | Air-leakage model (P1-09, in review) | Commitment effects, projection, progress comparison |
-| **Agent (P4)** | iMessage interview loop, website → iMessage handoff (`?session` → "(ref id)" → `GET /session/{id}`), bill photo → `/calibrate` → `/fixes` → landlord email, onboarding with QR, `add-user`/`doctor`/`remove-user`; mocks behind `USE_MOCK_API` | Everything API-backed is mocked until P2 serves it | Account-aware greeting, commitment flow, projection messages, monthly check-in, address change, reminders |
+| C1 | Photon Free plan: **10 allowlisted users**; Pro: 100 | photon.codes pricing | The account system is capped by the plan. Judges' phones consume slots; `remove-user` frees them. Abuse of the public onboarding page can exhaust slots (R5). |
+| C2 | Shared line pool: each user may text a **different** Photon number; **no group chats** | Photon routing docs | DM-only design; never assume one agent number; Photon's redirect opens Messages to the right one |
+| C3 | Unregistered senders are rejected ("Target not allowed") | Photon troubleshooting | "Texted us" ⇒ "was allowlisted": usable as hackathon identity (D5) |
+| C4 | Apple flags lines for bursts, broadcast without replies, more than 2–3 follow-ups to non-responders, cold outreach, 3 AM sends; hard limit **5,000 outbound/server/day**; **50 new conversations/line/day** | Photon deliverability docs | Proactive messaging policy (D4); inbound-first; no daily blasts |
+| C5 | First messages from unknown numbers show "Report Junk"; links in a first message are suppressed | Photon deliverability docs | Text-only first message, user sends first (already built) |
+| C6 | Android recipients get SMS/RCS fallback (no tapbacks) | Photon pricing | Text-only interactions; no reliance on tapbacks |
+| C7 | Photon management API: **5 req/s** per project | Photon API docs | Batch admin scripts; no per-message management calls |
+| C8 | Model covers **heating + cooling only**; p10/p90 not yet available; cooling validated less well than heating | `notes/integration.md`, P1 `accuracy.cooling_note` | Label `bill.covers`; projections and verification focus on heating; don't show narrower projected ranges than current |
+| C9 | P2-01 data quality: some office footprints typed as homes with huge unit sizes; SFA and 2–4-unit areas include garages; year built is a block-group median | `notes/integration.md` | Plausibility checks before scoring; ask unit size; label medians (already done in `/agent`) |
+| C10 | ResStock bill columns flagged inconsistent; prices come from EIA via P1 | `ResStock.md`, `UtilizationToMoney.md` | All $ from P1's pricing, never `out.bills` |
+| C11 | Time: hacking ends **12:00 PM Sun Oct 4**, feature freeze **8:00 AM** | PLAN.md §2, §8 | Two delivery horizons (§14.1); everything else is post-hackathon |
+| C12 | Onboarding needs a public URL; the free tunnel URL changes on every restart | P4-01 testing | `PUBLIC_URL` is config only; reprint the card and update P3's env after restarts |
 
 ---
 
-## 4. The user journey
+## 5. Architecture
 
-This merges the Phase 2 sketch (frontend, backend, message client and ML layers) with the accounts design. The original sketch image (`phase2-diagram.png`) isn't in the repo yet; this diagram replaces it.
+### 5.1 Components and responsibilities
+```text
+┌──────────────┐   iMessage    ┌──────────────┐  HTTPS (Spectrum gRPC)  ┌──────────────────────┐
+│ Renter phone │ ◀───────────▶ │ Photon cloud │ ◀─────────────────────▶ │ /agent (P4, Node)     │
+└──────────────┘               └──────────────┘                         │ conversation engine  │
+       │  QR / link                                                      │ onboarding :8787     │
+       ▼                                                                 └─────────┬────────────┘
+┌──────────────┐  tunnel (cloudflared)  ┌──────────────┐                          │ HTTP JSON
+│ Browser      │ ─────────────────────▶ │ /web (P3)    │ ──────────────┐          ▼
+└──────────────┘                        │ Next.js :3000│               │  ┌──────────────────────┐
+                                        └──────────────┘               └▶ │ /api (P2, FastAPI)   │
+                                                                          │ :8000 system of record│
+                                                                          │ accounts, properties, │
+                                                                          │ commitments, bills,   │
+                                                                          │ snapshots, impact     │
+                                                                          └─────────┬────────────┘
+                                                                                    │ HTTP
+                                                     ┌──────────────────┐           ▼
+                                                     │ Google Calendar  │  ┌──────────────────────┐
+                                                     │ (optional, P2)   │  │ /model (P1) :8001     │
+                                                     └──────────────────┘  │ estimate, projection, │
+                                                                           │ verification, carbon  │
+                                                                           └──────────────────────┘
+```
 
+| Component | Owns | Stateless? | Must never |
+|---|---|---|---|
+| **/model (P1)** | Estimates, commitment effects, projection, verification math, carbon factors | Yes (cached data + pickled models) | Store user data |
+| **/api (P2)** | **System of record**: users, properties, commitments, projections, bills, snapshots, impact, leaderboards; Calendar tokens | No (database) | Compute model numbers itself (it calls P1) |
+| **/agent (P4)** | Conversation engine (dialog state), Photon I/O, onboarding page, admin scripts | Short-lived dialog state only (D8) | Invent numbers; hold durable user data |
+| **/web (P3)** | Presentation: grade, map, leaderboard, commitments, history | Yes | Compute scores or savings |
+
+### 5.2 Trust boundaries
+1. **Photon → agent:** the sender handle is trusted because Photon only delivers from allowlisted users (C3).
+2. **Public internet → onboarding page:** untrusted; `/join` can allowlist numbers, so it's rate-limited and capped (R5).
+3. **Browser → web/api:** untrusted; a web session gains account rights only through the phone link (D5).
+4. **Agent/web → api:** internal; the API validates everything anyway (the agent checks responses against the contract too).
+
+### 5.3 Synchronous vs asynchronous paths
+- **Synchronous (request/response):** estimate, answer, projection, commitments, history.
+- **Slow synchronous:** first lookup in a new area (N5) and bill photo reading by a vision model; the agent shows typing and allows long timeouts (estimate 200 s, calibrate 120 s, already set).
+- **Asynchronous / scheduled:** monthly check-ins and reminders. For the demo, a **manual trigger** (D9) instead of a scheduler.
+
+### 5.4 Deployment (hackathon)
+Everything runs on teammates' laptops: model :8001, api :8000, web :3000, agent + onboarding :8787, cloudflared tunnel for public pages. **Single points of failure:** the laptop running the agent (Photon delivers there), the tunnel (QR and web handoff), and the model server (every number). Mitigations are in §13.
+
+---
+
+## 6. Core flows
+
+### 6.1 Identity and onboarding
 ```mermaid
-flowchart TD
-  A["Start: web button or text the agent"] --> B["Select address / paste listing"]
-  B --> C["Questionnaire"]
-  C --> D["Current grade, $ range, CO₂<br/>from /estimate + /answer"]
-  D --> E{"Signed in?"}
-  E -- no --> F["Offer to save: phone = account<br/>web: sign in or continue in iMessage"]
-  E -- yes --> G
-  F --> G["Leaderboard view<br/>own spot vs similar homes"]
-  G --> H["Commitments, ranked by CO₂ avoided per net $"]
-  H --> I["Select commitments"]
-  I --> J["/projection: projected grade + CO₂ + $<br/>shown as a ghost marker on the leaderboard"]
-  J --> K["Accept → reminders: iMessage or Calendar"]
-  K --> L["Monthly check-in text"]
-  L --> M{"Still at this address?"}
-  M -- yes --> N["Send this month's bill"]
-  N --> O["/calibrate: weather-normalized check"]
-  O --> P["New current snapshot + verified CO₂ avoided"]
-  P --> G
-  M -- no --> Q["Archive old home, keep history"]
-  Q --> B
+sequenceDiagram
+  participant B as Browser (QR or web)
+  participant O as Onboarding page (/agent)
+  participant P as Photon
+  participant A as Agent
+  participant API as /api
+  B->>O: GET /?session=<id> (session optional)
+  B->>O: POST /join phone
+  O->>P: POST /projects/{id}/users (shared)
+  O-->>B: 302 to Photon redirect, first text pre-filled "(ref id)"
+  B->>P: user taps Send in Messages
+  P->>A: inbound message from allowlisted handle
+  A->>API: POST /auth/phone {phone, session_id?}
+  API-->>A: user_id, current_property_id
+  A-->>P: welcome / welcome back / resumed report
 ```
 
-### 4.1 First-time user
-1. Scans the table QR or taps "Continue in iMessage" on the web. The onboarding page allowlists the phone with Photon and opens Messages with the first text ready. The agent recognizes "(ref id)" if they came from the web.
-2. Sends a listing or address. Gets the current grade, $ range and CO₂, then the questions that narrow the range (Phase 1 loop).
-3. Sees **2–3 commitments ranked by CO₂ avoided per net dollar**, each with its projected effect.
-4. Picks one or more and sees the **projected** grade and CO₂ ("if completed").
-5. Chooses reminders (iMessage by default, Calendar optionally).
-6. Gets a monthly check-in. Sends a bill. Sees whether emissions **actually** fell after weather is taken into account.
+### 6.2 Commitments and projection
+```mermaid
+sequenceDiagram
+  participant U as Renter
+  participant A as Agent or Web
+  participant API as /api
+  participant M as /model
+  U->>A: show my options
+  A->>API: GET /commitments/suggested/{property}
+  API->>M: effects for catalog actions at this home
+  M-->>API: per-action projected deltas
+  API-->>A: ranked by CO2 avoided per net $
+  U->>A: pick 1 and 3
+  A->>API: POST /projection {commitment_ids}
+  API->>M: one composed model run
+  M-->>API: current vs projected
+  API-->>A: labelled projected_if_completed
+  A-->>U: "If completed, projected grade ..." (never "your new grade")
+```
 
-### 4.2 Returning user (known phone)
+### 6.3 Bill verification
+```mermaid
+sequenceDiagram
+  participant U as Renter
+  participant A as Agent
+  participant API as /api
+  participant M as /model
+  U->>A: bill photo (HEIC converted to JPEG)
+  A->>API: POST /calibrate {session_id, bill_image_base64}
+  API->>API: vision model reads therms, kWh, dates
+  API->>M: weather-normalized comparison (degree-day fit)
+  M-->>API: pct vs expected, verified?, kg/kWh/therms avoided
+  API->>API: store bill, snapshot, impact record if verified
+  API-->>A: pct_vs_expected_for_weather, streak, badges, impact
+  A-->>U: "% below normal for this weather", then fixes + landlord email
+```
+
+### 6.4 Monthly check-in and moving
 ```text
-"Welcome back. Still living at ‹address›?"
-  ├─ yes → "Send this month's bill, or reply 'commitments' to see your list."
-  └─ moved → "What's your new address?" → old home archived → new baseline
+trigger (manual for demo) → "Still at ‹address›?"
+  yes   → "Send this month's bill" → §6.3
+  moved → "What's your new address?" → POST /properties (old archived) → new baseline → §6.2
+  no reply → one follow-up a few days later → pause (C4)
 ```
-
-### 4.3 The commitment loop
-```text
-current grade → ranked commitments → accept → projected effect → reminders
-     → marked done (reported) → next bills → weather-normalized check (verified)
-     → new current snapshot → projection vs actual compared
-```
-
-### 4.4 The leaderboard moment (from the sketch)
-Commitments sit **on the leaderboard screen**. Selecting one moves a **ghost marker** to the projected position and shifts the background color toward the projected grade. The solid marker (the user's real position) moves only when a new current snapshot exists. This keeps the sketch's "choosing commitments changes your place" without ever presenting a projection as achieved.
 
 ---
 
-## 5. Identity and accounts
+## 7. Data model and invariants
 
-### 5.1 Primary identity: the phone number
-One normalized E.164 phone number maps to one Hidden Rent account. The agent already normalizes numbers (`/agent/src/photon.ts`, `normalizePhone`), e.g. `6169164734` → `+16169164734`.
+### 7.1 Entities (shapes in Appendix A)
+| Entity | Purpose |
+|---|---|
+| **Building** | One city footprint (OBJECTID within a dated snapshot); unit of the map, scoring and aggregation |
+| **Address** | Mailing address and how it matched a building (within / snapped / none) |
+| **User** | One per normalized handle; reminder preferences; leaderboard opt-in and alias |
+| **Property** | A user's home over a period; links to a Building; carries sourced unit size and fuel |
+| **ScoreSnapshot** | Current state at a point in time (never written from a projection) |
+| **Commitment** | Catalog action chosen for a property; status and evidence level |
+| **Projection** | Stored `/projection` result, so actuals can be compared with what was predicted |
+| **BillSubmission** | Evidence: period, therms, kWh, weather-normalized delta |
+| **ImpactRecord** | **North-star ledger:** verified reductions only, with emission factors and year |
+| **CalendarConnection** | Optional token references (never secrets in git or logs) |
 
-### 5.2 What Photon gives us (verified in P4-01)
-- Every inbound iMessage carries the sender's handle (`message.sender.id`). On Free/Pro plans that sender must already be an allowlisted **project user**, created with `POST /projects/{id}/users` (`type: "shared"`). So for the hackathon, **"this number texted us" means "this number was allowlisted"**: a reasonable identity primitive.
-- Photon's shared user is idempotent per phone number, and a soft-deleted user's slot is reused on re-creation (Photon API docs). Whether the Photon user id itself survives delete/re-add is **unverified** (§23).
-- Caveat: Apple can register iMessage to an email instead of a phone number. Then `sender.id` is an email; `debug.photon.codes` reports the real handle. Accounts should key on the handle as received, normalized when it's a phone number.
-
-### 5.3 The web channel
-P3's "Sign in to save your scores" is a generic OpenID Connect redirect with no provider configured. Two ways to tie a web visitor to the phone account, best first:
-1. **Reuse the existing handoff.** The web links to `‹onboarding URL›/?session=<session_id>`. The visitor's first iMessage carries "(ref <session_id>)", so the backend learns `phone ↔ session` with no new auth system. This is already built on the P4 side.
-2. **A one-time code** shown on the web and texted to the agent (or the reverse). Use it only if a web-only sign-in is required.
-
-Don't add passwords.
-
-### 5.4 When to ask for an account (resolving the sketch)
-The sketch says "before a grade is given, the backend tells you to sign in if there is no account". That conflicts with PLAN.md's core promise: type an address, get a personal answer in seconds, which judges try at the table. **Proposal:** the grade stays anonymous. Saving commitments, progress and reminders requires an account. In iMessage the phone *is* the account, so texting users never see a sign-in step. **Decision needed** (§23).
-
-### 5.5 Account creation
-```text
-inbound message → normalize handle → find user
-   found     → load account + current property → continue
-   not found → create user (display name optional) → ask for an address
-```
-Never create duplicates from formatting differences. Concurrent first messages must resolve to one user (unique index on `phone_number`).
-
----
-
-## 6. Building data: footprints, addresses and sources
-
-From `web/HOUSE_SCHEMA.md`; the reference implementation is `web/scripts/build_map_fixture.py` (both on `p3/map-widget`).
-
-### 6.1 Sources (public, no key)
-| Data | Service | Fields used | Local cache |
-|---|---|---|---|
-| Building footprints + height | `a2maps.a2gov.org/.../OSI/BuildingFootprints/FeatureServer/0` | `OBJECTID`, `ABG_BLD_HG`, `Struc_Type`, `Bldg_Name`, `PackedPin`, `STORIES`, `FacilityID` | `model/data/raw/arcgis/a2_footprints.geojson` (P1) |
-| Mailing addresses | `a2maps.a2gov.org/.../MailingAddress/FeatureServer/0` | `PROPSTREET`, `TYPE`, point | `web/scripts/.cache/a2_mailing_addresses.json` |
-| Block-group outline | TIGERweb `tigerWMS_ACS2023/MapServer/10` | `GEOID`, polygon | none |
-| Year built, heating fuel | ACS 5-year via Census Reporter | `B25037`, `B25035`, `B25040` | P1's census cache |
-
-All queries ask for WGS84 (`outSR=4326`), page by `resultOffset` in `OBJECTID` order, and cache the raw response. City services return 403 to Python's default user agent, so send a browser-like one. The footprint metadata says polygons and heights come from 2009 countywide LiDAR and 2005–08 imagery, updated since from construction plans. So "LiDAR height" means "city-recorded height, originally from LiDAR".
-
-### 6.2 Pairing footprints with addresses
-1. Build a shapely `STRtree` over every footprint polygon.
-2. For each address point: **inside** (`predicate="within"`) → that footprint; else **snap** to the nearest footprint within `1.1e-4°` (address points sit 5–11 m off the roof, per P2-01); else drop.
-3. Normalize to a street line: strip everything after ` UNIT | APT | STE | #`, title-case words that don't start with a digit ("912 MARY ST UNIT 2" → "912 Mary St").
-4. Per footprint: the label is the most common street line (ties go to the first in `OBJECTID` order), and `units` is the count of matched addresses.
-
-At Ann Arbor (42.28° N), 1° latitude ≈ 110,574 m and 1° longitude ≈ 82,370 m, so `1.1e-4°` is about 12 m north–south and 9 m east–west. Result on the current cache: 25,994 of 35,007 footprints got an address, including 24,427 of 32,572 residential ones; most unmatched residential footprints look like garages.
-
-### 6.3 Floors and units
-- `STORIES` is filled for only 12,430 of 32,572 residential footprints (38%). Where it's missing, P1 estimates height ÷ 10 ft. Record which one was used. Don't filter on exact floor count (it silently drops 62% of homes); prefer `height_ft` and `footprint_sqft`.
-- **Unit counting differs today:** P2-01 counts only `TYPE = "General Mailing"` (plus `UNIT n` rows); the map script counts every type. **Pick one rule and run it in one place,** P2's pipeline, with `/web` only reading its output (§23).
-
-### 6.4 Why this matters for sustainability
-Accounts attach to **buildings**, not just addresses. That lets verified reductions roll up by building, block and neighborhood (§11.4), and lets the GRH angle work per building. Key buildings by `OBJECTID` within a dated snapshot (`"a2_footprints@2026-10-03"`). `FacilityID` looks stable but isn't unique (471 values repeat), so keep it and the centroid for re-matching after a refresh.
-
-### 6.5 Before this goes past the hackathon
-- Write a manifest next to each cache: service URL, query, fetch time, record count, sha256.
-- Keep the snap distance in metres, not degrees.
-- Add a test with known pairs, e.g. 912 Mary St → footprint 1317 (`BLD-001317`), 23.7 ft.
-
----
-
-## 7. Data model
-
-Logical entities. SQLite, Postgres or Neon is P2's call. The shapes are in Appendix A.
-
-| Entity | Purpose | Key fields |
+### 7.2 Invariants and where they're enforced
+| # | Invariant | Enforced by |
 |---|---|---|
-| **Building** | One city footprint: the unit of the map, scoring and aggregation | `id` (OBJECTID), `snapshot`, `facility_id`, `parcel_pin`, `footprint`, `center`, `footprint_sqft`, `height_ft: Sourced`, `stories: Sourced`, `structure_type`, `addresses[]`, `units` |
-| **Address** | One mailing address and its match | `street`, `street_line`, `type`, `point`, `building_id`, `match: within/snapped/none` |
-| **User** | One per normalized phone | `id`, `phone_number` (unique), `photon_user_id?`, `display_name?`, `current_property_id?`, `timezone?`, `reminder_prefs`, `leaderboard_opt_in`, `alias?` |
-| **Property** | A user's home over a period | `id`, `user_id`, `building_id`, `address`, `unit_sqft: Sourced`, `heating_fuel: Sourced`, `active`, `move_in_date?`, `move_out_date?` |
-| **ScoreSnapshot** | Current state at a point in time (never projected) | `id`, `property_id`, `source: initial_estimate/questionnaire/bill_regrade/manual_refresh`, `score`, `grade`, `grade_span`, `bill_annual {p10,p50,p90}`, `co2_kg_yr {p10,p50,p90}`, `percentile_peers`, `percentile_city`, `model_version`, `created_at` |
-| **Commitment** | An action the user chose | `id`, `user_id`, `property_id`, `catalog_id`, `status`, `evidence: projected/reported/verified`, `target_date?`, `accepted_at`, `completed_at?`, `projection_id`, `reminder_channel: imessage/calendar/none`, `calendar_event_id?` |
-| **Projection** | A stored `/projection` result, so later actuals compare against what was promised | `id`, `property_id`, `commitment_ids[]`, `current {…}`, `projected {…}`, `delta {score, usd_saved_yr, co2_kg_saved_yr}`, `method`, `model_version` |
-| **BillSubmission** | Evidence | `id`, `property_id`, `source: image/manual`, `period_start`, `period_end`, `therms?`, `kwh?`, `amount_usd?`, `weather_normalized_delta_pct`, `image_ref?` (short-lived) |
-| **ImpactRecord** | The north-star ledger: verified reductions only | `id`, `property_id`, `period`, `co2_kg_avoided`, `kwh_avoided`, `therms_avoided`, `usd_saved`, `baseline_snapshot_id`, `method`, `emission_factors {gas, electricity, year}` |
-| **CalendarConnection** | Optional | `user_id`, `provider`, token references only (secrets never in git or logs) |
+| I1 | One user per normalized handle | Unique index on `users.phone_number` (P2); normalization in `/agent` and `/api` |
+| I2 | At most one active property per user | Partial unique index (P2) |
+| I3 | ScoreSnapshots come only from estimates, answers or bills, never projections | P2 write path; P1 test |
+| I4 | ImpactRecords exist only for verified reductions and never span two properties | P2 write path |
+| I5 | Projected numbers are always labelled | API field `label`; P3/P4 wording tests |
+| I6 | Every user-visible number has a source | `Sourced<T>` in the data; `sources[]` in responses |
+| I7 | Bill periods don't double-count | Dedupe by (property, period) and image hash (P2) |
+| I8 | Factors used in an impact record are stored with it | P2 schema |
 
-Rules:
-- A user has **at most one active property**. Moving sets `move_out_date` and `active=false`, and history stays queryable.
-- `ImpactRecord`s are **per property** and are never summed across a move as "savings" (§1.3).
-- A `ScoreSnapshot` is never written from a projection.
+### 7.3 Consistency and idempotency
+- **Account creation** is idempotent (`POST /auth/phone` returns the existing user). Two quick first messages must not create two users (I1).
+- **Commitment acceptance** is idempotent per (property, catalog_id) while accepted.
+- **Bill submission** is idempotent per (property, period) (I7); a re-sent photo returns the stored result.
+- **Inbound message redelivery** from Photon isn't documented either way (check V9). The agent should tolerate duplicates (answers are idempotent server-side).
 
 ---
 
-## 8. Commitments
+## 8. State machines
 
-### 8.1 What a commitment is
-A concrete action that plausibly reduces energy use and emissions at the current home, that the model can represent, and whose effect bills can eventually show.
+### 8.1 Commitment
+```text
+status:    suggested ──accept──▶ accepted ──complete──▶ completed
+               │                     │
+               └──dismiss──▶ dismissed ◀──dismiss──┘
+evidence:  projected (on accept) ──user says done──▶ reported ──bills meet D3──▶ verified
+```
+No silent backward moves. Completing a commitment never changes the current grade; only a new snapshot does.
 
-### 8.2 The catalog
-The sketch says "a few commitments will be hardcoded". That's fine for the **list of actions**. Their **effects must come from the model** (§9). This is the starting catalog; P1 confirms each model mapping before it ships.
+### 8.2 Property
+```text
+active ──user moves──▶ archived (move_out_date set; history kept; impact frozen)
+```
 
-| Catalog id | Action | Who acts | Model mapping (P1 to confirm) | GRH link | How bills can verify it |
+### 8.3 Conversation (agent dialog state)
+```text
+idle ──link/address──▶ estimating ──ok──▶ (unit size?) ──▶ asking question ⇄ answering ──locked──▶ idle
+idle ──"(ref id)"──▶ resuming session ──▶ asking question
+idle/asking ──photo──▶ checking bill ──▶ idle (fixes + email sent)
+any ──"fixes"──▶ fixes sent ──▶ back to previous state (open question re-asked)
+any ──"stop"──▶ proactive messages paused (replies still work)
+check-in sent ──yes──▶ awaiting bill │ ──moved──▶ awaiting address ──▶ estimating
+```
+Built today: everything except account greeting, check-in, moved, "stop", and commitment selection. Dialog state is in memory; durable state belongs in `/api` (D8).
+
+---
+
+## 9. Domain logic: commitments, projection, verification, carbon
+
+### 9.1 Commitment catalog
+A fixed list of **actions** (the sketch's "hardcoded commitments"); their **effects** always come from the model. P1 confirms each mapping before it ships.
+
+| Catalog id | Action | Who acts | Model mapping (to confirm) | GRH link | Bills verify via |
 |---|---|---|---|---|---|
-| `air_sealing` | Seal drafts around windows, doors and penetrations | Landlord (renter for weatherstripping) | `in.infiltration` change or the ResStock air-sealing upgrade delta (`upgrades_lookup.json`) | Air sealing is a checklist item | Lower heating slope (gas per degree-day) |
-| `attic_insulation` | Insulate the attic to R-50 | Landlord | `in.insulation_ceiling` change or the ResStock upgrade delta | Attic R-50 is a checklist item (PLAN.md §4) | Lower heating slope |
-| `wall_insulation` | Insulate walls | Landlord | `in.insulation_wall` change | Walls are a checklist item | Lower heating slope |
-| `window_upgrade` | Storm windows or double-pane | Landlord | `in.windows` change | Window items | Lower heating slope |
-| `thermostat_setback` | Lower the heating setpoint at night / when away | Renter | Only if ResStock exposes setpoint inputs (verify column names); otherwise **not modeled**, verified by bills only | None | Lower heating slope or base |
-| `landlord_request` | Send the drafted email asking for the top envelope fix | Renter → landlord | Inherits the effect of the fix it asks for, applied only when that fix is reported done | Earns points for the landlord | Through the requested fix |
-| `heat_pump` | Electrify heating | Landlord | ResStock heat-pump upgrade delta; CO₂ uses the eGRID RFCM factor | Equipment items | Gas falls, electricity rises; net CO₂ from both |
+| `air_sealing` | Seal drafts | Landlord (renter: weatherstripping) | `in.infiltration` or ResStock air-sealing upgrade delta | Checklist item | Lower heating slope |
+| `attic_insulation` | Attic to R-50 | Landlord | `in.insulation_ceiling` or upgrade delta | Checklist item (PLAN.md §4) | Lower heating slope |
+| `wall_insulation` | Insulate walls | Landlord | `in.insulation_wall` | Checklist item | Lower heating slope |
+| `window_upgrade` | Storm or double-pane windows | Landlord | `in.windows` | Window items | Lower heating slope |
+| `thermostat_setback` | Lower setpoint at night/away | Renter | Only if ResStock exposes setpoint inputs (V5); else **not modeled**, bills only | — | Lower slope or base load |
+| `landlord_request` | Send the drafted email for the top envelope fix | Renter → landlord | Inherits the requested fix's effect once that fix is reported done | Points for the landlord | Through the fix |
+| `heat_pump` | Electrify heating | Landlord | ResStock heat-pump upgrade delta; CO₂ uses eGRID RFCM | Equipment items | Gas down, electricity up; net CO₂ |
 
-Excluded until modeled: anything the model can't represent (e.g. "unplug chargers"). Show it as a tip with no numbers, not as a scored commitment.
+Not modeled → shown as a tip with no numbers. Thermostat commitments carry a safety floor (D6); nothing rewards going below it.
 
-### 8.3 Ranking
-Default order: **CO₂ avoided per net dollar** = `co2_kg_saved_yr ÷ max(cost_usd − rebate_usd, ε)`, with renter-doable actions flagged so a renter always sees at least one thing they can do this week. Ties go to the higher `co2_kg_saved_yr`. Show dollars saved and GRH points next to each one.
+### 9.2 Ranking and projection
+- **Rank** by `co2_kg_saved_yr ÷ max(cost_usd − rebate_usd, ε)`; ties to higher CO₂; always include at least one renter-doable action. Show $ saved and GRH points alongside.
+- **Project** by applying all selected changes **in one model run** (or chaining upgrade deltas on the upgraded state). Effects don't add; never sum separate deltas. Return p10/p50/p90 when the model supports it; otherwise say "about". Never show a projected range narrower than the current one without a model reason.
+- **Honesty tests (P1):** zero commitments = no change; unsupported = rejected; composed ≤ sum of parts; removing reverses; projection never writes a snapshot.
 
-### 8.4 Safety bounds
-Thermostat commitments carry a floor (P1 or P2 to cite a health-based minimum indoor temperature before shipping). No commitment or leaderboard metric rewards going below it.
+### 9.3 Verification
+P1's `bill_check` fits gas use against heating degree-days. For each new bill period, compare actual use with the weather-normalized expectation under the **pre-commitment** fit. A reduction is **verified** when rule D3 holds; otherwise it's an "early signal" (the agent already says "‹x›% below normal for this weather"). After verification, show both: "projected ‹kg› kg, verified ‹kg› kg so far".
 
-### 8.5 Status and evidence
-```text
-status:   suggested → accepted → completed
-                    ↘ dismissed   accepted → dismissed
-evidence: projected (accepted) → reported (user says done) → verified (bills show it, §10)
-```
-No silent backward moves. Completing a commitment never changes the current grade by itself; only a new snapshot does.
-
----
-
-## 9. Projection: what a commitment *could* do
-
-### 9.1 Method (P1)
-```text
-selected commitments
-  → map each to model input changes or a ResStock upgrade delta (§8.2)
-  → compose them (below)
-  → rerun the bill model → kWh, therms → EIA prices → $ (UtilizationToMoney.md)
-  → CO₂ with the factors in §10.3
-  → score and grade with the same peer distribution as the current grade
-```
-
-### 9.2 Composing several commitments
-Effects don't add up. Air sealing plus attic insulation saves less than the sum of each alone. Apply all feature changes **together in one model run** (or chain upgrade deltas on the already-upgraded state), never by summing separate deltas. If two commitments change the same input, the stronger one wins and the projection says so.
-
-### 9.3 Uncertainty
-Return `projected.bill_annual {p10,p50,p90}` where the model supports it. If only p50 exists, say "about". Never show a projected range narrower than the current one without a model reason.
-
-### 9.4 Shape of the message (placeholders only)
-```text
-Current grade: ‹C› (‹score›)
-If you complete air sealing + attic insulation, the model projects:
-  grade ‹B› · ‹kg› kg CO₂ less a year · about ‹$›/yr saved
-  (projected, not yet verified)
-```
-
-### 9.5 Honesty tests (P1)
-- Zero commitments → no change.
-- An unsupported commitment → rejected or ignored, never scored.
-- Composition ≤ sum of parts. No double counting.
-- Removing a commitment reverses its effect.
-- Projection never writes a `ScoreSnapshot`.
-
----
-
-## 10. Verification and carbon accounting: what actually happened
-
-### 10.1 Weather normalization (existing pieces)
-P1's `bill_check` fits gas use against heating degree-days (change-point fit). For a new bill period, compare **actual use** with **expected use for that period's weather** under the pre-commitment fit. A drop versus that expectation is a candidate reduction; a drop in raw use during a mild month is not.
-
-### 10.2 When a reduction counts as "verified"
-**Proposal (P1 to confirm):** a reduction is verified when
-1. a commitment was reported done before the billing period started,
-2. at least one full billing period after completion shows use below the weather-normalized expectation, **and**
-3. the shortfall is larger than the fit's typical error (P1 already reports held-out error per path in `accuracy.*`).
-
-Anything less is "early signal". The agent says "your bill is ‹x›% below normal for this weather" (already built) but doesn't write an `ImpactRecord`.
-
-### 10.3 Carbon factors
-| Fuel | Factor | Source | Notes |
+### 9.4 Carbon accounting
+| Fuel | Factor | Source | Rule |
 |---|---|---|---|
-| Natural gas | 5.306 kg CO₂ per therm (53.06 kg/MMBtu) | EPA (PLAN.md §6.4) | P1 measures gas in ccf. Convert ccf → therms with the EIA heat content for Michigan for that year, and record the value used. |
-| Electricity | eGRID RFCM subregion output emission rate | EPA eGRID (PLAN.md §6.4) | Record the eGRID year. Use the same factor for current, projected and verified figures, so changes reflect use, not the factor. |
+| Natural gas | 5.306 kg CO₂/therm (53.06 kg/MMBtu) | EPA (PLAN.md §6.4) | P1 measures ccf: convert with the EIA Michigan heat content for that year (V7) and record it |
+| Electricity | eGRID RFCM output emission rate | EPA eGRID (PLAN.md §6.4) | Record the eGRID year (V7); use the same factor for current, projected and verified |
 
-Every `ImpactRecord` stores the factors and their year, so totals can be recomputed when factors update.
+Dollars come from P1's EIA pricing (marginal gas price, average electricity price), heating + cooling only (`UtilizationToMoney.md`). Always show CO₂ and $ together so a heat pump that cuts CO₂ but costs more isn't hidden.
 
-### 10.4 Actual vs projected
-After verification, show both: "projected ‹kg› kg, verified ‹kg› kg so far". This is the honest version of "did it work?" and the most persuasive line in the pitch.
-
----
-
-## 11. Leaderboard: reward reductions, not privilege
-
-### 11.1 The problem with the current mock
-Ranking by absolute efficiency rewards people who already live in efficient buildings, and it can reward moving rather than fixing (§1.3).
-
-### 11.2 Boards
-| Board | Metric | Notes |
+### 9.5 Leaderboards
+| Board | Metric | Evidence |
 |---|---|---|
-| **Biggest verified cut** (primary) | Verified CO₂ avoided ÷ the home's own baseline (%), weather-normalized | Fair across home sizes; verified only |
-| **Most CO₂ avoided** | Verified `co2_kg_avoided` this year | Absolute impact |
-| **Weather-beater streak** | Consecutive months below weather-normal | Already in the §10 contract as `streak_months` |
-| **Follow-through** | Commitments verified ÷ accepted | Rewards doing, not pledging |
-| **Hall of fame** (existing idea) | Most efficient buildings | Only buildings in the city's public benchmarking data (PLAN.md §5) |
-| **Neighborhood totals** | Sum of verified CO₂ avoided by neighborhood | The city-scale story |
+| **Biggest verified cut** (primary) | Verified CO₂ avoided ÷ own baseline (%) | Verified only |
+| Most CO₂ avoided | Verified kg this year | Verified only |
+| Weather-beater streak | Consecutive months below weather-normal (`streak_months`) | Bill checks |
+| Follow-through | Commitments verified ÷ accepted | Verified only |
+| Hall of fame | Most efficient buildings | Only buildings in the city's public benchmarking data (PLAN.md §5) |
+| Neighborhood totals | Sum of verified CO₂ avoided | Aggregated, minimum group size (D7) |
 
-### 11.3 Projected placement
-The sketch's "choosing commitments changes your place" is shown as a **ghost marker** labelled "projected". Projections never enter ranks.
+Projected placement is a **ghost marker** (the sketch's "choosing commitments changes your place"). Moving resets the board baseline. Peer comparisons use P1's scored building table and the ResStock look-alike cloud, never other users' private data.
 
-### 11.4 Peer data and privacy
-- Peer comparisons ("similar homes") come from P1's scored building table and the ResStock look-alike cloud (already in the map payload), not from other users' private data.
-- User entries show an alias (opt-in) and neighborhood only. Never phone numbers, exact addresses or a small landlord's name.
-- Minimum group size for any aggregate (proposal: 5 homes) so a single home can't be singled out.
-
-### 11.5 Anti-gaming
-Moving resets the board baseline. Only verified evidence counts. Manual bill entry is allowed but flagged, and only photo-verified bills reach the top of a board (proposal).
-
----
-
-## 12. Messaging cadence: monthly check-ins and task reminders
-
-### 12.1 The tension
-The sketch wants **a notification every day** for accepted tasks. Photon's deliverability guide (§24) warns that Apple flags lines for burst sending, broadcasting without exchange, more than 2–3 follow-ups to non-responders, cold outreach and **3 AM sends**. It also sets a hard limit of 5,000 outbound messages per server per day and recommends inbound-first designs. A flagged line ends the demo.
-
-### 12.2 Rules (proposal)
+### 9.6 Messaging policy (resolves the sketch's daily notifications vs C4)
 | Message | When | Rules |
 |---|---|---|
-| **Monthly check-in** (default) | Once a month, at a time the user picked, never at night | Opens with a question ("Still at ‹address›?"). If unanswered, one follow-up a few days later, then pause. |
-| **Task reminders** (opt-in) | Daily or weekly, user's choice, only for accepted commitments with a target date | Max one a day; auto-pause after 2 unanswered; "stop" or "pause" works any time |
-| **Bill nudge** | When a bill is likely to have arrived | Folded into the monthly check-in, not separate |
-| **Results** | Only in reply to the user's bill | Inbound-first by design |
-
-### 12.3 Scheduler
-A background scheduler isn't required for the demo. **Demo-safe:** a documented manual trigger (e.g. P4 `npm run checkin -- <phone>`, or a P2 endpoint P4 calls) that sends the check-in to one allowlisted phone. Build a real scheduler only after the core loop works.
+| Monthly check-in (default) | Once a month at the user's chosen hour, never at night | Opens with a question; one follow-up, then pause |
+| Task reminders (opt-in) | Daily or weekly, user's choice, only for accepted commitments with a target date | Max one a day; auto-pause after 2 unanswered; "stop"/"pause" any time |
+| Results | Only in reply to the user's bill | Inbound-first |
+| Calendar (optional) | On accept, if connected | Failure never blocks the commitment |
 
 ---
 
-## 13. Google Calendar (optional)
+## 10. Interfaces (additive API)
 
-Calendar is for reminders only, never identity or scoring, and the product must work if it's never connected.
+All additions go through `notes/contract-changes.md` with consumer acks; P2 owns final shapes. **Reuse before adding:** `/calibrate` is the bill check, `/fixes` feeds commitment candidates, `GET /session/{id}` is the web → iMessage link, `/leaderboard` gets a `board` parameter, `GET /map/{session_id}` is already proposed by P3.
 
-```text
-commitment accepted → "Want a reminder?"
-  ├─ iMessage (default)            → §12 rules
-  └─ Calendar → connected? → yes → create event ("Ask landlord about attic insulation")
-                         → no  → connect (OAuth) or fall back to iMessage
-```
-
-P2 to verify: OAuth scopes (event creation only), token storage (encrypted, outside git), redirect handling, and whether it fits in the time left. If not, mock it behind one switch and cut it first (§22).
-
----
-
-## 14. API additions (additive)
-
-All additions go through `notes/contract-changes.md` with consumer acks (DEV_STRATEGY #3). P2 owns the final shapes; the shapes below are proposals. Existing endpoints are **reused**, not duplicated: `/calibrate` is the bill check, `/fixes` is the source of commitment candidates, and `GET /session/{id}` is the web → iMessage link.
-
-### 14.1 Accounts
 ```http
-POST /auth/phone          {"phone": "+16169164734", "photon_user_id": "optional", "session_id": "optional"}
-→ {"user_id", "created": bool, "current_property_id": "…|null", "calendar_connected": bool}
-
-GET  /me/{user_id}
-→ {"user_id", "phone_masked": "+1******4734", "current_property_id",
-   "properties": [{"property_id", "address", "building_id", "active", "move_in_date", "move_out_date"}]}
-```
-Passing `session_id` links an anonymous web or iMessage session to the account (§5.3).
-
-### 14.2 Properties
-```http
-POST /properties                 {"user_id", "address" | "url", "unit_sqft?"}
-→ {"property_id", "building_id", "estimate": <§10 estimate>, "active": true}
-POST /properties/{id}/activate   → previous active property archived
-GET  /properties/{id}/history    → {"snapshots": [...], "bills": [...], "impact": [...], "commitments": [...]}
-```
-
-### 14.3 Commitments
-```http
+POST  /auth/phone                 {phone, photon_user_id?, session_id?} → {user_id, created, current_property_id, calendar_connected}
+GET   /me/{user_id}               → {user_id, phone_masked, current_property_id, properties[]}
+POST  /properties                 {user_id, address|url, unit_sqft?} → {property_id, building_id, estimate, active}
+POST  /properties/{id}/activate   → previous active property archived
+GET   /properties/{id}/history    → {snapshots[], bills[], impact[], commitments[]}
 GET   /commitments/suggested/{property_id}
-→ {"commitments": [{"catalog_id", "title", "description", "who_acts": "renter|landlord",
-     "projected": {"usd_saved_yr", "co2_kg_saved_yr", "score_delta", "new_grade"},
-     "cost_usd", "rebate_usd", "grh_points", "co2_per_net_usd", "method"}]}
-POST  /commitments          {"user_id", "property_id", "catalog_id", "target_date?"} → commitment
-PATCH /commitments/{id}     {"status": "completed" | "dismissed"}            → commitment
+      → {commitments: [{catalog_id, title, who_acts, projected{usd_saved_yr, co2_kg_saved_yr, score_delta, new_grade},
+                        cost_usd, rebate_usd, grh_points, co2_per_net_usd, method}]}
+POST  /commitments                {user_id, property_id, catalog_id, target_date?} → commitment
+PATCH /commitments/{id}           {status: completed|dismissed} → commitment
+POST  /projection                 {property_id, commitment_ids[]}
+      → {projection_id, current{score, grade, bill_annual, co2_kg_yr}, projected{…}, delta{score, usd_saved_yr, co2_kg_saved_yr},
+         label: "projected_if_completed", method, model_version}
+POST  /calibrate                  (existing; response adds) bill_id, verified, impact{co2_kg_avoided, kwh_avoided, therms_avoided, usd_saved, factors}|null, snapshot|null
+POST  /checkins/trigger           {user_id} → {message_hint: "still_at_address", property_id}      (demo trigger)
+GET   /leaderboard?board=verified_cut|co2_avoided|streak|follow_through|neighborhood&scope=city|neighborhood
+POST  /calendar/connect · POST /calendar/reminders · DELETE /calendar/reminders/{id}               (stretch)
 ```
-
-### 14.4 Projection
-```http
-POST /projection   {"property_id", "commitment_ids": [...]}
-→ {"projection_id",
-   "current":   {"score", "grade", "bill_annual": {p10,p50,p90}, "co2_kg_yr": {p10,p50,p90}},
-   "projected": {"score", "grade", "bill_annual": {p10,p50,p90}, "co2_kg_yr": {p10,p50,p90}},
-   "delta":     {"score", "usd_saved_yr", "co2_kg_saved_yr"},
-   "label": "projected_if_completed", "method": "model_rerun|resstock_upgrade_delta", "model_version"}
-```
-
-### 14.5 Bills, verification and impact (extends `/calibrate`)
-Reuse `POST /calibrate`. Add to its response (additive): `"bill_id"`, `"verified": bool`, `"impact": {"co2_kg_avoided", "kwh_avoided", "therms_avoided", "usd_saved", "factors": {...}} | null`, and `"snapshot": <new ScoreSnapshot> | null`.
-
-### 14.6 Check-ins and leaderboard
-```http
-POST /checkins/trigger   {"user_id"}  → {"message_hint": "still_at_address", "property_id"}   (demo trigger)
-GET  /leaderboard?board=verified_cut|co2_avoided|streak|follow_through|neighborhood&scope=city|neighborhood
-```
-`/leaderboard` already exists in §10; this adds a `board` parameter.
-
-### 14.7 Map (already proposed by P3)
-`GET /map/{session_id}` → `MapWidgetData` (see `notes/contract-changes.md`).
-
-### 14.8 Calendar (stretch)
-`POST /calendar/connect`, `POST /calendar/reminders`, `DELETE /calendar/reminders/{id}`.
+Errors follow the existing shape: `{detail: {code, message, hint?}}` with 422/503, passed to users verbatim by the agent.
 
 ---
 
-## 15. Ownership and tasks
+## 11. Decision log
 
-Task files follow `TASK_TEMPLATE.md`. Each lists its mocks in the Handoff section.
+Each decision has a proposed default so work isn't blocked. "Reversible" means it can change later without migrating data or breaking clients.
 
-### P1 `/model`: effects, projection, verification math
-| Task | Goal | Done when |
-|---|---|---|
-| **P1-NC-01** commitment effects | Map each catalog action (§8.2) to model inputs or ResStock upgrade deltas | Each action has a documented basis; unsupported ones are excluded |
-| **P1-NC-02** projection | `project_commitments(property_state, commitments)` → projected bill, CO₂, score, grade, deltas | Composition in one run; §9.5 tests pass |
-| **P1-NC-03** verification | `verify_reduction(fit, bills, completed_at)` → early signal / verified + kWh, therms, CO₂ avoided | Uses `bill_check`'s degree-day fit and held-out error |
-| **P1-NC-04** carbon factors | One place for EPA gas and eGRID RFCM factors, with year | All CO₂ outputs use it |
-| **P1-NC-05** pairing rule (with P2) | One unit-counting rule (§6.3) | P2 runs it; `/web` reads output |
-
-### P2 `/api`: persistence and plumbing
-| Task | Goal |
-|---|---|
-| **P2-NC-01** phone accounts | Create-or-load by normalized phone; link `session_id` |
-| **P2-NC-02** properties + history | One active property; archive on move; history endpoint |
-| **P2-NC-03** commitments | Catalog, suggestions from `/fixes` + P1 effects, status changes |
-| **P2-NC-04** projection | Wrap P1-NC-02 in `/projection`; store `Projection` rows |
-| **P2-NC-05** bills + impact | Extend `/calibrate`; write `BillSubmission`, `ScoreSnapshot`, `ImpactRecord` |
-| **P2-NC-06** leaderboard boards | §11 boards with privacy and minimum group size |
-| **P2-NC-07** check-in trigger | Demo trigger endpoint (§12.3) |
-| **P2-NC-08** Calendar (stretch) | OAuth + event creation; mock behind a switch |
-
-### P3 `/web`: presentation
-| Task | Goal |
-|---|---|
-| **P3-NC-01** current vs projected | Two bars, projected one visually distinct and labelled; CO₂ and $ together |
-| **P3-NC-02** commitments on the leaderboard | Commitment cards (CO₂, $, cost, rebate, GRH points, who acts); ghost marker for projected placement; background color follows projected grade |
-| **P3-NC-03** account + property header | Current home, change address, sign-in that links to the phone account (§5.3) |
-| **P3-NC-04** progress + impact history | Snapshots over time; verified CO₂ avoided; projected vs verified |
-| **P3-NC-05** new bill + address change | Upload a bill (→ `/calibrate`); confirm a move |
-| **P3-NC-06** improvement boards | §11 boards replacing the absolute-efficiency mock |
-
-### P4 `/agent`: conversations
-| Task | Goal | Builds on (already in `dev`) |
-|---|---|---|
-| **P4-NC-01** account-aware sender | Resolve sender → account (`/auth/phone`), greet returning users | `normalizePhone`, per-chat state |
-| **P4-NC-02** commitment flow | Show top 2–3 commitments, accept/dismiss by text, show projected effect with correct wording | Interview loop, `/fixes` text |
-| **P4-NC-03** address change | "I moved" → new address → archive → new baseline | `/estimate` flow |
-| **P4-NC-04** monthly check-in | Manual trigger script; "Still at ‹address›?" → bill → verified/early-signal reply | Bill photo → `/calibrate` |
-| **P4-NC-05** reminders | Opt-in task reminders within §12 rules; "stop"/"pause" | Photon send |
-| **P4-NC-06** Calendar (stretch) | Offer Calendar when connected | — |
+| ID | Decision | Options | Proposed default and why | Owner | Reversible | Blocks |
+|---|---|---|---|---|---|---|
+| **D1** | Sign in before the grade? (sketch vs PLAN.md) | Required / anonymous grade | **Anonymous grade; account to save.** PLAN.md's core promise is an answer in seconds; in iMessage the phone *is* the account | Team | Yes | P3 flow |
+| **D2** | Unit-counting rule | P2-01 (`General Mailing` + `UNIT n`) / count every type | **P2's rule, run once in P2's pipeline**; `/web` reads its output | P1 + P2 | Yes (recompute) | Scores, map |
+| **D3** | What counts as "verified" | Any drop / weather-normalized drop / drop beyond typical error over ≥1 full period | **≥1 full post-completion billing period below weather-normal by more than P1's held-out error** | P1 | Yes (re-evaluate records) | ImpactRecord, boards |
+| **D4** | Daily reminders? | Daily for all / opt-in capped / monthly only | **Opt-in, max one a day, auto-pause after 2 unanswered, never at night** (C4) | P4 + team | Yes | Reminders |
+| **D5** | Identity primitive | Photon handle / web OIDC / passwords | **Normalized Photon handle**; web links via the existing `?session` handoff; no passwords | P2 + P3 + P4 | Partly | Accounts |
+| **D6** | Thermostat safety floor | None / cited minimum | **Ship `thermostat_setback` only with a cited health-based minimum** | P1 | Yes | That commitment |
+| **D7** | Leaderboard minimum group size | None / k homes | **5 homes** for any aggregate | P2 | Yes | Boards |
+| **D8** | Where conversation state lives | Agent memory / API | **Durable state in `/api`; agent keeps only short dialog state** (pending question) with rehydration from `/me` + pending check-in after a restart | P4 + P2 | Yes | Restart safety |
+| **D9** | Scheduler for check-ins | Cron / queue / manual trigger | **Manual trigger for the demo** (`npm run checkin -- <phone>` in P4, or `POST /checkins/trigger`); real scheduler post-hackathon | P4 + P2 | Yes | Check-in demo |
+| **D10** | Database | SQLite / Neon Postgres | **SQLite** tonight (PLAN.md stack); Neon only if P2 already chose it | P2 | Medium | Persistence |
+| **D11** | `pct_vs_expected_for_weather` units | Fraction / percent | **Percent** (-12 = 12% below normal); `/agent` already assumes this | P2 confirms | Yes | Bill replies |
+| **D12** | `questions[].options` format | Strings / objects | **Strings or `{value, label}`**; `/agent` accepts both | P2 confirms | Yes | Interview |
+| **D13** | Bill photo size | Send full / downscale | **Agent converts HEIC → JPEG; API accepts at least ~6 MB base64 or the agent downscales** | P2 + P4 | Yes | Bill flow |
+| **D14** | Bill image retention | Keep / extract and delete | **Keep only until extraction; store numbers, not images** | P2 | Yes | Privacy |
+| **D15** | Who owns this file | P4 (author) / P2 (owns root docs per DEV_STRATEGY #6) | **P2 owns it after review**; P4 proposes edits through P2 | Team | Yes | — |
+| **D16** | Leaderboard headline board | Score delta / CO₂ delta / verified savings | **Verified CO₂ cut (%) vs own baseline**, fair across home sizes | Team | Yes | Board UI |
+| **D17** | Onboarding abuse | Open / rate-limited / code-gated | **Rate-limit `/join` per IP and cap total new users per hour; keep a `remove-user` sweep** | P4 | Yes | Slot exhaustion (R5) |
 
 ---
 
-## 16. Mocks and switches
+## 12. Assumptions and verification plan
 
-Same rules as now: mocks live in the owner's directory, match the accepted contract exactly, and switch by configuration only.
+Every unverified assumption becomes a check with an owner, a method and the checkpoint it gates. ✅ = verified, ⏳ = open.
 
-| Owner | Switch | Mocks |
-|---|---|---|
-| P1 | (tests) | Local fixtures for projection and verification |
-| P2 | `USE_MODEL_MOCKS=1` (proposal) | Exact `/projection` and verification responses until P1 lands |
-| P3 | `NEXT_PUBLIC_USE_MOCKS` (existing) | `/web/mocks/` for every new endpoint |
-| P4 | `USE_MOCK_API=1` (existing) | `src/mockApi.ts` extended with accounts, properties, commitments, projection, history; every mock reply labelled demo data |
+| ID | Assumption / thing to check | Method | Owner | Gates | Status |
+|---|---|---|---|---|---|
+| V1 | Photon delivers inbound texts and our replies on a real iPhone | Real-phone round trip | P4 | A | ✅ (P4-01) |
+| V2 | Pasted links and plain addresses are recognized on a real phone | Real-phone test | P4 | A | ✅ (P4-01) |
+| V3 | QR onboarding works through a public tunnel | Scan → join → text | P4 | A | ✅ (P4-01) |
+| V4 | Real photo attachments arrive and `read()` returns the image (HEIC and PNG) | Send both from an iPhone in demo mode | P4 | D | ⏳ |
+| V5 | ResStock exposes heating-setpoint inputs and upgrade scenarios for each catalog action | Inspect parquet columns + `upgrades_lookup.json` | P1 | C | ⏳ |
+| V6 | Effects compose sensibly in one run (composed ≤ sum) | P1 tests | P1 | C | ⏳ |
+| V7 | Which eGRID year and ccf → therm heat content to use | Pick and cite | P1 | D | ⏳ |
+| V8 | Photon user id survives delete/re-add; sender handle is a phone number, not an email | Delete/re-add a test user; check `sender.id` | P4 | A | ⏳ |
+| V9 | Whether Photon can redeliver an inbound message | Docs / Photon support | P4 | A | ⏳ |
+| V10 | `/api` accepts the bill photo size after HEIC → JPEG | Send a real phone photo to `/calibrate` | P2 + P4 | D | ⏳ |
+| V11 | `pct_vs_expected_for_weather` units and `streak_months` meaning (D11) | P2 confirms in `notes/requests.md` | P2 | D | ⏳ |
+| V12 | Web → iMessage handoff carries the session end to end | Web button with `?session=` → text → resumed report | P3 + P4 | A | ⏳ (P4 side built) |
+| V13 | Unit-size answer re-runs `/estimate` correctly on the live API | Real API + phone | P4 | B | ⏳ |
+| V14 | First-lookup latency keeps the typing indicator alive and the reply arrives | New area on the live API | P4 | B | ⏳ |
+| V15 | Printed QR card scans from about 2 ft; card looks right on a phone (light and dark) | Print + scan | P4 | A | ⏳ |
+| V16 | Google Calendar OAuth scopes and token storage fit the time left | Spike | P2 | F | ⏳ |
+| V17 | `/join` rate limit doesn't block a judge queue at the table | Several joins in a row | P4 | A | ⏳ |
 
 ---
 
-## 17. Integration order and checkpoints
+## 13. Risk register
 
+Likelihood and impact are H/M/L for the demo window.
+
+| ID | Risk | L | I | Mitigation | Owner |
+|---|---|---|---|---|---|
+| R1 | P2 endpoints (`/answer`, sessions, `/calibrate`, `/fixes`, accounts, projection) aren't ready by the 8 AM freeze | H | H | Exact-contract mocks behind one switch (built in `/agent`); demo the loop labelled "demo data"; cut lines in §14.1 | P2 |
+| R2 | Apple flags the Photon line | L | H | Policy D4, inbound-first, no night sends; fallback demo phone; stop proactive sends if flagged | P4 |
+| R3 | Agent laptop sleeps or restarts mid-demo; dialog state lost | M | M | Keep it awake and plugged in; D8 rehydration; don't restart during judging | P4 |
+| R4 | Tunnel URL changes → QR and web link break | M | H | `PUBLIC_URL` config; reprint card; update P3's env; `npm run doctor` shows the URL | P4 |
+| R5 | Public `/join` used to exhaust the 10 Photon slots | M | H | D17 rate limit; `remove-user`; demo phone fallback | P4 |
+| R6 | Model server down or cold (≈1 h cold build) | M | H | Warm it before judging; offline fixtures (P2-07); agent sends "try again", never numbers | P1 + P2 |
+| R7 | Bad building data (offices as homes, garages in floor area) produces absurd grades on a judge's address | M | H | Plausibility checks; ask unit size; pre-test demo addresses | P2 |
+| R8 | Projection presented as achieved (greenwashing) | L | H | Label in API (I5); wording tests in P3/P4; language guide §16 | All |
+| R9 | A mild month read as a reduction | M | M | Weather normalization (§9.3); "early signal" until D3 | P1 |
+| R10 | Moving to an efficient unit counted as savings | L | M | I4; board baseline resets on move | P2 |
+| R11 | Bill photo too large or unreadable | M | M | HEIC → JPEG (built); D13; ask for typed numbers on failure | P2 + P4 |
+| R12 | Privacy leak (phone numbers, addresses, bill images) | L | H | Masking; aliases; D14; no secrets in logs (checked in P4) | All |
+| R13 | Scope creep before freeze | H | M | Horizons in §14.1; cut from the bottom | Team |
+
+---
+
+## 14. Delivery plan: horizons, ownership, checkpoints
+
+### 14.1 Horizons
+| Horizon | Deadline | Scope |
+|---|---|---|
+| **H0: demo-safe** | 8:00 AM freeze (C11) | Phase 1 loop on the real API where possible; commitments + projection + bill check demoable end to end, real where served and **labelled demo data** where mocked; manual check-in trigger |
+| **H1: Phase 2 real** | Post-hackathon | Accounts and properties persisted; real projection from P1; verified impact records; improvement boards; reminders |
+| **H2: stretch** | Later | Neighborhood totals, Calendar, scheduler |
+
+**Demo-safe minimum (≈60 s of the pitch):** known phone → "still at ‹address›?" → current grade + CO₂ → two commitments ranked by CO₂ per $ → pick one → projected grade (labelled) with the web ghost marker → bill photo → "‹x›% below normal for this weather".
+
+### 14.2 Integration order
 ```text
-1 P2 accounts ─┐
-2 P1 effects + projection ─┼─▶ 3 P2 commitments + /projection ─▶ 4 P3 current-vs-projected + cards
-               │                                              └─▶ 5 P4 commitment flow
-6 P2/P4 address change ─▶ 7 bills → verification → impact ─▶ 8 progress + impact history
-9 reminders (iMessage) ─▶ 10 improvement boards ─▶ 11 Calendar (stretch)
+P2 accounts ─┐
+P1 effects + projection ─┼─▶ P2 commitments + /projection ─┬─▶ P3 current vs projected + cards
+                         │                                  └─▶ P4 commitment conversation
+P2/P4 address change ─▶ bills → verification → impact ─▶ history ─▶ boards ─▶ reminders ─▶ Calendar
 ```
-Work in parallel against mocks; integrate in this order.
 
-| Checkpoint | Demonstrates |
+### 14.3 Tasks
+| Owner | Tasks |
 |---|---|
-| **A: identity** | phone → account → current property (and web session linked) |
-| **B: commitments** | current grade → ranked suggestions → accept → stored |
-| **C: projection** | select → projected grade, CO₂ and $ change, from real model logic |
-| **D: verification** | new bill → weather-normalized check → new snapshot → `ImpactRecord` when verified |
-| **E: city total** | Neighborhood sum of verified CO₂ avoided on the board |
-| **F: reminders** (stretch) | Accepted commitment → reminder (iMessage, then Calendar) |
+| **P1** `/model` | NC-01 commitment effects (V5) · NC-02 projection (composition, honesty tests) · NC-03 verification (D3) · NC-04 carbon factors (V7) · NC-05 unit-count rule with P2 (D2) |
+| **P2** `/api` | NC-01 phone accounts + session link (D5) · NC-02 properties + history · NC-03 commitments (from `/fixes` + P1 effects) · NC-04 `/projection` · NC-05 bills + impact (extend `/calibrate`) · NC-06 boards (D7, D16) · NC-07 check-in trigger (D9) · NC-08 Calendar (stretch) · confirm D11–D13 |
+| **P3** `/web` | NC-01 current vs projected bars · NC-02 commitment cards on the leaderboard + ghost marker · NC-03 account/property header + phone link · NC-04 progress + impact history · NC-05 new bill + address change · NC-06 improvement boards · `?session=` on "Continue in iMessage" |
+| **P4** `/agent` | NC-01 account-aware greeting · NC-02 commitment selection + projection wording · NC-03 address change · NC-04 check-in trigger script · NC-05 opt-in reminders + "stop"/"pause" · NC-06 `/join` rate limit (D17) · NC-07 rehydration after restart (D8) · V4, V8, V12–V15, V17 |
+
+### 14.4 Mocks and switches
+| Owner | Switch | Covers |
+|---|---|---|
+| P2 | `USE_MODEL_MOCKS=1` (proposal) | Projection and verification until P1 lands |
+| P3 | `NEXT_PUBLIC_USE_MOCKS` (existing) | Every new endpoint, in `/web/mocks/` |
+| P4 | `USE_MOCK_API=1` (existing) | Accounts, properties, commitments, projection, history added to `src/mockApi.ts`; replies labelled demo data |
+
+### 14.5 Checkpoints
+| | Demonstrates | Gated by |
+|---|---|---|
+| **A** identity | phone → account → current property; web session linked | V1–V3 ✅, V8, V9, V12, V15, V17 |
+| **B** interview on real API | estimate → unit size → narrower range on a phone | V13, V14 |
+| **C** commitments + projection | ranked suggestions → accept → projected (real model) | V5, V6 |
+| **D** verification | bill → weather-normalized check → snapshot → impact when verified | V4, V7, V10, V11 |
+| **E** city total | neighborhood sum of verified CO₂ | D7 |
+| **F** reminders (stretch) | accepted commitment → reminder | V16 |
 
 ---
 
-## 18. Acceptance criteria
+## 15. Acceptance criteria
 
-**Accounts**
-- [ ] The same normalized phone always resolves to the same account; formatting never creates duplicates
-- [ ] A new phone creates exactly one account, even with two quick first messages
-- [ ] A web session links to the phone account through the handoff
-
-**Properties**
-- [ ] Moving archives the old home; history stays queryable; exactly one current home
-- [ ] A new home gets a fresh baseline; reductions never carry across a move
-
-**Commitments and projection**
-- [ ] Suggestions come only from catalog actions with a model mapping
-- [ ] Ranked by CO₂ avoided per net dollar, with at least one renter-doable action
-- [ ] Accept, dismiss and complete persist
-- [ ] Projected values come from one composed model run; removing a commitment reverses it
-- [ ] "Projected" appears on every projected figure in the web and the agent; the current grade doesn't change from a projection
-
-**Verification and impact**
-- [ ] Every bill comparison is weather-normalized
-- [ ] "Verified" appears only when §10.2 holds; otherwise "early signal"
-- [ ] `ImpactRecord`s store factors and their year; totals recompute
-
-**Leaderboard**
-- [ ] Ranks use verified evidence only; projected placement is a labelled ghost marker
-- [ ] No phone numbers, exact addresses or small-landlord names; minimum group size enforced
-
-**Messaging**
-- [ ] Check-ins and reminders follow §12; "stop"/"pause" works; no night sends
-- [ ] Calendar failure never blocks accepting a commitment
-
-**Everywhere**
-- [ ] No invented numbers; every figure traceable to code or data
+- [ ] **Accounts:** same handle → same account; no duplicates from formatting or two quick messages; web session links through the handoff
+- [ ] **Properties:** moving archives and preserves history; exactly one current home; reductions never carry across a move
+- [ ] **Commitments:** only modeled catalog actions; ranked by CO₂ per net $ with a renter-doable option; accept/dismiss/complete persist
+- [ ] **Projection:** one composed run; removing reverses; "projected" on every projected figure; current grade unchanged by projections
+- [ ] **Verification:** every comparison weather-normalized; "verified" only under D3; impact records store factors and year
+- [ ] **Boards:** verified evidence only; ghost marker for projections; no phone numbers, exact addresses or small-landlord names; minimum group size
+- [ ] **Messaging:** D4 policy; "stop"/"pause" works; no night sends; Calendar failure never blocks a commitment
+- [ ] **Operations:** contract mismatches logged; model version on responses; caches have manifests
+- [ ] **Everywhere:** no invented numbers
 
 ---
 
-## 19. Error states
-
-| Situation | Behavior |
-|---|---|
-| Unknown phone | Create the account (or begin signup) and ask for an address |
-| Duplicate phone | Resolve to the existing account |
-| No current property | Ask for an address |
-| Projection unavailable | Show the current grade only and say projection is temporarily unavailable; never estimate one in the agent or web |
-| Model unavailable | Never fabricate an improvement |
-| Bill photo unreadable | Ask for therms, kWh and the dates by text (`/calibrate` already accepts them) |
-| Bill period overlaps a previous one | Keep both, flag it, and don't double-count impact |
-| Unsupported commitment | Show it as a tip with no numbers; don't score it |
-| Calendar disconnected or failing | Commitment stays accepted; offer iMessage reminders |
-| User moves | Archive the home and start a new baseline |
-| User texts "stop" | Pause all proactive messages immediately; replies still work |
-| Photon line flagged | Stop proactive sends; fall back to inbound-only until Photon recovers the line |
-
----
-
-## 20. Security and privacy
-
-- Phone numbers, addresses and bill images are personal data. Show phone numbers masked (`+1******4734`, as `npm run doctor` already does).
-- Bill images can contain account numbers. Keep them only as long as the vision step needs them; store extracted numbers, not images, after that (proposal).
-- Never log secrets or full tokens. `.env` stays out of git; names go in `.env.example`.
-- Calendar tokens are encrypted and stored outside the repo.
-- Leaderboards: aliases only with opt-in, neighborhood-level location, minimum group size.
-- Never send one user's property data to another phone. Chat state is keyed by Photon space, and accounts by normalized handle.
-
----
-
-## 21. Language guide
+## 16. Language guide
 
 | Use | Avoid (unless literally true) |
 |---|---|
-| Current grade | Your new grade (for a projection) |
-| Projected grade / if completed / potential | Guaranteed savings |
-| Verified reduction (only when §10.2 holds) | Verified (for early signals) |
-| Early signal / below normal for this weather | Points awarded |
+| Current grade | "Your new grade" (for a projection) |
+| Projected grade · if completed · potential | Guaranteed savings |
+| Verified reduction (only under D3) | "Verified" for early signals |
+| Early signal · below normal for this weather | Points awarded |
 | CO₂ avoided, kg a year | Carbon neutral, offset |
-| Commitment, progress, monthly check-in | Pledge counted as impact |
-| Current home, previous home | — |
+| Commitment · progress · monthly check-in | Pledges counted as impact |
 
 ---
 
-## 22. Priorities, cut list and the demo-safe minimum
+## 17. Sources
 
-**Must have**
-1. Phone → account → current property
-2. Commitments ranked by CO₂ avoided per net dollar, from the model
-3. Projection with correct labelling
-4. Current vs projected on the web and in the agent
-5. Bill → weather-normalized check (`/calibrate`)
-6. Address change that preserves history
-
-**Should have**
-7. Verified `ImpactRecord`s and the "biggest verified cut" board
-8. Progress and impact history
-9. Monthly check-in (manual trigger)
-
-**Stretch** (cut from the bottom up)
-10. Neighborhood CO₂ totals
-11. Opt-in task reminders
-12. Google Calendar
-13. Automated scheduling
-
-**Demo-safe minimum** (about 60 seconds of the pitch):
-```text
-1. A judge texts from a known phone → "Welcome back, still at ‹address›?"
-2. Current grade + CO₂.
-3. Two commitments ranked by CO₂ per dollar; the judge picks one.
-4. Projected grade and CO₂ appear, labelled "projected"; the web shows the ghost marker move.
-5. A real bill photo → "‹x›% below normal for this weather" → early signal or verified.
-```
-
----
-
-## 23. Decisions needed and open questions
-
-### Decisions (owner)
-| # | Decision | Proposal | Owner |
-|---|---|---|---|
-| D1 | Sign in before the grade? (sketch vs PLAN.md) | No: anonymous grade; account to save (§5.4) | Team |
-| D2 | One unit-counting rule (§6.3) | P2's `General Mailing` rule, run in P2's pipeline | P1 + P2 |
-| D3 | What counts as "verified" (§10.2) | One full post-completion billing period below weather-normal by more than the held-out error | P1 |
-| D4 | Daily reminders? (§12) | Opt-in only, capped, auto-pause | P4 + team |
-| D5 | Web identity (§5.3) | Reuse the `?session` handoff; no passwords | P2 + P3 + P4 |
-| D6 | Thermostat floor (§8.4) | Cite a health-based minimum before shipping the commitment | P1 |
-| D7 | Leaderboard minimum group size | 5 homes | P2 |
-
-### Open questions
-- **Photon:** does a user's Photon id survive delete/re-add? Is the sender handle always a phone number, or sometimes an email (§5.2)? Does re-registration keep the same routing number?
-- **Model:** which ResStock upgrade scenarios match each catalog action? Are setpoint inputs available? How do effects compose in the leakage model (P1-09)?
-- **Verification:** how many months before "verified"? How do we handle bills that cover parts of two months?
-- **Carbon:** which eGRID year, and which ccf → therm heat content?
-- **Calendar:** scopes, token storage, and whether it fits in the time left.
-- **Leaderboard:** score delta vs CO₂ delta vs verified savings as the headline board; how to prevent gaming with manual bills.
-
----
-
-## 24. Sources
-
-| Fact | Source (as cited in PLAN.md and repo docs) |
+| Fact | Source |
 |---|---|
 | Buildings ≈ 68% of Ann Arbor emissions | A2ZERO (PLAN.md §4) |
-| ~31,500 rental units, median build year 1964; first MI energy code 1977 | PLAN.md §4 (`results/pivot-round2/`) |
-| 27,544 Ann Arbor renter households (54.5%); 45.0M US (34.8%) | PLAN.md §1 (Census) |
-| 70.7% of Ann Arbor homes heat with gas | PLAN.md §4 |
-| $1,052 (P10) – $2,254 (P90) for 800–1,200 sq ft gas-heated MI rentals | NREL ResStock 2024.2 (PLAN.md §4) |
-| Metered energy per sq ft varies ~3×, heating slope ~6× | Ann Arbor benchmarking (PLAN.md §6.3) |
-| GRH: effective Jan 6, 2026; 70 of 308 points through Jul 5, 2028, then 110 | a2gov.org news, checklist PDF, FAQ (PLAN.md §4) |
-| Gas 5.306 kg CO₂/therm (53.06 kg/MMBtu); electricity at eGRID RFCM | EPA (PLAN.md §6.4) |
-| Prices: EIA N3010MI3/N3010MI2 (gas, marginal), EIA-861M (electricity) | `UtilizationToMoney.md`, P1 `model/data_sources/eia.py` |
-| ResStock: 18,756 MI homes, simulated; 854 sq ft median 5+ unit apartment; bill columns flagged | `ResStock.md` |
-| Footprints, addresses, pairing results, `STORIES` coverage | `web/HOUSE_SCHEMA.md` (`p3/map-widget`) |
-| Photon allowlist, shared users, redirect; deliverability rules; 5,000/day limit | photon.codes docs (API reference, iMessage deliverability, troubleshooting) |
+| ~31,500 rentals, median build 1964; MI energy code 1977 | PLAN.md §4 |
+| 27,544 renter households (54.5%) | PLAN.md §1 (Census) |
+| 70.7% gas heat | PLAN.md §4 |
+| $1,052–$2,254 (P10–P90), 800–1,200 sq ft gas-heated MI rentals | NREL ResStock 2024.2 (PLAN.md §4) |
+| Energy/sq ft varies ~3×, heating slope ~6× | Ann Arbor benchmarking (PLAN.md §6.3) |
+| GRH: Jan 6, 2026; 70 of 308 points through Jul 5, 2028, then 110 | a2gov.org news, checklist, FAQ (PLAN.md §4) |
+| Gas 5.306 kg CO₂/therm; electricity eGRID RFCM | EPA (PLAN.md §6.4) |
+| Prices: EIA N3010MI3/N3010MI2 (gas, marginal), EIA-861M (electricity) | `UtilizationToMoney.md`; P1 `model/data_sources/eia.py` |
+| ResStock: 18,756 simulated MI homes; 854 sq ft median 5+ unit apartment; bill columns flagged | `ResStock.md` |
+| Footprints, addresses, pairing results, STORIES coverage | `web/HOUSE_SCHEMA.md` (`p3/map-widget`) |
+| Model gaps (heating + cooling only, no p10/p90, cooling less validated), data-quality issues, latency | `notes/integration.md`, `notes/P2.md` |
+| Photon: Free 10 users / Pro 100; shared pool, no groups; allowlist; 5,000/day; 50 new conversations/line/day; 5 req/s; deliverability rules | photon.codes docs (pricing, connection & routing, troubleshooting, deliverability, API reference) |
+| Hacking ends 12:00 PM Sun Oct 4; feature freeze 8:00 AM | PLAN.md §2, §8 |
 
 ---
 
@@ -730,11 +569,10 @@ Work in parallel against mocks; integrate in this order.
 /** Any value shown to a user carries where it came from (PLAN.md §0). */
 interface Sourced<T> {
   value: T;
-  source: string; // e.g. "city footprint record (STORIES)"
+  source: string;
   kind: "city_record" | "lidar" | "census" | "listing" | "renter" | "model" | "default";
 }
 
-/** One city footprint: the unit of the map, scoring and aggregation (HOUSE_SCHEMA.md). */
 interface Building {
   id: number;                 // footprint OBJECTID within `snapshot`
   snapshot: string;           // e.g. "a2_footprints@2026-10-03"
@@ -761,13 +599,13 @@ interface Address {
 
 interface User {
   id: string;
-  phone_number: string;       // E.164 or the raw iMessage handle; unique
+  phone_number: string;       // normalized handle (E.164, or the raw iMessage email handle); unique
   photon_user_id?: string;
   display_name?: string;
   alias?: string;             // leaderboard, opt-in
   leaderboard_opt_in: boolean;
-  timezone?: string;
-  reminder_prefs: { channel: "imessage" | "calendar" | "none"; cadence: "daily" | "weekly" | "off"; hour_local?: number };
+  timezone?: string;          // default America/Detroit
+  reminder_prefs: { channel: "imessage" | "calendar" | "none"; cadence: "daily" | "weekly" | "monthly" | "off"; hour_local?: number; paused?: boolean };
   current_property_id: string | null;
 }
 
@@ -837,11 +675,11 @@ interface BillSubmission {
   therms?: number;
   kwh?: number;
   amount_usd?: number;
-  weather_normalized_delta_pct: number; // percent, e.g. -12 = 12% below normal
-  image_ref?: string;                   // short-lived
+  weather_normalized_delta_pct: number; // percent: -12 = 12% below normal (D11)
+  image_sha256?: string;                // dedupe (I7); the image itself is not kept (D14)
 }
 
-/** The north-star ledger: verified reductions only, per property. */
+/** North-star ledger: verified reductions only, per property (I4, I8). */
 interface ImpactRecord {
   id: string;
   property_id: string;
@@ -851,17 +689,36 @@ interface ImpactRecord {
   therms_avoided: number;
   usd_saved: number;
   baseline_snapshot_id: string;
-  method: string;                       // e.g. "degree-day change-point fit, held-out error ‹x›"
-  emission_factors: { gas_kg_per_therm: number; elec_kg_per_kwh: number; egrid_year: number; source: string };
+  method: string;
+  emission_factors: { gas_kg_per_therm: number; elec_kg_per_kwh: number; egrid_year: number; ccf_to_therm: number; source: string };
 }
 ```
 
 ---
 
-## Appendix B: how the three source notes map into this file
+## Appendix B: building data pipeline (from HOUSE_SCHEMA)
 
-| Source note | Where it went | What changed |
+**Sources (public, no key; WGS84, paged by OBJECTID, raw responses cached):**
+- Footprints + height: `a2maps.a2gov.org/.../OSI/BuildingFootprints/FeatureServer/0` (`OBJECTID`, `ABG_BLD_HG`, `Struc_Type`, `Bldg_Name`, `PackedPin`, `STORIES`, `FacilityID`). Polygons and heights come from 2009 countywide LiDAR and 2005–08 imagery, updated since from construction plans.
+- Mailing addresses: `a2maps.a2gov.org/.../MailingAddress/FeatureServer/0` (`PROPSTREET`, `TYPE`, point).
+- Block-group outline: TIGERweb `tigerWMS_ACS2023/MapServer/10`. Year built and fuel: ACS 5-year via Census Reporter (`B25037`, `B25035`, `B25040`).
+- City services return 403 to Python's default user agent; send a browser-like one.
+
+**Pairing:** STRtree over footprints → address point **within** a footprint, else **snap** to the nearest within `1.1e-4°` (≈12 m N–S, ≈9 m E–W at 42.28° N; address points sit 5–11 m off the roof), else drop. Normalize to a street line (strip ` UNIT | APT | STE | #`, title-case). Per footprint: label = most common street line (ties by OBJECTID order); `units` = matched address count. Result on the current cache: 25,994 of 35,007 footprints matched, including 24,427 of 32,572 residential; most unmatched residential footprints look like garages.
+
+**Floors:** `STORIES` exists for 12,430 of 32,572 residential footprints (38%); otherwise height ÷ 10 ft, recorded in `stories.kind`. Prefer `height_ft` and `footprint_sqft` over exact floor counts.
+
+**Keys:** OBJECTID within a dated snapshot; `FacilityID` isn't unique (471 repeats), so keep it and the centroid for re-matching.
+
+**Hardening (H1):** run pairing once in P2's pipeline (D2); manifests next to caches (N7); snap distance in metres; a known-pair test (912 Mary St → footprint 1317, `BLD-001317`, 23.7 ft). Reference implementation: `web/scripts/build_map_fixture.py` (`p3/map-widget`).
+
+---
+
+## Appendix C: where each source note's content went
+
+| Source | Where it lives now | Main changes |
 |---|---|---|
-| **NEW_CHANGES** (accounts, commitments, projection, reminders) | §0, §2, §4–5, §7–9, §12–23 | Reframed around verified CO₂ avoided; added a third state (verified) and `ImpactRecord`; commitments ranked by CO₂ per net dollar; example numbers replaced with placeholders; endpoints reuse `/calibrate`, `/fixes` and `/session`; daily reminders limited by Photon's deliverability rules |
-| **Phase 2 flow sketch** | §3, §4 (diagram), §4.4, §5.4, §8.2, §12 | Leaderboard + commitments + ML loop kept; "sign in before the grade" turned into a decision (D1); "hardcoded commitments" kept as a catalog whose effects come from the model; daily notifications made opt-in and capped |
-| **HOUSE_SCHEMA** (`web/HOUSE_SCHEMA.md`) | §6, §7, Appendix A | Building/Address/Sourced shapes kept; tied to properties and impact aggregation; unit-counting conflict raised as D2 |
+| **NEW_CHANGES** (accounts, commitments, projection, reminders) | §1–3, §6–10, §14–16 | Reframed around verified CO₂; added the verified state, ImpactRecord and invariants; commitments ranked by CO₂ per net $; example numbers replaced with placeholders; endpoints reuse `/calibrate`, `/fixes`, `/session`; open questions became decisions (§11) and checks (§12) |
+| **Phase 2 flow sketch** (`phase2-diagram.png`, not in the repo) | §6 sequence diagrams, §9.1 catalog, §9.5 ghost marker, §9.6 policy | "Sign in before the grade" → D1; "hardcoded commitments" → catalog with model effects; daily notifications → D4 |
+| **HOUSE_SCHEMA** | §7, Appendix A, Appendix B | Building/Address/Sourced kept and tied to properties and impact aggregation; unit-count conflict → D2 |
+| **Integration findings + P4 checks** | §4 (C8–C12), §12, §13 | Model gaps, data quality, latency, tunnel and Photon limits turned into constraints, checks and risks |
