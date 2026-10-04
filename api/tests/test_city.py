@@ -3,6 +3,12 @@ import gzip
 import json
 import httpx
 import pytest
+import numpy as np
+import shapely
+from collections import Counter
+from types import SimpleNamespace
+from shapely.geometry import box, Point
+from app.geo.footprints import mailing_assignment, mailing_labels
 from fastapi.testclient import TestClient
 from app import city
 from app.main import app
@@ -41,27 +47,42 @@ def table(tmp_path, monkeypatch):
     footprints = tmp_path / "footprints.json"
     footprints.write_text(json.dumps({"features":[{"properties":{"OBJECTID":i+1, "Bldg_Name":"Private landlord"}, "geometry":geometry} for i in range(12)]}))
     monkeypatch.setattr(city,"TABLE_PATH",path)
-    monkeypatch.setattr(city,"FOOTPRINTS_PATH",footprints)
+    wgs = np.array([box(-83.700000123+i*.002,42.2,-83.699000456+i*.002,42.201) for i in range(14)])
+    props = [{"OBJECTID":i+1, "ABG_BLD_HG":23.74 if i < 12 else None,
+              "Struc_Type":"Office" if i == 12 else "Residential",
+              "PackedPin":"Garage" if i == 13 else None,"Bldg_Name":"Private landlord"} for i in range(14)]
+    points = np.array([g.representative_point() for g in wgs[:13]])
+    ix = SimpleNamespace(props=props,wgs=wgs,utm=wgs,tree=shapely.STRtree(wgs),
+        addr_street=np.array([f"{i+1} MAIN ST UNIT 1" for i in range(13)]),
+        addr_residential=np.array([True]*12+[False]),addr_utm=points,addr_wgs=points,addr_tree=shapely.STRtree(points))
+    monkeypatch.setattr(city,"_index",lambda: ix)
     for cached in (city._table,city._city_payload,city._leaderboard):
         cached.cache_clear()
     yield path,footprints
     for cached in (city._table,city._city_payload,city._leaderboard):
         cached.cache_clear()
 
-def test_all_geometries_cached_gzipped_without_names(table):
+def test_all_geometries_cached_gzipped_without_names(table, monkeypatch):
     client = TestClient(app)
     response = client.get("/city",headers={"Accept-Encoding":"gzip"})
     assert response.status_code == 200
     assert response.headers["content-encoding"] == "gzip"
     assert "Accept-Encoding" in response.headers["vary"]
     body = response.json()
-    assert body["type"] == "FeatureCollection" and len(body["features"]) == 12
+    assert body["type"] == "FeatureCollection" and len(body["features"]) == 14
     assert body["features"][0]["geometry"]["type"] == "Polygon"
-    assert set(body["features"][0]["properties"]) == {"score","grade","excess_usd_per_sqft","type"}
+    first = body["features"][0]
+    assert set(first) == {"type","geometry","properties"}
+    assert set(first["properties"]) == {"id","h","r","a","score","grade","excess_usd_per_sqft","type"}
+    assert {k:first["properties"][k] for k in ("id","h","r","a")} == {"id":1,"h":23.7,"r":1,"a":"1 Main St"}
+    assert body["features"][12]["properties"] == {"id":13,"h":0,"r":0,"a":"13 Main St"}
+    assert body["features"][13]["properties"] == {"id":14,"h":0,"r":1}
+    assert first["geometry"]["coordinates"][0][0][0] == -83.699
+    assert len({f["properties"]["id"] for f in body["features"]}) == 14
     assert "Private landlord" not in response.text and "Public apartments" not in response.text
     raw,compressed = city._city_payload()
     assert gzip.decompress(compressed) == raw
-    table[1].unlink()
+    monkeypatch.setattr(city,"_index",lambda: (_ for _ in ()).throw(RuntimeError("cache removed")))
     assert client.get("/city").status_code == 200
     identity = client.get("/city",headers={"Accept-Encoding":"gzip;q=0, identity"})
     assert "content-encoding" not in identity.headers and identity.json() == body
@@ -164,15 +185,16 @@ def test_city_all_type_unit_rows_keep_known_apartments_multifamily(fid):
     assert row["type"] == score_city.geo.MF5
 
 
-def test_city_courtyards_units_outside_footprint_use_same_25m_assignment():
+def test_city_courtyards_off_roof_units_use_common_city_assignment():
     from app.geo import FOOTPRINTS_PATH, ADDRESSES_PATH
     if not FOOTPRINTS_PATH.exists() or not ADDRESSES_PATH.exists():
         pytest.skip("run scripts/fetch_footprints.py")
     ix = score_city._index()
     i = next(i for i,p in enumerate(ix.props) if p["OBJECTID"] == 17797)
-    unit_counts = score_city.associated_units(ix)
-    row = score_city.footprint_inputs(ix,i,unit_counts.get(i,0))
-    assert (row["type"],row["sqft"]) == (score_city.geo.MF5,1263)
+    assignments = mailing_assignment(ix)
+    unit_counts = score_city.associated_units(ix,assignments)
+    row = score_city.footprint_inputs(ix,i,unit_counts.get(i,0),np.flatnonzero(assignments == i))
+    assert (row["type"],row["sqft"]) == (score_city.geo.MF5,1184)
 
 
 def test_slow_benchmark_stops_and_next_run_resumes_exact_inputs(tmp_path, monkeypatch):
@@ -202,3 +224,40 @@ def test_slow_benchmark_stops_and_next_run_resumes_exact_inputs(tmp_path, monkey
     assert score_city.main(args) == 0
     assert len(calls) == 203 and calls[-1] == 0
     assert score_city.read_checkpoint(checkpoint)[0]["annual_usd"] == 2000
+
+
+def test_mailing_assignment_p3_inside_nearest_radius_and_label_ties():
+    # WGS84 degrees; point 1 is just outside the roof and must snap to it.
+    geoms = np.array([box(0,0,.0001,.0001),box(.001,0,.0011,.0001)])
+    points = np.array([Point(.00005,.00005),Point(.00015,.00005),Point(.00105,.00005),
+                       Point(.00005,.00005),Point(.00005,.00005),Point(.0013,.00005)])
+    ix = SimpleNamespace(wgs=geoms,addr_wgs=points,
+        addr_street=np.array(["912 MARY ST UNIT 1","912 MARY ST UNIT 2","20 MAIN ST", "914 MARY ST", "914 MARY ST", "76 MAIN ST"]))
+    assignment = mailing_assignment(ix)
+    assert assignment.tolist() == [0,0,1,0,0,-1]
+    # 912 and 914 tie at two rows; source address order chooses 912.
+    assert mailing_labels(ix,assignment) == {0:"912 Mary St",1:"20 Main St"}
+
+
+def test_scoring_uses_the_same_assigned_general_and_vacant_unit_rows():
+    from scripts import score_city
+    points = np.array([Point(.00005,.00005),Point(.00015,.00005),Point(.00015,.00005)])
+    geoms = np.array([box(0,0,.0001,.0001)])
+    ix = SimpleNamespace(props=[{"OBJECTID":1317,"Struc_Type":"Residential","PackedPin":None,"STORIES":2}],
+        utm=np.array([box(0,0,10,10)]),wgs=geoms,tree=shapely.STRtree(geoms),addr_utm=points,addr_wgs=points,addr_tree=shapely.STRtree(points),
+        addr_street=np.array(["912 MARY ST","912 MARY ST UNIT 1","912 MARY ST UNIT 2"]),
+        addr_residential=np.array([True,False,False]),addr_by_street={"912 MARY ST":0},
+        units_by_street=Counter({"912 MARY ST":2}))
+    assignment = mailing_assignment(ix)
+    units = score_city.associated_units(ix,assignment)
+    row = score_city.footprint_inputs(ix,0,units[0],[j for j,i in enumerate(assignment) if i == 0])
+    assert row["footprint_id"] == 1317
+    assert row["type"] == score_city.geo.MF24
+    assert mailing_labels(ix,assignment) == {0:"912 Mary St"}
+
+
+def test_city_missing_mailing_cache_has_structured_error(table, monkeypatch):
+    monkeypatch.setattr(city,"_index",lambda: (_ for _ in ()).throw(RuntimeError("missing cache")))
+    response = TestClient(app).get("/city")
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "city_unavailable"
