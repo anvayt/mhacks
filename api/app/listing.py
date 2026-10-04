@@ -177,7 +177,11 @@ def _unit_after_state(source: str, t: list[str]) -> dict:
     if not r["needs_address"] or k is None:
         return r
     # One token after 'unit' is the unit; more is free text ('unit-3-bedroom-15-bath'), so drop it.
-    return _from_tokens(source, t[:k], _unit(t[k + 1]) if len(t) == k + 2 else None)
+    # Apartments.com's common shape repeats the designator: 'unit-apt-201' → Unit 201.
+    u = t[k + 1:]
+    if len(u) > 1 and u[0].lower() in UNITS:
+        u = u[1:]
+    return _from_tokens(source, t[:k], _unit(u[0]) if len(u) == 1 else None)
 
 
 def _trulia(segs: list[str]) -> dict:

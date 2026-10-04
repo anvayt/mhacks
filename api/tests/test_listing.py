@@ -322,6 +322,10 @@ UNITS = [
      "100 Main St Unit 2, Southfield, MI 48075", "Unit 2"),
     ("https://www.homes.com/property/6-parkview-place-ann-arbor-mi-unit-4/1ppkhgzjh32zs/",
      "6 Parkview Pl Unit 4, Ann Arbor, MI", "Unit 4"),
+    ("https://www.apartments.com/127-fieldcrest-st-ann-arbor-mi-unit-apt-201/h8h7y01/",  # real, Oct 3
+     "127 Fieldcrest St Unit 201, Ann Arbor, MI", "Unit 201"),
+    ("https://www.apartments.com/322-e-liberty-st-ann-arbor-mi-unit-apt-12/td56tm8/",  # real, Oct 3
+     "322 E Liberty St Unit 12, Ann Arbor, MI", "Unit 12"),
     ("https://hotpads.com/1115-willard-st-ann-arbor-mi-48104-w1aj91/101/pad",
      "1115 Willard St Unit 101, Ann Arbor, MI 48104", "Unit 101"),
     ("https://hotpads.com/220-w-ann-st-ann-arbor-mi-48104-1mn4cz3/1/pad",
