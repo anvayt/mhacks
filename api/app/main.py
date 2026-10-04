@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.boards import router as boards_router
 from app.calibrate import router as calibrate_router
 from app.city import router as city_router
 from app.compare import router as compare_router
@@ -26,6 +27,7 @@ app.include_router(forecast_router)
 app.include_router(compare_router)
 app.include_router(city_router)
 app.include_router(calibrate_router)
+app.include_router(boards_router)
 
 
 class EstimateRequest(BaseModel):
