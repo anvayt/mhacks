@@ -5,7 +5,7 @@ PASS | web login confirm (agent)    | agent confirmed the test login
 PASS | web login token              | web bearer token received; token withheld
 PASS | phone login idempotency      | two calls returned the same user
 PASS | save Morton property         | 1514 Morton: grade C, annual $2,117
-PASS | web account /me              | web authorization works; 1 property record(s)
+PASS | web account /me              | web authorization works; 3 property record(s)
 PASS | suggested commitments        | 7 suggestions; window_upgrade present
 PASS | accept window_upgrade        | window_upgrade accepted
 PASS | projection honesty           | current C unchanged; projected_if_completed; 0 not modeled

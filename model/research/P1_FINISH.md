@@ -54,3 +54,9 @@ A **hypothetical typed 80-therm February 2026 bill** is **77.3% below** this mod
 Morton's map has **34 → 32 → 17** simulated peers (public record → gas → single pane); final p10/p50/p90 are **$1,530 / $2,448 / $3,631**. Source: `morton_map.steps`. Arrowwood selects `metered` and all new commitments remain honest placeholders. An empty genuine peer cohort remains empty; the current web's generic empty copy still says pending model data.
 
 Legacy compatibility: **75/75** endpoint comparisons pass for five demo addresses plus 20 deterministic city samples, across `/hc/estimate`, `/hc/bill_check`, `/hc/weather` (`results/finish/compatibility.json`). Old numeric JSON tokens, including representation, match; additive fields are allowed. The current input contract's explicit new no-AC behavior is tested separately. Sign-off reproduces all source predictions with zero observed drift and corrects the stale blend headline to **29.2%**; see `results/SIGNOFF.md`.
+
+## Final integration gates
+
+Current dev through `0ea901a` was merged after the feature checkpoint. The one overlap in `api/app/commitments.py` preserves both simulation's heating/cooling dollar deltas and P1 effect metadata. Final checks on that result: **675 API tests passed, 2 skipped; 63 model tests passed; 16/16 Phase 2 steps passed; repeated legacy HTTP numeric comparison 75/75 passed; isolated live acceptance passed**. Evidence is in `results/finish/{api_tests,model_tests,phase2,compatibility,live_smoke}.log` with associated JSON. Model code/artifacts did not change during the dev merge.
+
+[Manual SWAP and ROLLBACK](../results/SWAP.md) is a lead-only handoff. No swap was executed. The existing city score table was not re-scored.
