@@ -2,7 +2,7 @@
 
 **Bottom line.** For any Ann Arbor address we return a point estimate of **heating $ and cooling $ for each of the four seasons** (and per year), for one apartment. It comes with the energy (gas ccf, electric kWh) and the weather that drives it: mean temperature, heating degree-days (HDD) and cooling degree-days (CDD) at the building's 800 m PRISM cell. It works for a typical year, a past year, or the next 12 months (forecast). It is as local as the data allows: the **building itself** (real meters when the city has them), not the zip code.
 
-Code: `model/hc/service.py` (`estimate_hc`). Dev server: `uvicorn model.hc.server:app --port 8001`. Every number below comes from a file in `model/results/`.
+Code: `model/heating_cooling/service.py` (`estimate_hc`). Dev server: `uvicorn model.heating_cooling.server:app --port 8001`. Every number below comes from a file in `model/results/`.
 
 ## 1. What "PRISM" means here (both meanings are used)
 

@@ -15,7 +15,7 @@
 - Calibration to real meters: for multifamily, predictions are scaled by
   median(Ann Arbor metered intensity) / median(ResStock 5+ unit intensity) (see results/resstock_hc_validation.json).
 
-Run: python -m model.hc.resstock_model
+Run: python -m model.heating_cooling.resstock_model
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from xgboost import XGBRegressor
 from model import climate
 from model.data_sources import openmeteo, prism
 from model.data_sources.resstock import load
-from model.hc.building_model import TAU_C, TAU_H_ELEC, TAU_H_GAS
+from model.heating_cooling.building_model import TAU_C, TAU_H_ELEC, TAU_H_GAS
 from model.paths import ARTIFACTS, PROCESSED, RESULTS
 
 KWH_PER_CCF = 103.7 / 3.412          # 1 ccf ≈ 103.7 kBtu (EIA average heat content); 3.412 kBtu per kWh
@@ -53,7 +53,7 @@ ANSWERS = {
 }
 # Envelope details a renter cannot observe (air leakage, insulation R-values, furnace efficiency). They stay out
 # of the model's inputs; ResStock samples them from Michigan's housing stock, so they average into the estimate.
-# They are used only in model/hc/leakage_analysis.py to ask whether they could be inferred from bills.
+# They are used only in model/heating_cooling/leakage_analysis.py to ask whether they could be inferred from bills.
 HIDDEN = ["ach50", "wall_r", "ceiling_r", "heating_afue", "low_e"]
 FEATURES = PUBLIC + list(ANSWERS)
 FOUNDATION = {"Heated Basement": 0, "Unheated Basement": 1, "Slab": 2, "Vented Crawlspace": 3,

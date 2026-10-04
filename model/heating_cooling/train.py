@@ -6,7 +6,7 @@
    building, to predict buildings without meters. Held-out error is reported at the month level and at the
    level that matters for the product: each building's annual heating (gas) and cooling (electric) energy.
 
-Run: python -m model.hc.train
+Run: python -m model.heating_cooling.train
 """
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 
 from model import climate
-from model.hc import changepoint
-from model.hc.features import FEATURES, building_features, weather_features, zero_weather
+from model.heating_cooling import changepoint
+from model.heating_cooling.features import FEATURES, building_features, weather_features, zero_weather
 from model.paths import ARTIFACTS, PROCESSED, RESULTS
 
 TARGETS = {"gas": "gas_ccf", "elec": "elec_kwh"}

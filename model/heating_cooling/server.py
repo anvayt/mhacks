@@ -1,22 +1,27 @@
-"""P1-06: dev HTTP server for the heating/cooling estimator (P2 wraps model.hc.service inside /api).
+"""P1-06: dev HTTP server for the heating/cooling estimator (P2 wraps model.heating_cooling.service inside /api).
 
-Run: uvicorn model.hc.server:app --port 8001
+Run: uvicorn model.heating_cooling.server:app --port 8001
   GET /hc/estimate?address=…&unit_sqft=850&mode=normal|forecast|2024&window_panes=2&floor_level=1&…
   GET /hc/estimate?lat=42.28&lon=-83.74
   GET /hc/weather?lat=…&lon=…&mode=…
   GET /hc/bill_check?address=…&year=2025&month=1&gas_ccf=95&unit_sqft=850
   GET /hc/buildings          (pre-scored metered + large apartment buildings, for the map)
+  GET /hc/validation         (held-out checks against real data)
+  GET /dashboard             (local explorer UI; / redirects here)
 """
 from __future__ import annotations
 
 import json
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from pathlib import Path
 
-from model.hc import service
-from model.hc.resstock_model import ANSWERS
-from model.paths import PROCESSED
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, RedirectResponse
+
+from model.heating_cooling import service
+from model.heating_cooling.resstock_model import ANSWERS
+from model.paths import PROCESSED, RESULTS
 
 app = FastAPI(title="Hidden Rent: heating + cooling estimates (P1)")
 
@@ -62,5 +67,27 @@ def answers():
 def buildings():
     p = PROCESSED / "buildings_hc.parquet"
     if not p.exists():
-        raise HTTPException(503, "run python -m model.hc.score_buildings first")
+        raise HTTPException(503, "run python -m model.heating_cooling.score_buildings first")
     return json.loads(pd.read_parquet(p).to_json(orient="records"))
+
+
+@app.get("/hc/validation")
+def validation():
+    out = {}
+    files = (("real", RESULTS / "validation_real.json"), ("leakage", RESULTS / "leakage_analysis.json"),
+             ("building_model", RESULTS / "building_model_validation.json"),
+             ("resstock", RESULTS / "resstock_hc_validation.json"), ("train", RESULTS / "hc_validation.json"),
+             ("meters", RESULTS / "meters_summary.json"), ("prices", PROCESSED / "prices_mi.json"))
+    for name, p in files:
+        out[name] = json.loads(p.read_text()) if p.exists() else None
+    return out
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse(Path(__file__).with_name("dashboard.html"))
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/dashboard")
