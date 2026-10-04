@@ -265,6 +265,8 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         feat = {"gfa_ft2": gfa, "year_built": yb, "stories_max": env["stories_max"], "height_ft_max": env["height_ft_max"],
                 "surface_to_volume": env["surface_to_volume"], "fp_count": env["fp_count"], "fp_area_ft2": env["fp_area_ft2"]}
 
+    # unnamed footprints / missing ENERGY STAR scores are NaN, which JSON (the HTTP server) can't encode
+    building = {k: None if isinstance(v, float) and not np.isfinite(v) else v for k, v in building.items()}
     btype = building_type or _guess_btype(float(feat["gfa_ft2"]), float(feat["stories_max"]))
     building["building_type"] = btype
     building["building_type_source"] = "caller" if building_type else "heuristic from floor area and stories"
