@@ -1,10 +1,10 @@
 {
-  "created_at": "2026-10-04T12:25:17.124539+00:00",
+  "created_at": "2026-10-04T12:27:13.392595+00:00",
   "api": "http://localhost:8061",
   "model": "http://localhost:8011",
   "bill_note": "Hypothetical typed 80-therm bill, not a real submitted utility bill.",
   "morton_initial": {
-    "session_id": "a43731ca40",
+    "session_id": "73ce0f5c44",
     "building": {
       "lat": 42.26254914787,
       "lon": -83.729299593899,
@@ -1096,7 +1096,7 @@
   },
   "morton_answers": [
     {
-      "session_id": "a43731ca40",
+      "session_id": "73ce0f5c44",
       "building": {
         "lat": 42.26254914787,
         "lon": -83.729299593899,
@@ -2170,7 +2170,7 @@
       }
     },
     {
-      "session_id": "a43731ca40",
+      "session_id": "73ce0f5c44",
       "building": {
         "lat": 42.26254914787,
         "lon": -83.729299593899,
@@ -3231,7 +3231,7 @@
   ],
   "morton_suggested": {
     "property_id": null,
-    "session_id": "a43731ca40",
+    "session_id": "73ce0f5c44",
     "commitments": [
       {
         "catalog_id": "heat_pump",
@@ -3653,7 +3653,7 @@
     "id": null,
     "projection_id": null,
     "property_id": null,
-    "session_id": "a43731ca40",
+    "session_id": "73ce0f5c44",
     "commitment_ids": [
       "air_sealing",
       "attic_insulation",
@@ -3698,6 +3698,8 @@
       "score": -19,
       "usd_saved_yr": -359,
       "co2_kg_saved_yr": 6154,
+      "building_heating_usd_saved_yr": -359,
+      "building_cooling_usd_saved_yr": 0,
       "label": "projected_if_completed"
     },
     "label": "projected_if_completed",
@@ -3831,13 +3833,13 @@
     },
     "method": "model_rerun",
     "model_version": "P1 /hc/estimate (resstock path)",
-    "created_at": "2026-10-04T12:25:17+00:00"
+    "created_at": "2026-10-04T12:27:13+00:00"
   },
   "morton_projection_load_only": {
     "id": null,
     "projection_id": null,
     "property_id": null,
-    "session_id": "a43731ca40",
+    "session_id": "73ce0f5c44",
     "commitment_ids": [
       "air_sealing",
       "attic_insulation",
@@ -3881,6 +3883,8 @@
       "score": 41,
       "usd_saved_yr": 679,
       "co2_kg_saved_yr": 4114,
+      "building_heating_usd_saved_yr": 679,
+      "building_cooling_usd_saved_yr": 0,
       "label": "projected_if_completed"
     },
     "label": "projected_if_completed",
@@ -3992,10 +3996,10 @@
     },
     "method": "model_rerun",
     "model_version": "P1 /hc/estimate (resstock path)",
-    "created_at": "2026-10-04T12:25:17+00:00"
+    "created_at": "2026-10-04T12:27:13+00:00"
   },
   "bill_request": {
-    "session_id": "a43731ca40",
+    "session_id": "73ce0f5c44",
     "therms": 80,
     "gas_unit": "therms",
     "start": "2026-02-01",
@@ -4008,7 +4012,7 @@
       "weather-beater"
     ],
     "estimate": {
-      "session_id": "a43731ca40",
+      "session_id": "73ce0f5c44",
       "building": {
         "lat": 42.26254914787,
         "lon": -83.729299593899,
@@ -5635,7 +5639,7 @@
     ]
   },
   "arrowwood": {
-    "session_id": "383f71d0c3",
+    "session_id": "0665fd9c22",
     "building": {
       "lat": 42.307546009309,
       "lon": -83.734544266026,
@@ -6707,7 +6711,7 @@
   },
   "arrowwood_suggested": {
     "property_id": null,
-    "session_id": "383f71d0c3",
+    "session_id": "0665fd9c22",
     "commitments": [
       {
         "catalog_id": "thermostat_setback",
