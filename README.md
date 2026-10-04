@@ -10,14 +10,16 @@ Secrets go only in git-ignored `.env` files; every variable name is in [`.env.ex
 
 | Piece | Port | Set up once | Start |
 |---|---|---|---|
-| `/model` heating + cooling (P1) | 8001 | `make -C model setup && make -C model build` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`) | `make -C model dashboard` |
+| `/model` heating + cooling (P1) | 8001 | `make -C model setup && make -C model build && make -C model leakage` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`; PRISM allows each grid twice a day per IP, so copy `model/data/raw/prism/` from a teammate instead of re-downloading) | `make -C model dashboard` |
 | `/api` FastAPI (P2) | 8000 | `cd api && uv sync && uv run python scripts/fetch_footprints.py` (~30 s, city GIS into `/data/`) | `cd api && uv run uvicorn app.main:app --port 8000` |
 | `/agent` iMessage agent (P4) | | `cd agent && npm ci && cp .env.example .env` (Photon creds for real iMessage) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
 | onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
 | `/web` Next.js (P3) | 3000 | `cd web && npm ci` | `cd web && npm run dev` |
 
 `make -C model build` (and `leakage`) rewrite committed files under `model/data/processed/` and `model/results/`
-with this machine's retrain; leave those to P1 (`git checkout -- model/data/processed model/results` to drop them).
+with this machine's retrain. Don't commit them (P1 owns them), but keep them while you serve from this machine: the
+server reads them together with the git-ignored models in `model/artifacts/` trained in the same build, so dropping
+only one side mixes two trainings.
 
 Start order: model, then api, then agent / web. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
 `http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` and the web form at `NEXT_PUBLIC_API_BASE_URL`
@@ -33,18 +35,17 @@ curl -s localhost:8000/estimate -H 'content-type: application/json' \
 Tests (each from the repo root):
 
 ```bash
-make -C model test                       # needs make -C model build first
+make -C model test                       # needs make -C model build and make -C model leakage first
 (cd api && uv run pytest -q)             # /estimate end-to-end tests skip unless the model server is up
 (cd agent && npm test && npm run typecheck)
 (cd web && npm run build)                # type-checks /web; it has no tests yet
-make -C model leakage && make -C model test   # P1-09 leakage tests need its model trained first
 ```
 
 `POST /estimate` today returns real `building` fields and heating + cooling `bill` p50s (annual, per season, per month,
 from P1's model; `heating_cooling` has P1's full answer). Not yet filled (null/empty): `session_id`, `bill` p10/p90,
 `co2_t`, score/grade/percentiles/hidden rent, badges, questions. Errors are 422
 `{"detail": {"code", "message"}}` with codes `missing_input`, `needs_address` (+ `hint`), `not_found` (outside Ann
-Arbor), `not_a_home`; 503 when the model or the address lookup is down.
+Arbor), `not_a_home`, `bad_unit_sqft` (outside 100–10,000); 503 when the model or the address lookup is down or errors.
 
 ## Research (`results/` on `main`)
 
