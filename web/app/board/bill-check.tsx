@@ -37,11 +37,11 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
   const [fixes, setFixes] = useState<Fixes | null>(null); const [fixError, setFixError] = useState(""); const [copied, setCopied] = useState(false);
   async function loadFixes() { setFixError(""); try { setFixes(await apiFetch<Fixes>(`/fixes/${encodeURIComponent(sessionId)}`)); } catch (e) { setFixError(errorText(e)); } }
   async function submit(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError(""); setFixes(null); setResult(null);
+    event.preventDefault(); setBusy(true); setError(""); setFixes(null); setResult(null); setCopied(false);
     try {
       const input = photo ? { bill_image_base64: photo } : mode === "amount" ? { amount_usd: Number(usage) } : { therms: Number(usage), gas_unit: mode };
       const checked = await apiFetch<Calibration>("/calibrate", { body: { session_id: sessionId, ...(propertyId ? { property_id: propertyId } : {}), ...input, ...dates, ...(kwh ? { kwh: Number(kwh) } : {}) } });
-      setResult(checked); setAmountResult(!photo && mode === "amount");
+      setResult(checked); setAmountResult(checked.extracted?.estimated_from_amount === true);
       await onChecked(checked); await loadFixes();
     } catch (e) {
       const typing = e instanceof ApiError && ["unreadable_bill", "bad_bill", "vision_unavailable"].includes(e.code);
@@ -57,10 +57,10 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
       <div className={styles.grid}>
         <label className={styles.input}>{mode === "amount" ? "Gas bill amount ($)" : `Gas usage (${mode})`}<input id="gas-usage" type="number" inputMode="decimal" min="0.01" step="any" required={!photo} disabled={!!photo} value={usage} onChange={e => setUsage(e.target.value)} /></label>
         <label className={styles.input}>Electricity kWh (optional; stored, not compared)<input type="number" inputMode="decimal" min="0" step="any" value={kwh} onChange={e => setKwh(e.target.value)} /></label>
-        <label className={styles.input}>Billing start<input type="date" required value={dates.start} onChange={e => setDates({ ...dates, start: e.target.value })} /></label>
-        <label className={styles.input}>Billing end<input type="date" required min={dates.start} value={dates.end} onChange={e => setDates({ ...dates, end: e.target.value })} /></label>
+        <label className={styles.input}>Billing start<input id="bill-start" type="date" required value={dates.start} onChange={e => setDates({ ...dates, start: e.target.value })} /></label>
+        <label className={styles.input}>Billing end<input id="bill-end" type="date" required min={dates.start} value={dates.end} onChange={e => setDates({ ...dates, end: e.target.value })} /></label>
       </div>
-      <label className={styles.input}>Optional bill photo<input type="file" accept="image/*" disabled={busy || readingPhoto} onChange={async e => {
+      <label className={styles.input}>Optional bill photo<input id="bill-photo" type="file" accept="image/*" disabled={busy || readingPhoto} onChange={async e => {
         const file = e.target.files?.[0]; if (!file) return; setReadingPhoto(true); setError(""); setPhoto(null);
         try { setPhoto(await jpeg(file)); setPhotoName(file.name); } catch (err) { setError(errorText(err)); } finally { setReadingPhoto(false); e.target.value = ""; }
       }} /></label>
@@ -72,7 +72,7 @@ export function BillCheck({ sessionId, propertyId, onChecked }: { sessionId: str
     <div aria-live="polite">{result && <div className={styles.section}>
       <p><strong>{Math.abs(result.pct_vs_expected_for_weather).toLocaleString("en-US", { maximumFractionDigits: 1 })}% {result.pct_vs_expected_for_weather < 0 ? "below" : "above"} normal for this weather</strong></p>
       <p>{result.streak_months} months in a row below normal 🔥</p>
-      {amountResult && <p className="board-note">Estimated from your bill amount.</p>}
+      {amountResult && <p className="board-note">{result.extracted?.note ?? "Estimated from your bill amount."}</p>}
       <p className="board-note">{result.verified ? "Verified gas reduction." : "Early signal, not verified savings."} {result.note}</p>
       {result.impact && <p>{result.impact.co2_kg_avoided.toLocaleString()} kg CO₂ avoided · {money(result.impact.usd_saved)} saved in this verified period.</p>}
       {!!result.badges?.length && <p>Badges: {result.badges.map(b => b.replaceAll("-", " ")).join(" · ")}</p>}
