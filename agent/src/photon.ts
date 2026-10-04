@@ -15,6 +15,9 @@ export interface PhotonCreds {
 export interface SharedUser {
   id: string;
   phoneNumber: string;
+  /** The Photon line this user texts (shared pool assigns one per user). */
+  assignedPhoneNumber: string;
+  firstName?: string | null;
 }
 
 /** Normalize a typed phone number to E.164, assuming US (+1) for 10-digit input. Returns null if it can't. */
@@ -36,6 +39,31 @@ export class PhotonError extends Error {
   }
 }
 
+async function photonRequest<T>(
+  creds: PhotonCreds,
+  path: string,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+): Promise<T> {
+  const auth = Buffer.from(`${creds.projectId}:${creds.projectSecret}`).toString("base64");
+  const res = await fetchImpl(`${API}/projects/${creds.projectId}${path}`, {
+    ...init,
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+  });
+  const body = (await res.json().catch(() => null)) as { succeed?: boolean; data?: T; message?: string } | null;
+  if (!res.ok || !body?.succeed || !body.data) {
+    throw new PhotonError(`Photon ${init.method ?? "GET"} ${path} failed (${res.status}): ${body?.message ?? "no message"}`, res.status);
+  }
+  return body.data;
+}
+
+const toUser = (u: SharedUser): SharedUser => ({
+  id: u.id,
+  phoneNumber: u.phoneNumber,
+  assignedPhoneNumber: u.assignedPhoneNumber,
+  firstName: u.firstName ?? null,
+});
+
 /** POST /projects/{id}/users with type "shared". Idempotent per phone number on Photon's side. */
 export async function createSharedUser(
   creds: PhotonCreds,
@@ -43,17 +71,22 @@ export async function createSharedUser(
   firstName?: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SharedUser> {
-  const auth = Buffer.from(`${creds.projectId}:${creds.projectSecret}`).toString("base64");
-  const res = await fetchImpl(`${API}/projects/${creds.projectId}/users/`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "shared", phoneNumber, ...(firstName ? { firstName } : {}) }),
-  });
-  const body = (await res.json().catch(() => null)) as { succeed?: boolean; data?: SharedUser } | null;
-  if (!res.ok || !body?.succeed || !body.data) {
-    throw new PhotonError(`Photon create user failed (${res.status}): ${JSON.stringify(body)}`, res.status);
-  }
-  return { id: body.data.id, phoneNumber: body.data.phoneNumber };
+  const body = JSON.stringify({ type: "shared", phoneNumber, ...(firstName ? { firstName } : {}) });
+  return toUser(await photonRequest<SharedUser>(creds, "/users/", { method: "POST", body }, fetchImpl));
+}
+
+/** GET /projects/{id}/users?type=shared. Also the cheapest way to check credentials. */
+export async function listSharedUsers(
+  creds: PhotonCreds,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ users: SharedUser[]; total: number }> {
+  const data = await photonRequest<{ users: SharedUser[]; total: number }>(
+    creds,
+    "/users/?type=shared&limit=500",
+    { method: "GET" },
+    fetchImpl,
+  );
+  return { users: data.users.map(toUser), total: data.total };
 }
 
 /** Public Photon endpoint that 302s into Messages (SMS deep link) with the opener pre-filled. */
