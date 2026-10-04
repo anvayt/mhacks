@@ -145,6 +145,16 @@ export async function adoptSession(): Promise<void> {
   save("property", p.property_id);
 }
 
+// "Change address" on the board: a per-tab flag so the grade screen saves the new lookup as the current home without
+// a second click. The board clears it when the trip ends, so a later unrelated lookup is never adopted.
+const MOVE_KEY = "hr_moving";
+export function startMove(): void {
+  try { sessionStorage.setItem(MOVE_KEY, "1"); } catch { /* blocked storage: the grade screen's Save button still works */ }
+}
+export function endMove(): boolean {
+  try { const on = sessionStorage.getItem(MOVE_KEY) === "1"; sessionStorage.removeItem(MOVE_KEY); return on; } catch { return false; }
+}
+
 /** Signed in, and is the current session already their saved home? null when not signed in. */
 export async function sessionIsHome(): Promise<boolean | null> {
   const user_id = load("user");

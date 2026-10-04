@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   adoptSession,
+  endMove,
   billCovers,
   currentEstimate,
   errorText,
@@ -52,7 +53,10 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
       .then((est) => {
         setE(est);
         sessionIsHome()
-          .then((is) => setHome(is === false ? "offer" : "hidden"))
+          .then((is) => {
+            setHome(is === false ? "offer" : "hidden");
+            if (is === false && endMove()) void saveHome(); // came from the board's "Change address": this is the new home
+          })
           .catch((err) => {
             if (err instanceof ApiError && err.status === 401) {
               save("token", null); // expired login: the grade works without it

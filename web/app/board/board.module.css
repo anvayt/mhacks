@@ -37,3 +37,6 @@
 
 .track { position:relative; }
 .ghostBar { position:absolute; bottom:0; left:8%; width:84%; border:2px dashed #10102d; background:#ffffff80; box-sizing:border-box; transition:height .6s ease; }
+.homeRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; }
+.linkButton { border: 0; padding: 0; background: none; color: inherit; font: inherit; font-size: 14px; opacity: .8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.linkButton:hover, .linkButton:focus-visible { opacity: 1; }

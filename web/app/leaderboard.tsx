@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { usageHue } from "./flow-api";
-import { ListingForm } from "./listing-form";
+import { endMove, startMove, usageHue } from "./flow-api";
 import { apiFetch, ApiError, load, save } from "./lib/api";
 import { BillCheck } from "./board/bill-check";
 import { FastForward } from "./board/fast-forward";
@@ -32,12 +31,10 @@ export function Leaderboard() {
   const [projection, setProjection] = useState<Projection | null>(null);
   const [publicBoard, setPublicBoard] = useState<PublicBoard | null>(null);
   const [verified, setVerified] = useState<VerifiedBoard | null>(null);
-  const [monthly, setMonthly] = useState<"ask" | "address" | "bill">("ask");
   const [targetDate, setTargetDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [moveError, setMoveError] = useState("");
   const [optionError, setOptionError] = useState("");
   const [publicError, setPublicError] = useState("");
   const [notice, setNotice] = useState("");
@@ -68,6 +65,7 @@ export function Leaderboard() {
     setPublicError([hall, board].filter(x => x.status === "rejected").map(x => errorText((x as PromiseRejectedResult).reason)).join(" "));
   }
   async function initialize() {
+    endMove(); // back on the board: a "Change address" trip that ended here is over
     setLoading(true); setError(""); setOptionError(""); setPosition(null); setProjection(null); setSnapshot(null); setSuggestions([]); setChosen([]);
     void fetchPublic();
     try {
@@ -148,17 +146,6 @@ export function Leaderboard() {
       setNotice(result.mock ? "Demo calendar reminder saved (mock; no real event created)." : "Calendar reminder saved."); setCalendarConnected(true);
     } catch (e) { setOptionError(errorText(e)); } finally { setBusy(""); }
   }
-  // ListingForm already ran /estimate (and the unit-size ask): adopt that session, never look the address up again.
-  async function move(_listing: string, next: { session_id: string }) {
-    if (busy) return; setBusy("move"); setMoveError("");
-    try {
-      if (context?.signed && context.userId) {
-        const home = await apiFetch<{ property_id: string }>("/properties", { body: { user_id: context.userId, session_id: next.session_id } });
-        save("property", home.property_id);
-      } else save("property", null);
-      save("session", next.session_id); router.push(`/survey?session_id=${encodeURIComponent(next.session_id)}`);
-    } catch (e) { setMoveError(errorText(e)); } finally { setBusy(""); }
-  }
   async function checked(result: Calibration) {
     setProjection(null); setChosen([]);
     if (result.snapshot && !result.snapshot.provisional && result.snapshot.source === "bill_regrade") setSnapshot(result.snapshot);
@@ -229,10 +216,15 @@ export function Leaderboard() {
           {notice && <p role="status" className={styles.status}>{notice}</p>}
         </section>}
         {context?.signed && <ReminderSettings />}
-        <section className={styles.section}><h2 className="eyebrow">Change address?</h2><div className="choice-row"><button type="button" className="control choice" aria-pressed={monthly === "address"} onClick={() => setMonthly("address")}>Yes</button><button type="button" className="control choice" aria-pressed={monthly === "bill"} onClick={() => setMonthly("bill")} disabled={!context}>No</button></div>
-          {monthly === "address" && <><ListingForm onPicked={move} submitLabel={busy === "move" ? "Looking it up…" : "Find my hidden rent"} />{moveError && <p role="alert" className={`${styles.status} ${styles.error}`}>{moveError}</p>}{context?.signed && <p className="board-note">Saving the new address archives your previous home and starts a new baseline.</p>}</>}
-          {monthly === "bill" && context && <BillCheck key={context.sessionId} sessionId={context.sessionId} propertyId={context.propertyId} currentGrade={current ? gradeSpan(current.grade, snapshot?.grade_span ?? estimate?.grade_span) : estimate ? gradeSpan(estimate.grade, estimate.grade_span) : null} onChecked={checked} />}
-        </section>
+        {context && <section className={styles.section}>
+          <h2 className="eyebrow">Current home</h2>
+          <div className={styles.homeRow}><span>{estimate?.building.address ?? "Loading your home…"}</span>
+            {/* Moving is the exception: back to the same address step new users start on. Nothing is cleared here; the new
+                lookup becomes the session, and the grade screen saves it as the current home (POST /properties archives the old one). */}
+            <button type="button" className={styles.linkButton} onClick={() => { startMove(); router.push("/address"); }}>I moved: change address</button></div>
+          <h2 className="eyebrow">This month&apos;s bill</h2>
+          <BillCheck key={context.sessionId} sessionId={context.sessionId} propertyId={context.propertyId} currentGrade={current ? gradeSpan(current.grade, snapshot?.grade_span ?? estimate?.grade_span) : estimate ? gradeSpan(estimate.grade, estimate.grade_span) : null} onChecked={checked} />
+        </section>}
         <section className={styles.section}><h2 className="eyebrow">Hall of fame</h2><p className="board-note">Predicted scores. Names appear only for buildings in Ann Arbor&apos;s public energy benchmarking data.</p>{publicBoard && <ol className={styles.list}>{publicBoard.best.map(b => <li key={b.benchmark_id}>{b.name} · {b.grade} · score {b.score}{b.demo ? " · demo data" : ""}{b.source && <> · <a href={b.source} target="_blank" rel="noreferrer">Source ↗</a></>}</li>)}</ol>}
           <h3 className="eyebrow">Highest excess cost by block</h3>{publicBoard && <ul className={styles.list}>{publicBoard.worst_blocks.map(b => <li key={b.geoid}>{b.area_type.replaceAll("_", " ")} {b.geoid} · {b.building_count} buildings · ${b.excess_usd_per_sqft.toFixed(2)}/sq ft above type median{b.demo ? " · demo data" : ""}</li>)}</ul>}
         </section>
