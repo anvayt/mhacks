@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { httpApi, type Estimate } from "../src/api.ts";
+import { CONTRACT_ERROR, httpApi, type Estimate } from "../src/api.ts";
 import { Conversations, DEMO_LABEL } from "../src/conversation.ts";
 import { mockApi } from "../src/mockApi.ts";
 import { UNIT_SIZE_QUESTION, WELCOME, estimateText, matchOption } from "../src/replies.ts";
@@ -135,4 +135,21 @@ test("chats are independent", async () => {
   const chat = new Conversations(mockApi());
   await chat.reply("a", "912 Mary St, Ann Arbor, MI");
   assert.match(await chat.reply("b", "850"), /Hidden Rent/); // b has no pending question → welcome
+});
+
+test("contract mismatch: a 200 without bill.annual.p50 is logged and answered honestly, without numbers", async () => {
+  const logs: string[] = [];
+  const fetchFn = (async () => new Response(JSON.stringify({ session_id: null, building: {}, bill: {} }))) as unknown as typeof fetch;
+  const chat = new Conversations(httpApi("http://api", fetchFn, (m) => logs.push(m)));
+  assert.equal(await chat.reply("c", "912 Mary St, Ann Arbor, MI"), CONTRACT_ERROR);
+  assert.match(logs.join("\n"), /\[contract\] POST \/estimate: bill\.annual\.p50 missing/);
+});
+
+test("contract warnings (bad question shape) are logged but the reply still goes out", async () => {
+  const logs: string[] = [];
+  const body = estimate({ session_id: "s1", questions: [{ id: "q", text: "?" } as any] });
+  const fetchFn = (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch;
+  const text = await new Conversations(httpApi("http://api", fetchFn, (m) => logs.push(m))).reply("c", "912 Mary St, Ann Arbor, MI");
+  assert.match(text, /\$1,234/);
+  assert.match(logs[0], /questions\[0\] needs \{id, text, options\[\]\}/);
 });
