@@ -182,6 +182,17 @@ tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); f
     <div id="wx"></div>
   </section>
 
+  <section class="card span2" id="monthly">
+    <h2>Monthly estimate</h2>
+    <p class="note" id="mo-note">Run an estimate</p>
+    <div class="legend"><span><span class="key" style="background:var(--heat)"></span>Heating</span><span><span class="key" style="background:var(--cool)"></span>Cooling</span><span class="muted">($ = energy × EIA Michigan price for that month)</span>
+      <span class="toggle" style="margin-left:auto"><button class="ghost" id="mo-btn" type="button">Table view</button></span></div>
+    <div id="mo-chart"></div>
+    <div id="mo-table" hidden></div>
+    <h3 style="font-size:14px;margin:16px 0 6px">How accurate is a single month? (held-out, real Ann Arbor meters)</h3>
+    <div id="mo-acc"></div>
+  </section>
+
   <section class="card span2" id="modeling">
     <h2>Model performance</h2>
     <div class="prose">
@@ -376,7 +387,7 @@ function render(e) {
   $("t-cool-s").textContent = `${Math.round(e.seasons.reduce((s, x) => s + x.cooling.electric_kwh, 0))} kWh`;
   const acc = e.accuracy && e.accuracy.seasonal_gas_median_abs_error;
   $("t-acc").textContent = acc ? `energy error ±${pct(acc.all)} vs real meters` : "";
-  renderChart(e); renderTable(e); renderMeta(e); renderWx(e); renderDetail(e);
+  renderChart(e); renderTable(e); renderMeta(e); renderWx(e); renderDetail(e); renderMonthly(e);
   if (e.method === "metered" && e.building.benchmarking_id && $("mb-sel").options.length) { $("mb-sel").value = e.building.benchmarking_id; loadMetered(); }
   const ul = $("srcs"); ul.replaceChildren(...e.sources.map((s) => el("li", {}, s)));
 }
@@ -892,6 +903,90 @@ function drawMetered() {
 }
 $("mb-sel").addEventListener("change", loadMetered);
 loadHeld(); loadMeteredList();
+
+// ---------------------------------------------------------------- monthly section
+const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+let MO_V = null;  // validation (monthly accuracy for every path), fetched once
+function renderMonthly(e) {
+  const M = e.months || [];
+  const label = (m) => MON3[m.month - 1] + (m.year ? " " + String(m.year).slice(2) : "");
+  const fuel = e.building.heating_fuel;
+  const acc = e.accuracy || {};
+  const pathName = { metered: "this building's own meters", "meter_model+resstock": "the unmetered model blend", resstock: "ResStock (no meters)" }[e.method];
+  $("mo-note").textContent =
+    `The same estimate as the seasons above, before adding months together (each season is a plain sum of its 3 months). ` +
+    `Monthly figures are less certain than seasonal ones: for ${pathName}, a single month's total ${fuel === "gas" ? "gas" : "energy"} use is off by a median of ` +
+    `${acc.monthly_gas_median_abs_error_all_months != null ? pct(acc.monthly_gas_median_abs_error_all_months) : "–"} (gas) / ` +
+    `${acc.monthly_elec_median_abs_error_all_months != null ? pct(acc.monthly_elec_median_abs_error_all_months) : "–"} (electricity) on real meters, ` +
+    `versus ${acc.seasonal_gas_median_abs_error ? pct(acc.seasonal_gas_median_abs_error.all) : "–"} for a season (gas). ` +
+    `Low-use months (spring, summer gas; spring/fall cooling) have the largest percentage errors.` +
+    (acc.monthly_forecast_note ? " Forecast mode: " + acc.monthly_forecast_note + "." : "");
+  // grouped bars, 12 months
+  const box = $("mo-chart"); box.replaceChildren();
+  const W = Math.max(360, box.clientWidth || 900), H = 240, m = { t: 22, r: 8, b: 30, l: 48 };
+  const max = Math.max(1, ...M.flatMap((x) => [x.heating.usd, x.cooling.usd]));
+  const nice = Math.ceil(max / 20) * 20;
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Heating and cooling by month" });
+  const y = (v) => m.t + (H - m.t - m.b) * (1 - v / nice);
+  for (let i = 0; i <= 4; i++) { const v = nice * i / 4;
+    svg.append(sv("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css("--grid") }));
+    const t = sv("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }); t.textContent = "$" + Math.round(v); svg.append(t); }
+  const gw = (W - m.l - m.r) / Math.max(1, M.length), bw = Math.min(22, gw * 0.34);
+  M.forEach((x, i) => {
+    const cx = m.l + gw * (i + 0.5);
+    [["heating", x.heating.usd, css("--heat"), -1], ["cooling", x.cooling.usd, css("--cool"), 1]].forEach(([name, v, color, side]) => {
+      const x0 = cx + (side < 0 ? -bw - 1 : 1), h = Math.max(0, y(0) - y(v)), r = Math.min(3, h / 2);
+      const d = h > 0 ? `M${x0},${y(0)} V${y(v) + r} Q${x0},${y(v)} ${x0 + r},${y(v)} H${x0 + bw - r} Q${x0 + bw},${y(v)} ${x0 + bw},${y(v) + r} V${y(0)} Z` : `M${x0},${y(0)} h${bw}`;
+      const bar = sv("path", { d, fill: color, stroke: h > 0 ? "none" : color });
+      const hit = sv("rect", { x: x0 - 2, y: m.t, width: bw + 4, height: H - m.t - m.b, fill: "transparent" });
+      const a = x.accuracy || {};
+      const sub = name === "heating"
+        ? `${x.heating.gas_ccf ? x.heating.gas_ccf + " ccf gas" : x.heating.electric_kwh + " kWh"} · ${x.weather.tmean_f} °F · HDD65 ${x.weather.hdd65}` +
+          (a.gas_median_abs_error != null ? ` · held-out error ±${pct(a.gas_median_abs_error)}` : "")
+        : `${x.cooling.electric_kwh} kWh · CDD65 ${x.weather.cdd65}` + (a.elec_median_abs_error != null ? ` · held-out error ±${pct(a.elec_median_abs_error)}` : "");
+      const show = (ev) => tip(ev, usd(v), `${name} · ${label(x)}`, sub);
+      for (const n of [hit, bar]) { n.addEventListener("pointermove", show); n.addEventListener("pointerleave", hideTip); }
+      svg.append(bar, hit);
+    });
+    const lab = sv("text", { x: cx, y: H - 10, "text-anchor": "middle" }); lab.textContent = label(x); svg.append(lab);
+  });
+  svg.append(sv("line", { x1: m.l, x2: W - m.r, y1: y(0), y2: y(0), stroke: css("--text-muted") }));
+  box.append(svg);
+  // table
+  const t = el("table"), hd = el("tr");
+  ["Month", "Heating " + (fuel === "gas" ? "ccf" : "kWh"), "Cooling kWh", "≈ $ total", "Mean °F", "HDD65", "CDD65", "Held-out error: gas (bias)", "electricity (bias)"]
+    .forEach((h) => hd.append(el("th", {}, h))); t.append(hd);
+  const sgn = (b) => b == null ? "" : ` (${b >= 0 ? "+" : ""}${pct(b)})`;
+  M.forEach((x) => { const r = el("tr"), a = x.accuracy || {};
+    [label(x), fuel === "gas" ? x.heating.gas_ccf : x.heating.electric_kwh, x.cooling.electric_kwh, usd(x.total_usd), x.weather.tmean_f, x.weather.hdd65, x.weather.cdd65,
+     a.gas_median_abs_error != null ? "±" + pct(a.gas_median_abs_error) + sgn(a.gas_bias) : "–",
+     a.elec_median_abs_error != null ? "±" + pct(a.elec_median_abs_error) + sgn(a.elec_bias) : "–"].forEach((v) => r.append(el("td", {}, String(v))));
+    t.append(r); });
+  const wrap = el("div", { class: "tscroll" }); wrap.append(t);
+  const basis = M.map((x) => x.weather.basis).filter(Boolean);
+  $("mo-table").replaceChildren(wrap, ...(e.mode === "forecast" && basis.length ? [el("p", { class: "note", style: "margin-top:6px" }, "Weather basis per month: " + M.map((x) => `${label(x)}: ${x.weather.basis || "–"}`).join(" · "))] : []));
+  renderMonthlyAcc();
+}
+$("mo-btn").onclick = () => { const h = $("mo-table").hidden; $("mo-table").hidden = !h; $("mo-chart").hidden = h; $("mo-btn").textContent = h ? "Chart view" : "Table view"; };
+async function renderMonthlyAcc() {
+  if (!MO_V) { try { MO_V = (await getJSON("/hc/validation")).real; } catch (e) { return; } }
+  const t = el("table"), hd = el("tr"); hd.append(el("th", {}, "Estimate path"), el("th", {}, "Energy"));
+  MON3.forEach((m) => hd.append(el("th", {}, m))); hd.append(el("th", {}, "All")); t.append(hd);
+  const paths = [["metered", "Metered (own fit, other years)"], ["blend", "Unmetered blend (served)"], ["resstock", "ResStock"], ["null", "Baseline"]];
+  for (const [fk, fname] of [["gas", "Gas"], ["elec", "Electricity"]]) {
+    const S = MO_V[`monthly_${fk}_vs_real_meters`]; if (!S) continue;
+    for (const [pk, pname] of paths) { const P = S[pk]; if (!P) continue; const r = el("tr");
+      r.append(el("td", {}, pname), el("td", {}, fname));
+      for (let mi = 1; mi <= 12; mi++) { const c = P.by_month[String(mi)];
+        const td = el("td", {}, c ? pct(c.median_abs_pct_error) : "–");
+        if (c) td.title = `bias ${c.median_signed_error >= 0 ? "+" : ""}${pct(c.median_signed_error)} · p90 ${pct(c.p90_abs_pct_error)} · n ${c.n}`;
+        r.append(td); }
+      r.append(el("td", {}, pct(P.all_months))); t.append(r); }
+  }
+  const wrap = el("div", { class: "tscroll" }); wrap.append(t);
+  $("mo-acc").replaceChildren(wrap, el("p", { class: "note", style: "margin-top:6px" },
+    "Median absolute % error of each building's total monthly gas / electricity, for data the model never saw (metered: a held-out year; unmetered: held-out buildings, with all calibration done in-fold). Hover a cell for bias, p90 and n. Unmetered electricity is biased low in winter (−16 to −19%): the unmetered model has no winter electric load (lighting, furnace fans)."));
+}
 
 run();
 </script>
