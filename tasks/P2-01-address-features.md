@@ -58,6 +58,11 @@ Given any Ann Arbor street address, return the building features the bill model 
 - [x] **Stories snapping:** snap `in.geometry_stories` to the nearest ResStock 2024.2 MI category (1–15, 20, 21, 35); keep the raw count in `stories_raw`.
 - **FOR MERGE (tell P1/Dennis):** `in.geometry_stories` is snapped to ResStock's categories (e.g. 26-story Tower Plaza → 21, nearest). If P1's model treats stories as a number instead, use `stories_raw`. Decide at merge.
 
+## Follow-up 2 (team decisions Oct 3, ~9:45 PM)
+- Side-by-side duplexes stay **Single-Family Attached** (RECS definition, which ResStock follows).
+- [ ] **Guard:** skip the townhouse rule when floor area per address is above 5,587 sq ft (ResStock MI single-family max), so co-ops/sororities (e.g. Escher Co-op, AEPhi) aren't labelled townhouses.
+- Corner lots with addresses on two streets: leave as is.
+
 ## Handoff (fill in when done; DEV_STRATEGY #1)
 **Branch `p2/address-features` @ 2731a80, pushed. Not merged into dev.** All "Done when" items pass (12 tests).
 
