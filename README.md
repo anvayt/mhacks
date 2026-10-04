@@ -3,6 +3,67 @@
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
 in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), `/web` (P3, landing screen so far).
 
+## Run the demo
+
+The launcher needs the existing Python/Node dependencies and city cache. Prepare these once while online:
+
+```bash
+(cd api && uv sync && uv run python scripts/fetch_footprints.py)
+(cd web && npm ci)
+(cd agent && npm ci)
+```
+
+Point `MODEL_DIR` at the checkout with P1's **already-built** artifacts and matching processed data; it defaults to
+`../mhacks-integration`. The launcher never builds or retrains the model.
+
+```bash
+AGENT_TERMINAL=1 make demo       # terminal chat, real API estimates, no iMessages
+# In a second terminal, from the same checkout:
+make demo-warm                  # five real estimates, one forecast session per weather cell
+make demo-check                 # isolated API/model with outbound Python networking blocked
+```
+
+`make demo` starts or reuses the healthy model on `:8001`, then API `:8000`, web `:3000`, onboarding `:8787`, and
+finally the agent. Open [the website](http://localhost:3000). Without both Photon credentials the agent always
+uses terminal chat; with both credentials, plain `make demo` uses Photon. Set `AGENT_TERMINAL=1` to force terminal
+chat. The terminal provider may download its `tuichat` binary from GitHub on first use, so launch it once online.
+
+Environment variables already set in the shell take precedence over literal assignments in root `.env`, then
+`agent/.env`. Files are parsed without executing shell code; `$VARIABLE` interpolation is not supported. No
+credential values are printed. For example: `MODEL_DIR=/path/to/built/checkout AGENT_TERMINAL=1 make demo`.
+A reused service retains its existing environment and code; the launcher does not reconfigure or restart it.
+A listening port whose health check fails stops startup and is left alone.
+
+Ctrl-C stops only process groups created by this launcher, including npm/tsx/Next children. Reused services stay
+running. Logs, ownership records, and warm/check JSON responses go under git-ignored `data/demo/<run>/`; override
+with `DEMO_LOG_DIR=/path/to/logs`. Agent terminal output is recorded with the system `script` utility. Runtime
+prerequisites are Bash, curl, make, npm, ps, lsof, script, and the existing `api/.venv`; no packages are added.
+
+`demo/addresses.txt` is the editable five-address list. `make demo-warm` makes requests sequentially, saves the
+real responses, and reports annual heating/cooling costs and weather cells. It calls
+`GET /forecast/{session_id}` once for the first returned session in each distinct model weather cell; later
+listings in that cell are reported as already checked. Cell coordinates come from model inputs/location before
+falling back to building coordinates. HTTP 404 is
+reported as a skip, so this also works before the session/forecast branch is merged. Other failed responses or
+invalid estimate shapes make the command fail. `API_BASE_URL` and `DEMO_ADDRESSES` can target another local API/list.
+The saved JSON is diagnostic output; it is never replayed as an API fixture.
+
+`make demo-check` starts fresh isolated processes on `:18000` and `:18001`, using this checkout's API cache and
+`MODEL_DIR`'s existing model cache. Both Python processes receive a socket guard that rejects non-loopback DNS
+and connections; an external `httpx` request verifies the guard first. A second real pass through the address list
+reports working estimates and any blocked external hosts in `outbound.jsonl`. Changing proxies in this shell
+cannot restrict the already-running model on `:8001`, which is why the check uses a separate model process and
+leaves the demo/shared server untouched. Override `DEMO_CHECK_API_PORT` / `DEMO_CHECK_MODEL_PORT` if needed.
+
+This is a Python-process offline simulation, not an OS firewall or certification of every endpoint. A forecast
+404 is a skip, not a successful offline forecast. The forecast implementation on `p2/forecast` requests live
+Open-Meteo daily forecasts on each call; warming its disk history alone does not remove that dependency. Cache
+misses may still require Census geocoding/Census Reporter, city GIS, or the model's weather/EIA sources. The check
+reports attempts even if an existing cached fallback succeeds. Photon/iMessage, tunnels, browser assets, dependency
+installation, and first-use tuichat downloads still need separate network checks. No real messages are sent by
+warm/check; validate the launcher with `AGENT_TERMINAL=1`.
+Run `bash scripts/test-demo.sh` for the bounded cleanup, dotenv, and forecast-cell regression checks; these use no real model calls or messages.
+
 ## Run the whole thing
 
 Needs Python 3 + [uv](https://docs.astral.sh/uv/), Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm).
