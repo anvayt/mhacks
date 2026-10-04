@@ -17,7 +17,7 @@
   background:var(--ink); color:var(--white); font:16px var(--font-mono); text-transform:uppercase; box-shadow:6px 6px 0 var(--paper); }
 .play:focus-visible { outline:3px solid #ffb000; outline-offset:3px; }
 .playing { left:auto; top:auto; right:16px; bottom:16px; transform:none; padding:10px 14px; font-size:14px; box-shadow:none; opacity:.85; }
-.credit { margin-top:20px; font:11px/1.6 var(--font-mono); color:var(--muted); }
+.credit { margin-top:20px; font:11px/1.6 var(--font-mono); opacity:.9; }
 .captions { margin:28px 0 0; padding:24px; background:var(--paper); color:var(--ink); font:clamp(17px,2vw,22px)/1.6 var(--font-sans); }
 .captions span { transition:color .2s, background-color .2s; }
 .now { background:#ffe27a; }
