@@ -1,7 +1,19 @@
-import type { Calibration, Projection, Suggestion } from "./api.ts";
+import type { Calibration, FastForward, Projection, Suggestion } from "./api.ts";
 import { calibrationText } from "./replies.ts";
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const num = (n: number) => Math.round(n).toLocaleString("en-US");
+// Small simulated sums keep their cents / tenths, so one day never reads "$0".
+const smallMoney = (n: number) => (Math.abs(n) < 10 ? `$${n.toFixed(2)}` : money(n));
+const smallNum = (n: number) => (Math.abs(n) < 10 ? n.toFixed(1) : num(n));
+
+/** POST /simulate/fast-forward, worded as a simulation; every number is the API's. */
+export function fastForwardText(f: FastForward): string {
+  const kept = f.commitments.filter((c) => c.modeled).map((c) => c.title[0].toLowerCase() + c.title.slice(1));
+  if (!kept.length) return 'Nothing to fast-forward yet: none of your commitments has modeled savings. Say "options" and pick one with numbers.';
+  const what = `your commitment${kept.length > 1 ? "s" : ""} to ${kept.length > 1 ? `${kept.slice(0, -1).join(", ")} and ${kept.at(-1)}` : kept[0]}`;
+  const days = `${f.totals.days} day${f.totals.days === 1 ? "" : "s"}`;
+  return `Simulation, not real usage: if you keep ${what}, in ${days} you'd save about ${smallMoney(f.totals.usd_saved)} and ${smallNum(f.totals.kg_co2_saved)} kg CO₂ (projected). Your real streak stays ${f.real_habit_streak}.`;
+}
 
 export function suggestionsText(items: Suggestion[]): string {
   if (!items.length) return "No commitments are available for this home yet.";
