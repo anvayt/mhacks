@@ -41,9 +41,10 @@ def session(sid="s1", method="resstock", base=BASE, **answers):
                          "type": "Multi-Family with 2 - 4 Units"},
             "bill": {"annual": {"p10": None, "p50": base["annual"]["total_usd"], "p90": None}},
             "heating_cooling": dict(base, method=method),
-            "answers": {}, "model_params": {"lat": 42.27, "lon": -83.74, "unit_sqft": 850.0,
-                                            "building_type": "Multi-Family with 2 - 4 Units",
-                                            "block_group": "261614001001", **answers}}
+            # answers as P2-04's /answer stores them: option value strings
+            "answers": {q: str(v) for q, v in answers.items()},
+            "model_params": {"lat": 42.27, "lon": -83.74, "unit_sqft": 850.0,
+                             "building_type": "Multi-Family with 2 - 4 Units", "block_group": "261614001001"}}
     sessions.save(body)
     return sid
 
@@ -51,7 +52,7 @@ def session(sid="s1", method="resstock", base=BASE, **answers):
 @pytest.fixture
 def calls(monkeypatch):
     c = []
-    monkeypatch.setattr("app.fixes.httpx.get", fake_model(c))
+    monkeypatch.setattr("app.estimate.httpx.get", fake_model(c))
     monkeypatch.setattr("app.fixes.score_for", lambda annual, sqft, t: {"grade": "B" if annual < 800 else "C"})
     return c
 
@@ -93,6 +94,13 @@ def test_heat_pump_priced_for_electric_heat(calls):  # resistance → heat pump;
     assert hp["usd_saved_yr"] == 963 and hp["co2_kg_saved"] == round(co2_kg(0, 16316 - 11368)) and hp["new_grade"] == "C"
     assert not hp["unpriced"] and hp["grh_points"] == 20  # "electricity is primary" (15) is already earned
     assert len(calls) == 1 and calls[0]["heating_fuel"] == "electric" and calls[0]["cooling_code"] == 3
+
+
+def test_no_ac_never_sends_cooling_code_0_and_marks_used_fixes(calls):
+    sid = session(window_panes=1, cooling_code=0)
+    client.get(f"/fixes/{sid}")
+    assert calls and all("cooling_code" not in c for c in calls)  # 0 is outside P1's training data
+    assert sessions.get(sid)["used_fixes"]  # badges: leak-hunter
 
 
 def test_fix_the_model_says_adds_co2_is_listed_unpriced(calls):  # WINDOWS (450 ccf) adds 50 ccf to this base
@@ -166,6 +174,6 @@ def test_unknown_session_404():
 def test_model_down_503(monkeypatch):
     def down(*a, **k):
         raise httpx.ConnectError("refused")
-    monkeypatch.setattr("app.fixes.httpx.get", down)
+    monkeypatch.setattr("app.estimate.httpx.get", down)
     r = client.get(f"/fixes/{session()}")
     assert r.status_code == 503 and r.json()["detail"]["code"] == "model_unavailable"
