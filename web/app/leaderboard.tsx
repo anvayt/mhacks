@@ -23,7 +23,6 @@ type Context = { sessionId: string; propertyId: string | null; userId: string | 
 export function Leaderboard() {
   const router = useRouter();
   const [context, setContext] = useState<Context | null>(null);
-  const [view, setView] = useState<"compare" | "map">("compare"); // peer bars or the city map, switchable any time
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [position, setPosition] = useState<Position | null>(null);
@@ -192,10 +191,12 @@ export function Leaderboard() {
           <p className="board-note">Building heating + cooling: {billRange(currentBill)}. {!snapshot || snapshot.source === "initial_estimate" || snapshot.source === "questionnaire" ? "P10–P90 range returned with this saved model estimate; typical-weather heating + cooling." : "Current bill range from the saved score snapshot."} {estimate.bill.note}</p>
           {heatIn && <p className="board-note">Your cooling bill (heat is in your rent): {billRange(estimate.bill.annual)}.</p>}
           {calibrated && <p className="board-note">Current monthly grade: from your bill, adjusted for weather. What-if projections are unavailable for this calibrated baseline; your current result remains visible.</p>}
-          <div role="group" aria-label="Compare with peers or show on the map" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{(["compare", "map"] as const).map(v => <button key={v} type="button" className="control choice" aria-pressed={view === v} onClick={() => setView(v)}>{v === "compare" ? "Compare with peers" : "Show on map"}</button>)}</div>
-          {view === "map" && context ? <GradeMap session={context.sessionId} /> : <ol className={`board-chart ${styles.chart}`} aria-label="Anonymized nearby ranks, annual cost at your unit size">{rows.map((p, i) => <li key={p.id} className={p.you ? "board-col you" : "board-col"}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 24, alignItems: "start", width: "100%" }}>
+            <ol className={`board-chart ${styles.chart}`} aria-label="Anonymized nearby ranks, annual cost at your unit size">{rows.map((p, i) => <li key={p.id} className={p.you ? "board-col you" : "board-col"}>
             <span className="board-value">{p.you ? money(p.annual) : <>≈ {money(p.annual)}<br />at your size</>}</span><span className={`board-track ${styles.track}`}><span className="board-bar" style={{ height: `${p.annual / highest * 100}%`, background: backgroundColorAt(i / Math.max(1, rows.length - 1)) }} />{p.you && ghost && <span className={styles.ghostBar} role="img" style={{ height: `${Math.min(100, (ghost.building_annual_usd ?? ghost.bill_annual.p50) / highest * 100)}%` }} aria-label={`Projected if completed: score ${ghost.score}, ${money(ghost.building_annual_usd ?? ghost.bill_annual.p50)} per year`} />}</span><span className="board-label">{p.you ? "You" : "Peer"}<br />#{p.rank.toLocaleString()}</span>
-          </li>)}</ol>}
+          </li>)}</ol>
+            {context && <GradeMap session={context.sessionId} />}
+          </div>
           {ghost && <p className="board-note">Dashed overlay: projected if completed · {money(ghost.building_annual_usd ?? ghost.bill_annual.p50)}/yr · score {ghost.score}{position?.projected?.rank != null ? ` · same-type rank #${position.projected.rank.toLocaleString()}` : ""}. Your solid bar stays fixed.</p>}
           <p className="board-note">Nearby ranks come from the API&apos;s scored city footprints of your building type. {sqft != null ? <>Peer bars scale their annual cost per sq ft to your {sizeLabel}.</> : "Peer cost bars are unavailable: size unknown."} Your bar stays at the current building estimate. If heat is included in rent, the chart still rates the building; your own bill is shown separately.</p>
           <div className={styles.rail} aria-label="Current and projected city percentiles"><span className={styles.marker} style={{ left: pin(current.percentile_city) }}>You · {percent(current.percentile_city)}%</span>{ghost && <span className={`${styles.marker} ${styles.ghost}`} style={{ left: pin(ghost.percentile_city) }}>Projected if completed<br />Score {ghost.score} · {percent(ghost.percentile_city)}%</span>}</div>

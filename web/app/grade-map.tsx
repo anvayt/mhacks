@@ -14,7 +14,7 @@ export function GradeMap({ session }: { session: string }) {
   }, [session]);
   if (!data) return null;
   return (
-    <section className="score-reveal score-reveal-late" aria-label="This home on the Ann Arbor map" style={{ marginTop: 24, alignSelf: "stretch", width: "100%" }}>
+    <section className="score-reveal score-reveal-late" aria-label="This home on the Ann Arbor map" style={{ alignSelf: "stretch", width: "100%" }}>
       <HiddenRentMap data={data} step={data.steps.length - 1} focus={focus} onFocusChange={setFocus} />
       <p className="ranking-source">
         Every Ann Arbor building, colored by its predicted grade. Switch to Satellite or hide neighbors in the corner.{" "}
