@@ -1,0 +1,62 @@
+{
+  "primary_metered": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "metered_any_roof_coverage": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "raw_winter_gas_sensitivity": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "predicted_cost_secondary": {
+    "n": 1,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "verdict": "NO-GO",
+  "reason": "The required independent metered correlation cannot be estimated: no meter-backed properties pass native-pixel roof eligibility.",
+  "counts": {
+    "native_pixel_eligible_roofs": 52,
+    "scored_roofs_geometry_eligible": 4,
+    "post_event_acquisitions_checked": 28,
+    "acquisitions_with_usable_roofs": 10,
+    "clear_scene_dates": 10,
+    "paired_roof_scene_observations": 302,
+    "roofs_with_any_observation": 52,
+    "eligible_roof_event_curves": 30,
+    "roofs_with_metric": 27,
+    "predicted_cost_pairs": 1,
+    "primary_metered_pairs": 0,
+    "source_access_errors": 0
+  }
+}

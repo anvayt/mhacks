@@ -1,0 +1,15 @@
+PASS live isolated smoke; evidence: /Users/anvaytodkar/Code/mhacks-p1/model/results/finish/live_smoke.json
+Morton 2753.0 sqft; annual 2185.0 grade C
+air_sealing {"usd_saved_yr": 218, "co2_kg_saved_yr": 1322, "score_delta": 16, "new_grade": "B", "label": "projected_if_completed"}
+attic_insulation {"usd_saved_yr": 110, "co2_kg_saved_yr": 665, "score_delta": 11, "new_grade": "C", "label": "projected_if_completed"}
+wall_insulation {"usd_saved_yr": 400, "co2_kg_saved_yr": 2422, "score_delta": 29, "new_grade": "B", "label": "projected_if_completed"}
+heat_pump {"usd_saved_yr": -1652, "co2_kg_saved_yr": 3243, "score_delta": -43, "new_grade": "F", "label": "projected_if_completed"}
+thermostat_setback {"usd_saved_yr": 52, "co2_kg_saved_yr": 313, "score_delta": 5, "new_grade": "C", "label": "projected_if_completed"}
+Combined {'score': -19, 'usd_saved_yr': -359, 'co2_kg_saved_yr': 6154, 'building_heating_usd_saved_yr': -359, 'building_cooling_usd_saved_yr': 0, 'label': 'projected_if_completed'}
+Load-only {'score': 41, 'usd_saved_yr': 679, 'co2_kg_saved_yr': 4114, 'building_heating_usd_saved_yr': 679, 'building_cooling_usd_saved_yr': 0, 'label': 'projected_if_completed'}
+Bill noise_floor 25.2
+Bill estimate_error_floor 118.3
+Bill meaningful True
+Bill pct_vs_expected_for_weather -77.3
+Map cloud 17
+Arrowwood: metered, all new effects remain placeholders

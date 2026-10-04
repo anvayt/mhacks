@@ -1,0 +1,19 @@
+.page { max-width: 1440px; margin: auto; padding: 28px 36px 64px; }
+.nav { display: flex; justify-content: space-between; gap: 16px; font: 12px var(--font-mono); text-transform: uppercase; }
+.header { margin: 64px 0 36px; }
+.header h1 { font: clamp(64px, 8vw, 112px)/.94 var(--font-display); margin: 18px 0; text-transform: uppercase; }
+.header h1 em { font: italic 1em var(--font-serif); text-transform: none; }
+.header p:first-child { font: 12px var(--font-mono); }
+.address { background: var(--paper); color: var(--ink); padding: 20px; display: flex; gap: 16px; justify-content: space-between; align-items: center; border: 1px solid var(--ink); border-bottom: 0; }
+.address h2 { font: 28px var(--font-display); margin: 0; }
+.address span { font: 11px var(--font-mono); }
+.caption { font: 12px/1.6 var(--font-mono); max-width: 1000px; }
+.history { display: flex; align-items: center; gap: 16px; padding: 24px; background: var(--paper); color: var(--ink); font: 12px var(--font-mono); margin-top: 28px; flex-wrap: wrap; }
+.history input { flex: 1; min-width: 130px; accent-color: var(--blue); }
+.notice { background: var(--paper); color: var(--ink); padding: 32px; line-height: 1.6; }
+.notice button { padding: 10px 16px; margin-right: 12px; cursor: pointer; }
+@media(max-width:600px) { .page { padding: 20px 16px 40px; } .nav { font-size: 10px; flex-wrap: wrap; } .header { margin-top: 44px; } .header h1 { font-size: 64px; } .address { flex-direction: column; align-items: flex-start; } .address h2 { font-size: 24px; } .history { padding: 16px; gap: 12px; } }
+
+.nav a { color: inherit; }
+
+.storyFrame { background: var(--paper); padding: 24px; }

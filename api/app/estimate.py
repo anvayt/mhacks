@@ -1,0 +1,301 @@
+"""POST /estimate, POST /answer, GET /session/{id} (PLAN.md §10): listing link | address -> building features
+(P2-01/02) -> P1 heating + cooling model -> score/grade/percentiles (app/score.py), p10/p90 band, next questions.
+Every body is saved as the session's latest (app/sessions.py), with co2_t (app/co2.py) and badges (app/badges.py).
+
+/api reaches /model over HTTP (P1's server, `make -C model dashboard`, MODEL_BASE_URL, default :8001) so the two
+Python environments (api: uv, py3.12; model: root .venv with xgboost/lightgbm/rasterio and pickled models) stay apart.
+"""
+
+import logging
+import os
+import re
+import secrets
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from math import prod
+
+import httpx
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from shapely.geometry import shape
+
+from app import badges, co2, score, sessions
+from app.geo.features import get_features
+from app.links import resolve_link
+from app.score import GRADES, score_for
+
+MODEL_BASE_URL = os.environ.get("MODEL_BASE_URL", "http://localhost:8001")
+MODEL_DOWN = "Our cost model is starting up. Try again in a minute."  # details go to the server log only
+LOOKUP_DOWN = "The address lookup isn't answering right now. Try again in a minute."
+log = logging.getLogger(__name__)
+# ponytail: one process-wide cap on calls to P1's shared server (/compare runs two estimates of 4 calls each, /fixes
+# and concurrent users add more); per-endpoint pools stay as they are. Raise if P1's server idles.
+MODEL_SLOTS = threading.BoundedSemaphore(4)
+SEASONS = ("winter", "spring", "summer", "fall")
+MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+NOT_A_HOME = "That doesn't look like a home. Send a residential address or listing."  # team decision (P2-04)
+EXPIRED = "That session expired. Send the listing again."
+NO_AC = "No AC: cooling cost set to $0; P1's cooling model only covers homes with AC."
+HEAT_INCLUDED = "Heat is paid by your landlord: your bill shows cooling only; the grade still rates the building."
+HIDDEN_RENT_COOLING = ("Heat is included in your rent, so hidden rent compares cooling only: (your cooling $/yr − the "
+                       "median cooling $ per sq ft of same-type Ann Arbor homes × your sq ft) / 12.")
+MULTIFAMILY = ("Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units")
+SKIP = {"skip", "not sure", "unsure", "idk", "dont know", "don't know", "i don't know"}
+# Renter questions -> /hc/estimate params: P1's ANSWERS codes (model/heating_cooling/resstock_model.py) plus
+# heating_fuel. Options are (value, label, extra words a renter might text instead of the label).
+QUESTIONS = {
+    # "included": the model keeps its block-group fuel (the grade rates the building); the renter's bill has no heat
+    "heating_fuel": ("Is the heat gas or electric, or included in your rent?",
+                     [("gas", "Gas", "natural heat"), ("electric", "Electric", "heat"),
+                      ("included", "Heat is included in my rent", "landlord pays paid")]),
+    "window_panes": ("Are the windows single-, double- or triple-pane?",
+                     [("1", "Single-pane", "one"), ("2", "Double-pane", "two"), ("3", "Triple-pane", "three")]),
+    "floor_level": ("Is the unit on the ground floor, a middle floor or the top floor?",
+                    [("0", "Ground floor", "first bottom"), ("1", "Middle floor", "mid"), ("2", "Top floor", "")]),
+    "cooling_code": ("What air conditioning does the unit have?",
+                     [("0", "No AC", "none"), ("1", "Window/room AC", "wall portable"), ("2", "Central AC", "central air"),
+                      ("3", "Heat pump", "mini split minisplit ductless")]),
+}
+
+router = APIRouter()
+
+
+def _fail(status: int, code: str, message: str, **extra) -> HTTPException:
+    return HTTPException(status, {"code": code, "message": message, **extra})
+
+
+def _hc(params: dict) -> dict:
+    """GET /hc/estimate on P1's server; errors become friendly 422/503s."""
+    try:
+        with MODEL_SLOTS:
+            r = httpx.get(f"{MODEL_BASE_URL}/hc/estimate", params={k: v for k, v in params.items() if v is not None},
+                          timeout=180)  # a never-seen weather cell downloads its 1991+ history once
+    except httpx.HTTPError as e:
+        log.warning("model unreachable at %s (start it: make -C model dashboard): %r", MODEL_BASE_URL, e)
+        raise _fail(503, "model_unavailable", MODEL_DOWN)
+    if r.status_code == 422:
+        raise _fail(422, "not_found", r.json().get("detail", "The model couldn't place this building."))
+    if r.is_error:  # any other model failure is a friendly 503, never a bare 500
+        log.warning("model /hc/estimate HTTP %s: %s", r.status_code, r.text[:500])
+        raise _fail(503, "model_unavailable", MODEL_DOWN)
+    return r.json()
+
+
+def _model_answer(q: str, v) -> bool:
+    """Answers that are model inputs: not skips, and not "heat included" (the building's fuel stays the model's)."""
+    return v is not None and not (q == "heating_fuel" and v == "included")
+
+
+def session_params(s: dict) -> dict:
+    """A saved session's /hc/estimate params with its answers (heating_fuel, window_panes, ...; "2" -> 2)."""
+    known = {q: int(v) if v.isdigit() else v for q, v in s["answers"].items() if _model_answer(q, v)}
+    return {**s["model_params"], **known}
+
+
+def renter_usd_key(s: dict) -> str:
+    """Which annual/month $ the renter pays: cooling only when heat is included in the rent."""
+    return "cooling_usd" if (s.get("answers") or {}).get("heating_fuel") == "included" else "total_usd"
+
+
+def _hc_ac(params: dict) -> dict:
+    """_hc, with cooling set to $0 (and 0 kWh) for "No AC": P1's cooling model only covers homes with AC, so
+    cooling_code=0 is never sent (out of its training data: it moved 912 Mary St's heating $3,199 -> $4,246)."""
+    no_ac = str(params.get("cooling_code")) == "0"
+    hc = _hc({k: v for k, v in params.items() if not (no_ac and k == "cooling_code") and _model_answer(k, v)})
+    if no_ac:
+        a = hc["annual"]
+        a["electric_kwh"] -= sum(s["cooling"]["electric_kwh"] for s in hc["seasons"])
+        a["total_usd"] -= a["cooling_usd"]
+        a["cooling_usd"] = 0
+        for x in [*hc["seasons"], *hc.get("months", [])]:
+            x["total_usd"] -= x["cooling"]["usd"]
+            x["cooling"] = {**x["cooling"], "usd": 0, "electric_kwh": 0,
+                            **({"usd_exact": 0.0} if "usd_exact" in x["cooling"] else {})}
+    return hc
+
+
+def _scaled(p50, lo: float, hi: float) -> dict:
+    return {"p10": round(p50 * lo), "p50": p50, "p90": round(p50 * hi)}
+
+
+def _cap(lo, hi, p50, prev: dict | None) -> tuple:
+    """Never wider than before the last answer: model interactions can make one open question swing more than two
+    did, but an answer only adds information."""
+    if prev and None not in (prev.get("p10"), prev.get("p90")) and prev["p10"] <= p50 <= prev["p90"]:
+        return max(lo, prev["p10"]), min(hi, prev["p90"])
+    return lo, hi
+
+
+def _respond(session_id: str, building: dict, params: dict, answers: dict, prev: dict | None = None) -> dict:
+    """Run P1's model with the answers so far, then band, score and next questions; saved as the session's latest.
+
+    Grade range: the model's own spread over the questions not answered yet (each varied across its options, one at
+    a time; the low/high ratios multiply, as P1's model works in log space, so it can't go negative). The $ range
+    (p10/p90) widens that by P1's held-out real-meter error for this estimate path. Both are capped by `prev` (the
+    previous body)."""
+    known = {q: v for q, v in answers.items() if _model_answer(q, v)}  # "heat included": fuel stays open
+    hc = _hc_ac({**params, **known})  # alone first: warms a never-seen weather cell before the parallel calls
+    btype = building["type"]
+    open_qs = [q for q in QUESTIONS if q not in known and (q != "floor_level" or btype in MULTIFAMILY)
+               and not (q == "heating_fuel" and hc["method"] == "metered")]  # metered: fuel is read off the meters
+    jobs = [(q, v) for q in open_qs for v, _, _ in QUESTIONS[q][1]]
+    with ThreadPoolExecutor(4) as ex:  # ponytail: fixed 4, P1's server is shared (city batch); raise if it idles
+        results = ex.map(lambda j: _hc_ac({**params, **known, j[0]: j[1]})["annual"]["total_usd"], jobs)
+        totals: dict[str, list] = {}
+        for (q, _), t in zip(jobs, results):
+            totals.setdefault(q, []).append(t)
+    swing = {q: (min(t), max(t)) for q, t in totals.items()}
+    p50 = hc["annual"]["total_usd"]
+    err = (hc.get("accuracy", {}).get("seasonal_gas_median_abs_error") or {}).get("all") or 0
+    g_lo = round(p50 * prod(min(1, lo / p50) for lo, _ in swing.values() if p50))
+    g_hi = round(p50 * prod(max(1, hi / p50) for _, hi in swing.values() if p50))
+    g_lo, g_hi = _cap(g_lo, g_hi, p50, prev and prev.get("grade_band_usd"))
+    prev_bill = prev and (prev["bill"].get("building_annual") or prev["bill"]["annual"])
+    p10, p90 = _cap(round(g_lo * (1 - err)), round(g_hi * (1 + err)), p50, prev_bill)
+    lo_r, hi_r = (p10 / p50, p90 / p50) if p50 else (1, 1)
+    full = {"p10": p10, "p50": p50, "p90": p90}  # the building's heating + cooling $ band
+    included = answers.get("heating_fuel") == "included"
+    usd = (lambda x: x["cooling"]["usd"]) if included else (lambda x: x["total_usd"])  # what the renter pays
+
+    sqft = hc["unit_sqft"]
+    best, worst = score_for(g_lo, sqft, btype)["grade"], score_for(g_hi, sqft, btype)["grade"]  # high cost = worse
+    span = list(GRADES[GRADES.index(best):GRADES.index(worst) + 1])
+    # ask only what moves this estimate and wasn't skipped, biggest swing first
+    ask = sorted((q for q in open_qs if q not in answers and swing[q][1] - swing[q][0] >= 1),
+                 key=lambda q: swing[q][1] - swing[q][0], reverse=True)
+    seasons = {x["season"]: x for x in hc["seasons"]}
+    body = {
+        "session_id": session_id,
+        "building": {**building, "sqft": sqft,
+                     "year_built": hc["building"].get("year_built", building["year_built"]),
+                     "year_built_source": hc["building"].get("year_built_source", building["year_built_source"])},
+        "bill": {"covers": "heating + cooling only (P1 model); base electricity, hot water and fixed charges not yet",
+                 "annual": _scaled(hc["annual"]["cooling_usd"], lo_r, hi_r) if included else full,
+                 "seasonal": {x: _scaled(usd(seasons[x]), lo_r, hi_r) for x in SEASONS if x in seasons},
+                 "monthly": {MONTHS[m["month"] - 1]: _scaled(usd(m), lo_r, hi_r) for m in hc.get("months", [])},
+                 **({"building_annual": full} if included else {}),  # additive: the grade's $ (heat + cooling)
+                 # additive
+                 "band_method": f"p10/p90 = the grade range's $ (grade_band_usd, see grade_span_method) widened by "
+                                f"±{err:.0%}: P1's median error vs held-out real Ann Arbor gas meters for this "
+                                f"estimate path ({hc['method']}). Never wider than before the last answer. "
+                                "Seasons and months are scaled by the same ratios.",
+                 **({"note": " ".join(n for n, on in ((NO_AC, known.get("cooling_code") == "0"),
+                                                       (HEAT_INCLUDED, included)) if on)}
+                    if known.get("cooling_code") == "0" or included else {})},
+        "co2_t": None,  # below, from the bill band
+        **score_for(p50, sqft, btype), "grade_span": span, "locked": len(span) == 1 or not ask,
+        # additive
+        "grade_band_usd": {"p10": g_lo, "p50": p50, "p90": g_hi},
+        "grade_span_method": f"The grades your answers can still reach: p50 × the model's lowest/highest ratio for each "
+                             f"of the {len(open_qs)} question(s) not answered yet (each varied over its options, "
+                             "ratios multiplied), never wider than before the last answer. The $ range "
+                             "(bill.band_method) also includes the model's error vs real meters.",
+        "badges": [],
+        "questions": [{"id": q, "text": QUESTIONS[q][0],
+                       "options": [{"value": v, "label": lab} for v, lab, _ in QUESTIONS[q][1]]} for q in ask],
+        "heating_cooling": hc,  # additive: P1's full answer (heating vs cooling, energy, weather, method, accuracy)
+        "answers": answers, "model_params": params,  # additive (see app/sessions.py)
+    }
+    body["co2_t"] = co2.co2_t(hc, {"annual": full})  # the building's emissions, heat included or not
+    if included:
+        med = score.peer_cooling(btype)
+        body["hidden_rent_usd_mo"] = None if med is None else int(round((hc["annual"]["cooling_usd"] - med * sqft) / 12))
+        body["hidden_rent_method"] = HIDDEN_RENT_COOLING
+    body["badges"] = badges.badges(body, used_fixes=bool(prev and prev.get("used_fixes")),
+                                   previous_grade=prev and prev.get("grade"))
+    if prev and prev.get("used_fixes"):
+        body["used_fixes"] = True  # kept across answers for leak-hunter (set by /fixes)
+    sessions.save(body)
+    return body
+
+
+def estimate(url: str | None = None, address: str | None = None, unit_sqft: float | None = None) -> dict:
+    if not (url or address):
+        raise _fail(422, "missing_input", "Send a listing link or an Ann Arbor street address.")
+    if unit_sqft is not None and not 100 <= unit_sqft <= 10_000:  # the bill scales with it: -50 gave -$81/yr
+        raise _fail(422, "bad_unit_sqft", "Unit size should be the unit's floor area in square feet (100 to 10,000).")
+    if url:
+        link = resolve_link(url)
+        if link["needs_address"] or not link["address"]:
+            # team decision: never auto-geocode a hint; ask the renter to confirm the address
+            raise _fail(422, "needs_address", "That link doesn't show the street address. What's the address?",
+                        hint=link.get("hint"), source=link.get("source"))
+        address = link["address"]
+    try:
+        f = get_features(address, unit_sqft)
+    except LookupError:
+        raise _fail(422, "not_found", "We couldn't find that building. Hidden Rent covers homes in the City of "
+                    "Ann Arbor, MI; send a street address there.", address=address)
+    except httpx.HTTPError as e:  # Census geocoder / Census Reporter down; cached addresses still work
+        log.warning("address lookup failed for %r: %r", address, e)
+        raise _fail(503, "lookup_unavailable", LOOKUP_DOWN)
+    if f["in.geometry_building_type_recs"] is None:
+        raise _fail(422, "not_a_home", NOT_A_HOME, address=f["matched_address"])
+
+    # A point inside P2's footprint, so P1 scores the same building (the geocoder point can sit on the street).
+    pt = shape(f["footprint_geojson"]).representative_point()
+    params = {"lat": pt.y, "lon": pt.x, "unit_sqft": f["in.sqft"],
+              "building_type": f["in.geometry_building_type_recs"], "block_group": f["block_group_geoid"]}
+    building = {"lat": f["lat"], "lon": f["lon"], "footprint_geojson": f["footprint_geojson"],
+                "year_built": f["year_built"], "type": f["in.geometry_building_type_recs"],
+                # additive
+                "address": f["matched_address"], "sqft_estimated": f["sqft_estimated"],
+                "year_built_source": f["year_built_source"],
+                "warnings": f["warnings"]}  # P2-01's checks, e.g. a unit size outside ResStock's range
+    return _respond(secrets.token_hex(5), building, params, {})
+
+
+def _words(s: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", s.lower()))
+
+
+def _parse(question_id: str, answer) -> str | None:
+    """Option value for a texted answer: the value itself, label words ("double pane" -> "2"), or None for skip."""
+    text, options = QUESTIONS[question_id]
+    a = str(answer).strip().lower()
+    try:
+        a = f"{float(a):g}"  # 2, 2.0, "2" -> "2"
+    except ValueError:
+        pass
+    if a in SKIP:
+        return None
+    if a in {v for v, _, _ in options}:
+        return a
+    hits = [(len(_words(a) & _words(f"{v} {lab} {extra}")), v) for v, lab, extra in options]
+    best = max(n for n, _ in hits)
+    if best and [n for n, _ in hits].count(best) == 1:
+        return next(v for n, v in hits if n == best)
+    labels = [lab for _, lab, _ in options]
+    raise _fail(422, "bad_answer", f"Sorry, I didn't catch that. {text} Reply {', '.join(labels[:-1])} or {labels[-1]}, "
+                "or say skip.")
+
+
+class AnswerRequest(BaseModel):
+    session_id: str
+    question_id: str
+    answer: str | int | float
+
+
+@router.post("/answer")
+def post_answer(req: AnswerRequest) -> dict:
+    """Re-run the model with every answer so far: same shape as /estimate, narrower band, next questions."""
+    s = sessions.get(req.session_id)
+    if s is None:
+        raise _fail(404, "not_found", EXPIRED)
+    if req.question_id not in QUESTIONS:
+        raise _fail(422, "bad_answer", "I don't have that question. Answer one of the questions I sent, or say skip.")
+    answers = {**s["answers"], req.question_id: _parse(req.question_id, req.answer)}
+    body = _respond(s["session_id"], s["building"], s["model_params"], answers, s)
+    from app import accounts, bills  # lazy: accounts imports this module
+    if prop := accounts.property_for_session(body["session_id"]):
+        bills.record_snapshot(prop["id"], "questionnaire", body)  # the saved home's history shows the grade path
+    return body
+
+
+@router.get("/session/{session_id}")
+def get_session(session_id: str) -> dict:
+    """The session's latest estimate (website -> iMessage handoff)."""
+    s = sessions.get(session_id)
+    if s is None:
+        raise _fail(404, "not_found", EXPIRED)
+    return s

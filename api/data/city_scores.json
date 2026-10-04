@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-10-04T06:11:16.916468+00:00",
+  "scored": 25704,
+  "candidates": 25704,
+  "seconds": 11.97,
+  "benchmark_calls": 200,
+  "benchmark_seconds": 3.1,
+  "complete": true,
+  "reused": 25000,
+  "scored_this_run": 704,
+  "stopped_after_benchmark": false,
+  "projected_minutes": 6.64,
+  "failures": [],
+  "sources": {
+    "benchmark": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0",
+    "block_groups": "https://tigerweb.geo.census.gov/arcgis/rest/services/Census2020/tigerWMS_Census2020/MapServer/8"
+  },
+  "mailing_assignment": "P3 HOUSE_SCHEMA section 3: inside, else nearest within 1.1e-4 WGS84 degrees; all mailing TYPEs; same as /city labels",
+  "percentile": "midpoint empirical: 100 * (less + 0.5 * equal) / N, within building type",
+  "notes": "Predicted heating + cooling only; P2-01 plus lookup-fixes residential/size guards; census tracts proxy neighborhoods."
+}

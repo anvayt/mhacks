@@ -1,0 +1,29 @@
+{
+  "name": "hidden-rent-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "agent": "tsx src/agent.ts",
+    "onboard": "tsx src/onboard.ts",
+    "add-user": "tsx scripts/add-user.ts",
+    "remove-user": "tsx scripts/remove-user.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "checkin": "tsx scripts/checkin.ts",
+    "remind-now": "tsx scripts/checkin.ts --demo"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "spectrum-ts": "12.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "@types/qrcode": "1.5.6",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  },
+  "optionalDependencies": {
+    "heif2jpeg": "0.1.6"
+  }
+}

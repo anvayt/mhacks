@@ -1,0 +1,942 @@
+{
+  "data": {
+    "raw_rows": {
+      "rsbs2015": 700,
+      "rbsa2018": 371
+    },
+    "blower-door test completed, unit CFM50": {
+      "kept": 1012,
+      "dropped": 59
+    },
+    "test at ~50 Pa (|pressure| 45\u201355)": {
+      "kept": 949,
+      "dropped": 63
+    },
+    "year built, floor area, stories present": {
+      "kept": 949,
+      "dropped": 0
+    },
+    "floor area 300\u20138,000 ft\u00b2": {
+      "kept": 949,
+      "dropped": 0
+    },
+    "ACH50 within 0.5\u201360": {
+      "kept": 947,
+      "dropped": 2
+    },
+    "final_by_source": {
+      "rsbs2015": 586,
+      "rbsa2018": 361
+    },
+    "final_by_home_type": {
+      "detached": 767,
+      "attached_or_2to4": 137,
+      "manufactured": 43
+    }
+  },
+  "target": "log(CFM50 per ft\u00b2 conditioned floor area)",
+  "features": [
+    "year_built",
+    "log_area",
+    "stories",
+    "ht_attached_or_2to4",
+    "ht_manufactured",
+    "climate_zone"
+  ],
+  "metric": "median absolute % error on CFM50/ft\u00b2 (same % for CFM50 and ACH50)",
+  "tests": {
+    "grouped_leave_one_region_out": {
+      "families": {
+        "baseline_median": {
+          "n": 947,
+          "medape": 0.4288095193416972,
+          "medape_se": 0.01614352477093671,
+          "within_25pct": 0.2787750791974657,
+          "within_50pct": 0.5755015839493136,
+          "bias_median_signed": 0.0015741755866494067,
+          "r2_log": -0.02553191763009033,
+          "spearman": -0.28848929135733326,
+          "label": "Baseline: median of all buildings (ignores features)",
+          "complexity": 0,
+          "train_medape": 0.4197720047442911,
+          "overfit_gap": 0.009037514597406093,
+          "params_per_fold": [
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "per_region_medape": {
+            "Capital District": 0.4641988451494734,
+            "Central New York": 0.5278907690528989,
+            "Finger Lakes": 0.4333434706702308,
+            "Long Island": 0.35346626924724717,
+            "Mid-Hudson": 0.38901044371944904,
+            "Mohawk Valley": 0.4608985942056004,
+            "New York City": 0.43610908372163715,
+            "North Country": 0.4289361177860225,
+            "Southern Tier": 0.4097055007943787,
+            "Western New York": 0.4359711754557718
+          }
+        },
+        "median_lasso": {
+          "n": 947,
+          "medape": 0.2486888900747718,
+          "medape_se": 0.010054026400538268,
+          "within_25pct": 0.5058078141499472,
+          "within_50pct": 0.8215417106652587,
+          "bias_median_signed": 0.0029246852370488075,
+          "r2_log": 0.6153326198086089,
+          "spearman": 0.8085917506802885,
+          "label": "Median regression + lasso penalty (L1 loss, L1 penalty)",
+          "complexity": 2,
+          "train_medape": 0.24023302096006063,
+          "overfit_gap": 0.008455869114711162,
+          "params_per_fold": [
+            {
+              "alpha": 0.0
+            },
+            {
+              "alpha": 0.0
+            },
+            {
+              "alpha": 0.0
+            },
+            {
+              "alpha": 0.002053525026457146
+            },
+            {
+              "alpha": 0.01539926526059492
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0
+            },
+            {
+              "alpha": 0.002053525026457146
+            },
+            {
+              "alpha": 0.0
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.19584657230760893,
+            "Central New York": 0.2845281389186194,
+            "Finger Lakes": 0.22201842513839942,
+            "Long Island": 0.2572588827214298,
+            "Mid-Hudson": 0.29606995093443167,
+            "Mohawk Valley": 0.30568235765123297,
+            "New York City": 0.2550878605468804,
+            "North Country": 0.24125789322883961,
+            "Southern Tier": 0.26554008186984945,
+            "Western New York": 0.1897278748515141
+          }
+        },
+        "ols": {
+          "n": 947,
+          "medape": 0.2467274431532902,
+          "medape_se": 0.012000613281485056,
+          "within_25pct": 0.5068637803590285,
+          "within_50pct": 0.8215417106652587,
+          "bias_median_signed": -0.017384271081070657,
+          "r2_log": 0.6107344600448679,
+          "spearman": 0.8070699153314566,
+          "label": "Ordinary least squares",
+          "complexity": 3,
+          "train_medape": 0.23981789341784818,
+          "overfit_gap": 0.006909549735442028,
+          "params_per_fold": [
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {}
+          ],
+          "per_region_medape": {
+            "Capital District": 0.1926527932708808,
+            "Central New York": 0.2669318572932091,
+            "Finger Lakes": 0.20877687574495396,
+            "Long Island": 0.26941799049120846,
+            "Mid-Hudson": 0.28809608881425064,
+            "Mohawk Valley": 0.2914452223374347,
+            "New York City": 0.25545519250044235,
+            "North Country": 0.2357210276147883,
+            "Southern Tier": 0.28596845678837846,
+            "Western New York": 0.19109801524080017
+          }
+        },
+        "lasso": {
+          "n": 947,
+          "medape": 0.2466262297573889,
+          "medape_se": 0.011304574956563325,
+          "within_25pct": 0.5079197465681098,
+          "within_50pct": 0.8204857444561774,
+          "bias_median_signed": -0.022849313209529987,
+          "r2_log": 0.6091442499359214,
+          "spearman": 0.8067068748362592,
+          "label": "Lasso (squared loss, L1 penalty)",
+          "complexity": 3,
+          "train_medape": 0.23953633631975726,
+          "overfit_gap": 0.007089893437631639,
+          "params_per_fold": [
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.004328761281083059
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.011103363181676379
+            },
+            {
+              "alpha": 0.0001
+            },
+            {
+              "alpha": 0.0006579332246575682
+            },
+            {
+              "alpha": 0.011103363181676379
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.19278937622287118,
+            "Central New York": 0.26713261024271073,
+            "Finger Lakes": 0.20898276217672107,
+            "Long Island": 0.2764040445860162,
+            "Mid-Hudson": 0.28813949131435723,
+            "Mohawk Valley": 0.3026120128097392,
+            "New York City": 0.25455985644144263,
+            "North Country": 0.23570706258538943,
+            "Southern Tier": 0.28709882935094166,
+            "Western New York": 0.1884431744238937
+          }
+        },
+        "ridge": {
+          "n": 947,
+          "medape": 0.2491671156086388,
+          "medape_se": 0.011990554463781887,
+          "within_25pct": 0.5015839493136219,
+          "within_50pct": 0.8215417106652587,
+          "bias_median_signed": -0.021666725459659086,
+          "r2_log": 0.6097118709264837,
+          "spearman": 0.8068199898530651,
+          "label": "Ridge (squared loss, L2 penalty)",
+          "complexity": 3,
+          "train_medape": 0.23947142184295617,
+          "overfit_gap": 0.009695693765682634,
+          "params_per_fold": [
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 2.030917620904737
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 11.93776641714437
+            },
+            {
+              "alpha": 0.837677640068292
+            },
+            {
+              "alpha": 28.942661247167518
+            },
+            {
+              "alpha": 70.1703828670383
+            },
+            {
+              "alpha": 0.01
+            },
+            {
+              "alpha": 4.923882631706742
+            },
+            {
+              "alpha": 70.1703828670383
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.1926588477814426,
+            "Central New York": 0.2678162280733891,
+            "Finger Lakes": 0.20878508235100313,
+            "Long Island": 0.26882296440913556,
+            "Mid-Hudson": 0.2881951538780678,
+            "Mohawk Valley": 0.3101972478035483,
+            "New York City": 0.25908220934358284,
+            "North Country": 0.235724401845524,
+            "Southern Tier": 0.28675050489344855,
+            "Western New York": 0.19691227577674186
+          }
+        },
+        "elastic_net": {
+          "n": 947,
+          "medape": 0.24642539460378554,
+          "medape_se": 0.012335053881643528,
+          "within_25pct": 0.5068637803590285,
+          "within_50pct": 0.8204857444561774,
+          "bias_median_signed": -0.021216760222469988,
+          "r2_log": 0.6076508071980204,
+          "spearman": 0.8059405313712676,
+          "label": "Elastic net (squared loss, L1+L2 penalty)",
+          "complexity": 3,
+          "train_medape": 0.23925937950432644,
+          "overfit_gap": 0.007166015099459105,
+          "params_per_fold": [
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.5
+            },
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.011103363181676379,
+              "l1_ratio": 0.8
+            },
+            {
+              "alpha": 0.0001,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.004328761281083059,
+              "l1_ratio": 0.2
+            },
+            {
+              "alpha": 0.07305271542664457,
+              "l1_ratio": 0.2
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.19272029023036263,
+            "Central New York": 0.2670016494230969,
+            "Finger Lakes": 0.2088719493110447,
+            "Long Island": 0.27877355145184846,
+            "Mid-Hudson": 0.288112891665938,
+            "Mohawk Valley": 0.3036896295431981,
+            "New York City": 0.24642539460378554,
+            "North Country": 0.23574306708612724,
+            "Southern Tier": 0.28792652467768964,
+            "Western New York": 0.20872956950903443
+          }
+        },
+        "huber": {
+          "n": 947,
+          "medape": 0.2495161092142446,
+          "medape_se": 0.012629562045908174,
+          "within_25pct": 0.5026399155227033,
+          "within_50pct": 0.8183738120380147,
+          "bias_median_signed": -0.0013133990122921047,
+          "r2_log": 0.6123768847956492,
+          "spearman": 0.8069956851471095,
+          "label": "Huber regression (robust loss, L2 penalty)",
+          "complexity": 3,
+          "train_medape": 0.24064931715151597,
+          "overfit_gap": 0.00886679206272864,
+          "params_per_fold": [
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.35
+            },
+            {
+              "alpha": 10.0,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 1.1
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            },
+            {
+              "alpha": 0.0001,
+              "epsilon": 2.0
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.19132061419684965,
+            "Central New York": 0.28209742798016735,
+            "Finger Lakes": 0.2246273667924532,
+            "Long Island": 0.2644284938476107,
+            "Mid-Hudson": 0.2904538307809843,
+            "Mohawk Valley": 0.30407143435584283,
+            "New York City": 0.2648876041068422,
+            "North Country": 0.24687011528971237,
+            "Southern Tier": 0.2763892560710796,
+            "Western New York": 0.18673659840810652
+          }
+        },
+        "random_forest": {
+          "n": 947,
+          "medape": 0.23612673797642814,
+          "medape_se": 0.008499879332827613,
+          "within_25pct": 0.5269271383315733,
+          "within_50pct": 0.8342133051742344,
+          "bias_median_signed": -0.013898908814612643,
+          "r2_log": 0.6345742831842001,
+          "spearman": 0.8174317834426021,
+          "label": "Random forest (tuned)",
+          "complexity": 5,
+          "train_medape": 0.19278238159450198,
+          "overfit_gap": 0.04334435638192616,
+          "params_per_fold": [
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 20
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 5
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 5
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 2
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 2
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 5
+            },
+            {
+              "max_features": 1.0,
+              "min_samples_leaf": 40
+            },
+            {
+              "max_features": 0.66,
+              "min_samples_leaf": 10
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.20610435305864228,
+            "Central New York": 0.25788528382650067,
+            "Finger Lakes": 0.21972238766950447,
+            "Long Island": 0.2286314731204594,
+            "Mid-Hudson": 0.24547682486020783,
+            "Mohawk Valley": 0.31443057006094044,
+            "New York City": 0.30808848139849054,
+            "North Country": 0.23004815527949285,
+            "Southern Tier": 0.21495887979041228,
+            "Western New York": 0.21572438238321334
+          }
+        },
+        "xgboost": {
+          "n": 947,
+          "medape": 0.2375951322696067,
+          "medape_se": 0.008359773389260541,
+          "within_25pct": 0.5216473072861668,
+          "within_50pct": 0.8268215417106652,
+          "bias_median_signed": -0.0032818935493046375,
+          "r2_log": 0.6430616094912159,
+          "spearman": 0.8213848506916411,
+          "label": "XGBoost (tuned)",
+          "complexity": 6,
+          "train_medape": 0.2044825666906725,
+          "overfit_gap": 0.03311256557893422,
+          "params_per_fold": [
+            {
+              "subsample": 0.6,
+              "reg_lambda": 50,
+              "objective": "reg:squarederror",
+              "n_estimators": 100,
+              "min_child_weight": 3,
+              "max_depth": 1,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 1,
+              "objective": "reg:absoluteerror",
+              "n_estimators": 100,
+              "min_child_weight": 3,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 50,
+              "objective": "reg:squarederror",
+              "n_estimators": 50,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 50,
+              "min_child_weight": 1,
+              "max_depth": 3,
+              "learning_rate": 0.1,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 50,
+              "objective": "reg:squarederror",
+              "n_estimators": 25,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 0.1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 200,
+              "min_child_weight": 8,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 1.0
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 1,
+              "objective": "reg:squarederror",
+              "n_estimators": 25,
+              "min_child_weight": 3,
+              "max_depth": 3,
+              "learning_rate": 0.3,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 1.0,
+              "reg_lambda": 10,
+              "objective": "reg:squarederror",
+              "n_estimators": 50,
+              "min_child_weight": 15,
+              "max_depth": 4,
+              "learning_rate": 0.1,
+              "colsample_bytree": 0.5
+            },
+            {
+              "subsample": 0.6,
+              "reg_lambda": 1,
+              "objective": "reg:pseudohubererror",
+              "n_estimators": 200,
+              "min_child_weight": 3,
+              "max_depth": 4,
+              "learning_rate": 0.03,
+              "colsample_bytree": 0.8
+            },
+            {
+              "subsample": 0.8,
+              "reg_lambda": 50,
+              "objective": "reg:squarederror",
+              "n_estimators": 400,
+              "min_child_weight": 3,
+              "max_depth": 3,
+              "learning_rate": 0.01,
+              "colsample_bytree": 1.0
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.20944710950336898,
+            "Central New York": 0.2755753757344429,
+            "Finger Lakes": 0.20919747014058832,
+            "Long Island": 0.21405682710751428,
+            "Mid-Hudson": 0.2553747687125435,
+            "Mohawk Valley": 0.3166661871187299,
+            "New York City": 0.28953998828540883,
+            "North Country": 0.2515412848634717,
+            "Southern Tier": 0.1915663804006713,
+            "Western New York": 0.21186479136275982
+          }
+        },
+        "mlp": {
+          "n": 947,
+          "medape": 0.2370318700870787,
+          "medape_se": 0.00881560442718514,
+          "within_25pct": 0.5258711721224921,
+          "within_50pct": 0.8310454065469906,
+          "bias_median_signed": -0.036560140582372336,
+          "r2_log": 0.6250569156835386,
+          "spearman": 0.8110469774344267,
+          "label": "Neural network (MLP, tuned)",
+          "complexity": 7,
+          "train_medape": 0.2276429250745376,
+          "overfit_gap": 0.009388945012541117,
+          "params_per_fold": [
+            {
+              "learning_rate_init": 0.003,
+              "hidden_layer_sizes": [
+                8
+              ],
+              "alpha": 0.001
+            },
+            {
+              "learning_rate_init": 0.001,
+              "hidden_layer_sizes": [
+                32,
+                16
+              ],
+              "alpha": 0.001
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                8
+              ],
+              "alpha": 1.0
+            },
+            {
+              "learning_rate_init": 0.003,
+              "hidden_layer_sizes": [
+                16
+              ],
+              "alpha": 1.0
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                32,
+                16
+              ],
+              "alpha": 1.0
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                8
+              ],
+              "alpha": 0.001
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                32
+              ],
+              "alpha": 10.0
+            },
+            {
+              "learning_rate_init": 0.003,
+              "hidden_layer_sizes": [
+                16,
+                8
+              ],
+              "alpha": 1.0
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                16,
+                8
+              ],
+              "alpha": 1.0
+            },
+            {
+              "learning_rate_init": 0.01,
+              "hidden_layer_sizes": [
+                8
+              ],
+              "alpha": 0.001
+            }
+          ],
+          "per_region_medape": {
+            "Capital District": 0.2049137100072127,
+            "Central New York": 0.2571896235664596,
+            "Finger Lakes": 0.1954964652463166,
+            "Long Island": 0.24039754868104213,
+            "Mid-Hudson": 0.2729341412435933,
+            "Mohawk Valley": 0.2955838627941407,
+            "New York City": 0.31451669888920053,
+            "North Country": 0.20447941747059306,
+            "Southern Tier": 0.24363190676020086,
+            "Western New York": 0.18432938686546174
+          }
+        },
+        "year_built_median_reg": {
+          "n": 947,
+          "medape": 0.2962258338186876,
+          "medape_se": 0.013638184904078454,
+          "within_25pct": 0.43294614572333684,
+          "within_50pct": 0.7296726504751848,
+          "bias_median_signed": 0.0021638286801142215,
+          "r2_log": 0.42714091502864027,
+          "spearman": 0.7398269663883483,
+          "label": "Median regression on year built only",
+          "complexity": 1,
+          "train_medape": 0.292973590875779,
+          "overfit_gap": 0.003252242942908601
+        },
+        "resstock_lookup": {
+          "n": 947,
+          "medape": 0.39374325782092745,
+          "medape_se": 0.01822123580999782,
+          "within_25pct": 0.3474128827877508,
+          "within_50pct": 0.5828933474128828,
+          "bias_median_signed": 0.331615120274914,
+          "r2_log": 0.2787203184537448,
+          "spearman": 0.7397272880183524,
+          "label": "ResStock lookup: median simulated ACH50 by vintage (MI), 8 ft ceilings; not fit to NY",
+          "complexity": 0.5,
+          "train_medape": null,
+          "overfit_gap": null
+        }
+      },
+      "best_by_mean": "random_forest",
+      "threshold": 0.24462661730925575,
+      "within_1se": [
+        "random_forest",
+        "xgboost",
+        "mlp"
+      ],
+      "chosen": "random_forest"
+    },
+    "random_kfold": {
+      "random_forest": {
+        "n": 947,
+        "medape": 0.23567462761320768,
+        "medape_se": 0.009871387120503259,
+        "within_25pct": 0.5269271383315733,
+        "within_50pct": 0.8331573389651531,
+        "bias_median_signed": -0.021094632748179243,
+        "r2_log": 0.6408990816739351,
+        "spearman": 0.8211307016099257
+      },
+      "baseline_median": {
+        "n": 947,
+        "medape": 0.41994297425155014,
+        "medape_se": 0.013965958600362326,
+        "within_25pct": 0.2808870116156283,
+        "within_50pct": 0.5839493136219641,
+        "bias_median_signed": -0.000990387845640428,
+        "r2_log": -0.002629104570428087,
+        "spearman": -0.08333862777197698
+      }
+    },
+    "cross_dataset": {
+      "train_rsbs2015_test_rbsa2018": {
+        "random_forest": {
+          "n": 361,
+          "medape": 0.2597421092040362,
+          "medape_se": 0.014592101782861336,
+          "within_25pct": 0.4792243767313019,
+          "within_50pct": 0.7562326869806094,
+          "bias_median_signed": 0.08630111138677288,
+          "r2_log": 0.5790079530488732,
+          "spearman": 0.7880744266060273
+        },
+        "baseline_median": {
+          "n": 361,
+          "medape": 0.41748563337411493,
+          "medape_se": 0.02025960072594229,
+          "within_25pct": 0.28254847645429365,
+          "within_50pct": 0.5983379501385041,
+          "bias_median_signed": 0.11700205713957068,
+          "r2_log": -0.044418074042733346,
+          "spearman": NaN
+        }
+      },
+      "train_rbsa2018_test_rsbs2015": {
+        "random_forest": {
+          "n": 586,
+          "medape": 0.24339478611669513,
+          "medape_se": 0.010983261043328635,
+          "within_25pct": 0.5085324232081911,
+          "within_50pct": 0.8549488054607508,
+          "bias_median_signed": -0.10630032758083174,
+          "r2_log": 0.6111701676331904,
+          "spearman": 0.8185010562496594
+        },
+        "baseline_median": {
+          "n": 586,
+          "medape": 0.4215880534234065,
+          "medape_se": 0.01679229371073098,
+          "within_25pct": 0.26621160409556316,
+          "within_50pct": 0.5836177474402731,
+          "bias_median_signed": -0.10474577371382043,
+          "r2_log": -0.02565325502767224,
+          "spearman": NaN
+        }
+      }
+    },
+    "year_built_scenarios": {
+      "a_true_year_built": {
+        "n": 947,
+        "medape": 0.23612673797642814,
+        "medape_se": 0.008250362162282376,
+        "within_25pct": 0.5269271383315733,
+        "within_50pct": 0.8342133051742344,
+        "bias_median_signed": -0.013898908814612643,
+        "r2_log": 0.6345742831842001,
+        "spearman": 0.8174317834426021
+      },
+      "b_no_year_built": {
+        "n": 947,
+        "medape": 0.3226626474635934,
+        "medape_se": 0.010721651312067173,
+        "within_25pct": 0.3833157338965153,
+        "within_50pct": 0.7117212249208026,
+        "bias_median_signed": -0.025242775794347194,
+        "r2_log": 0.37680044445731,
+        "spearman": 0.6232872433749892
+      },
+      "c_noisy_year_built_trained_on_true": {
+        "n": 947,
+        "medape": 0.2779050646288168,
+        "medape_se": 0.009889099798172304,
+        "within_25pct": 0.4551214361140444,
+        "within_50pct": 0.7550158394931362,
+        "bias_median_signed": 0.010128283847780306,
+        "r2_log": 0.4332065986280206,
+        "spearman": 0.6923906198500717
+      },
+      "c_noisy_year_built_trained_on_noisy": {
+        "n": 947,
+        "medape": 0.2731242548715508,
+        "medape_se": 0.009717135480241505,
+        "within_25pct": 0.4614572333685322,
+        "within_50pct": 0.7866948257655755,
+        "bias_median_signed": -0.03829919672924076,
+        "r2_log": 0.5002141940878501,
+        "spearman": 0.7269764121882614
+      }
+    },
+    "extended_features_analysis_only": {
+      "lasso": {
+        "n": 947,
+        "medape": 0.2462299237574117,
+        "medape_se": 0.010915061550490343,
+        "within_25pct": 0.5068637803590285,
+        "within_50pct": 0.8278775079197466,
+        "bias_median_signed": -0.017338563980392574,
+        "r2_log": 0.6350502445802915,
+        "spearman": 0.816837385256717
+      },
+      "random_forest": {
+        "n": 947,
+        "medape": 0.23724982897376967,
+        "medape_se": 0.008514173487942244,
+        "within_25pct": 0.5205913410770855,
+        "within_50pct": 0.8321013727560718,
+        "bias_median_signed": -0.013443032904625563,
+        "r2_log": 0.6314307676000424,
+        "spearman": 0.8108242410564508
+      }
+    }
+  },
+  "notes": [],
+  "ann_arbor_year_built_gap": {
+    "n_buildings": 125,
+    "median": -1.0,
+    "mad": 12.0,
+    "p10_p90": [
+      -26.6,
+      43.0
+    ],
+    "source": "Ann Arbor benchmarked buildings: reported year built \u2212 ACS block-group renter median"
+  },
+  "final": {
+    "family": "random_forest",
+    "params": {
+      "max_features": 0.66,
+      "min_samples_leaf": 5
+    },
+    "trained_with_noisy_year_built": true,
+    "features": [
+      "year_built",
+      "log_area",
+      "stories",
+      "ht_attached_or_2to4",
+      "ht_manufactured",
+      "climate_zone"
+    ],
+    "n": 947,
+    "feature_importance": {
+      "year_built": 0.417,
+      "log_area": 0.468,
+      "stories": 0.032,
+      "ht_attached_or_2to4": 0.016,
+      "ht_manufactured": 0.004,
+      "climate_zone": 0.063
+    }
+  },
+  "runtime_s": 183
+}
