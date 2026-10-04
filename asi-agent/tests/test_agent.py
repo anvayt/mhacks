@@ -122,7 +122,7 @@ def test_sender_isolation_state_answers_options_and_ff():
         api = FakeAPI(); chats = Conversations(api, IntentParser(key=''))
         a = await chats.reply('alice', '1514 Morton Ave')
         b = await chats.reply('bob', '912 Mary St')
-        assert 'share?session=1514%20Morton%20Ave' in a and 'share?session=912%20Mary%20St' in b
+        assert 'share?session=1514%20Morton%20Ave' in a and 'share?session=912%20Mary%20St' in b and 'watch?session=1514%20Morton%20Ave' in a
         assert 'Local preview links' in a and '/?session=' in a and '/compare?a=' in a
         answer = await chats.reply('alice', '2')
         assert '🔒 locked' in answer and 'How many window panes' not in answer
