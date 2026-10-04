@@ -46,8 +46,11 @@ export function MapStory({ data, step: rawStep, onStepChange, onFocus, className
   const now = steps[step];
   const b = data.building;
   const bg = data.block_group;
-  const width = (i: number) => steps[i].lookalikes.p90 - steps[i].lookalikes.p10;
-  const narrower = Math.round((1 - width(step) / width(0)) * 100);
+  const width = (i: number) => {
+    const cloud = steps[i].lookalikes;
+    return cloud.p90 != null && cloud.p10 != null ? cloud.p90 - cloud.p10 : 0;
+  };
+  const narrower = width(0) > 0 ? Math.round((1 - width(step) / width(0)) * 100) : 0;
   const seasonMax = Math.max(1, ...steps.flatMap((s) => SEASONS.map((k) => s.estimate.seasons[k])));
 
   return (
@@ -106,10 +109,10 @@ export function MapStory({ data, step: rawStep, onStepChange, onFocus, className
         <LookalikeStrip steps={steps} step={step} />
         <div className={styles.stats} aria-live="polite">
           <Stat value={usd(now.estimate.annual_usd)} label="per year, heating + cooling" />
-          <Stat
+          {now.lookalikes.count > 0 && <Stat
             value={num(now.lookalikes.count)}
             label={`similar homes${step > 0 && narrower > 0 ? `, range ${narrower}% narrower` : ""}`}
-          />
+          />}
         </div>
         <ul className={styles.seasons} aria-label="Estimate by season">
           {SEASONS.map((s) => (
@@ -133,7 +136,7 @@ export function MapStory({ data, step: rawStep, onStepChange, onFocus, className
                   <span className={styles.qAnswer}>
                     {s.answer_label}
                     <em>
-                      {signedUsd(delta)}/yr · {num(steps[i - 1].lookalikes.count)} → {num(s.lookalikes.count)} homes
+                      {signedUsd(delta)}/yr{ s.lookalikes.count > 0 ? ` · ${num(steps[i - 1].lookalikes.count)} → ${num(s.lookalikes.count)} homes` : "" }
                     </em>
                   </span>
                 ) : next ? (
@@ -151,8 +154,8 @@ export function MapStory({ data, step: rawStep, onStepChange, onFocus, className
           </button>
         )}
         <p className={styles.fine}>
-          Half of our estimates land within ±{Math.round(now.estimate.typical_error * 100)}% of real metered Ann Arbor
-          bills.
+          Held-out seasonal gas median absolute error: {Math.round(now.estimate.typical_error * 100)}%.
+          {" "}{data.accuracy_basis} Method: {now.estimate.method}.
         </p>
       </section>
     </div>
