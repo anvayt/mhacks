@@ -1,4 +1,4 @@
-import { gradeLabel, money, annualRange, hiddenRent, carbon, peerLabel, type Estimate } from "@/components/hidden-rent-map/estimate-data";
+import { gradeLabel, money, annualRange, billLabel, buildingLine, hiddenRent, carbon, peerLabel, type Estimate } from "@/components/hidden-rent-map/estimate-data";
 import { qrMatrix } from "./qr";
 
 export async function shareImage(e: Estimate, url: string): Promise<Blob> {
@@ -13,7 +13,7 @@ export async function shareImage(e: Estimate, url: string): Promise<Blob> {
   ctx.fillStyle = "#11121a";
   const text = (value: string, x: number, y: number, size: number, family = sans) => { ctx.font = `${size}px ${family}`; ctx.fillText(value,x,y); };
   text("HIDDEN RENT / ANN ARBOR",90,112,24,mono);
-  text("PREDICTED HEATING + COOLING",90,170,22,mono);
+  text(billLabel(e),90,170,22,mono);
   const address = e.building.address;
   ctx.font = `36px ${display}`;
   const addressLines: string[] = []; let line = "";
@@ -26,6 +26,8 @@ export async function shareImage(e: Estimate, url: string): Promise<Blob> {
   ctx.fillRect(90,708,1020,2);
   text(`${money(e.bill.annual.p50)}/year`,90,800,68,display);
   text(`${annualRange(e)} · estimated range`,90,850,25,mono);
+  const building = buildingLine(e);
+  if (building) text(building,90,884,20,mono);
   text(`${hiddenRent(e)} hidden rent`,90,930,44,display);
   text("Compared with the same-type median",90,971,24,sans);
   text(`${carbon(e)} · predicted`,90,1044,36,display);
