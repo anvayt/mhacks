@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SurveyFields } from "../survey-fields";
+import { SurveyGate } from "../survey-gate";
 
 export const metadata: Metadata = {
   title: "Hidden Rent survey",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SurveyPage() {
-  return <SurveyFields />;
+  return <SurveyGate />;
 }
