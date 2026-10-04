@@ -1,0 +1,10 @@
+/* The API's questions have up to four options with longer labels: two per row at phone width. */
+@media (max-width: 480px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .row > :global(.choice) {
+    flex: 1 1 40%;
+  }
+}
