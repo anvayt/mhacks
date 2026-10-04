@@ -161,7 +161,7 @@ def _at_home(s: dict, property_id: str, only: set | None = None) -> tuple[dict, 
                                    "title": f"Send your landlord the drafted email: {t['title'][0].lower()}{t['title'][1:]}",
                                    "requests": target}
     if target in changes and any(c["catalog_id"] == target and c["status"] == "completed"
-                                 for c in list_commitments(property_id)):
+                                 for c in (list_commitments(property_id) if property_id else [])):
         changes["landlord_request"], runs["landlord_request"] = changes[target], runs[target]
     return entries, changes, runs
 
@@ -190,14 +190,30 @@ def _rank(c: dict) -> tuple:
     return 0, r is None, -(r or 0), -p["co2_kg_saved_yr"]
 
 
+def _session(session_id: str) -> dict:
+    s = sessions.get(session_id)
+    if s is None:
+        raise _fail(404, "not_found", estimate.EXPIRED)
+    return s
+
+
+def _suggested(s: dict, property_id: str | None) -> list[dict]:
+    entries, changes, runs = _at_home(s, property_id)
+    return sorted((_item(cid, e, s, changes, runs) for cid, e in entries.items()), key=_rank)
+
+
 @router.get("/commitments/suggested/{property_id}")
 def get_suggested(property_id: str, request: Request) -> dict:
     """Catalog actions at this home, ranked (NEW_CHANGES §9.2). 404 property_not_found / not_found, 503
     model_unavailable."""
     _, s = _home(property_id, request)
-    entries, changes, runs = _at_home(s, property_id)
-    out = [_item(cid, e, s, changes, runs) for cid, e in entries.items()]
-    return {"property_id": property_id, "commitments": sorted(out, key=_rank)}
+    return {"property_id": property_id, "commitments": _suggested(s, property_id)}
+
+
+@router.get("/commitments/suggested")
+def get_suggested_for_session(session_id: str) -> dict:
+    """The same list for a web session before sign-in (no account, no auth: sessions are unguessable ids)."""
+    return {"property_id": None, "session_id": session_id, "commitments": _suggested(_session(session_id), None)}
 
 
 class CommitRequest(BaseModel):
@@ -271,30 +287,22 @@ def _band(p50: float, ref: dict) -> dict:
 
 
 class ProjectionRequest(BaseModel):
-    property_id: str
+    property_id: str | None = None
+    session_id: str | None = None  # instead of property_id: an anonymous what-if (catalog ids only, nothing stored)
     commitment_ids: list[str] = []  # commitment ids, or catalog ids for a what-if before accepting
 
 
-@router.post("/projection")
-def post_projection(req: ProjectionRequest, request: Request) -> dict:
-    """Current vs projected if the commitments are completed: all modeled changes in ONE composed P1 run (each action's
-    own run only screens it, as in suggested). Placeholders and actions the model says don't cut CO₂ here are listed
-    in not_modeled. Zero modeled → projected == current."""
-    _, s = _home(req.property_id, request)
-    mine = {c["id"]: c["catalog_id"] for c in list_commitments(req.property_id) if c["status"] != "dismissed"}
-    cids = []
-    for i in req.commitment_ids:
-        if (cid := i if i in CATALOG else mine.get(i)) is None:
-            raise _fail(422, "unknown_commitment", "One of those isn't an open commitment for this home. Pick from "
-                        "your accepted ones.")
-        cids.append(cid)
-    cids = list(dict.fromkeys(cids))
-    _, changes, runs = _at_home(s, req.property_id, {*cids, *(ENVELOPE if "landlord_request" in cids else ())})
+def what_if(s: dict, cids: list[str], property_id: str | None = None) -> dict:
+    """Current vs projected if these catalog actions are completed: all modeled changes in ONE composed P1 run (each
+    action's own run only screens it, as in suggested). Stores nothing. `building_annual_usd`: the building's heating +
+    cooling $ behind the score (the bill shows the renter's $: cooling only when heat is included in the rent)."""
+    _, changes, runs = _at_home(s, property_id, {*cids, *(ENVELOPE if "landlord_request" in cids else ())})
     modeled = [c for c in cids if c in changes]
     hc, ref = s["heating_cooling"], s["bill"]["annual"]
     a = hc["annual"]
     current = {"score": s["score"], "grade": s["grade"], "percentile_city": s.get("percentile_city"),
-               "bill_annual": ref, "co2_kg_yr": _band(co2_kg(a["gas_ccf"], a["electric_kwh"]), ref)}
+               "bill_annual": ref, "co2_kg_yr": _band(co2_kg(a["gas_ccf"], a["electric_kwh"]), ref),
+               "building_annual_usd": a["total_usd"]}
     projected, delta = {**current, "label": LABEL}, {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0}
     if modeled:
         change = {k: v for c in modeled for k, v in changes[c].items()}  # effects don't add: one composed run
@@ -304,13 +312,40 @@ def post_projection(req: ProjectionRequest, request: Request) -> dict:
         n = new["annual"]
         projected = {"score": sc["score"], "grade": sc["grade"], "percentile_city": sc["percentile_city"],
                      "bill_annual": _band(n[estimate.renter_usd_key(s)], ref),
-                     "co2_kg_yr": _band(co2_kg(n["gas_ccf"], n["electric_kwh"]), ref), "label": LABEL}
+                     "co2_kg_yr": _band(co2_kg(n["gas_ccf"], n["electric_kwh"]), ref),
+                     "building_annual_usd": n["total_usd"], "label": LABEL}
         delta = {"score": sc["score"] - s["score"], "usd_saved_yr": usd, "co2_kg_saved_yr": kg}
-    pid = "prj_" + secrets.token_hex(6)
-    body = {"id": pid, "projection_id": pid, "property_id": req.property_id, "commitment_ids": req.commitment_ids,
-            "current": current, "projected": projected, "delta": {**delta, "label": LABEL}, "label": LABEL,
+    return {"current": current, "projected": projected, "delta": {**delta, "label": LABEL}, "label": LABEL,
             "modeled": modeled, "not_modeled": [c for c in cids if c not in changes],
             "method": "model_rerun", "model_version": f"P1 /hc/estimate ({hc['method']} path)", "created_at": _now()}
+
+
+@router.post("/projection")
+def post_projection(req: ProjectionRequest, request: Request) -> dict:
+    """Current vs projected if the commitments are completed: all modeled changes in ONE composed P1 run (each action's
+    own run only screens it, as in suggested). Placeholders and actions the model says don't cut CO₂ here are listed
+    in not_modeled. Zero modeled → projected == current. With session_id instead of property_id: a what-if for the
+    web before sign-in (catalog ids only; no id, nothing stored)."""
+    if not req.property_id:
+        if not req.session_id:
+            raise _fail(422, "missing_input", "Send a property_id or a session_id.")
+        if any(i not in CATALOG for i in req.commitment_ids):
+            raise _fail(422, "unknown_action", "We don't have that action. Pick one from your suggested list.")
+        cids = list(dict.fromkeys(req.commitment_ids))
+        return {"id": None, "projection_id": None, "property_id": None, "session_id": req.session_id,
+                "commitment_ids": req.commitment_ids, **what_if(_session(req.session_id), cids)}
+    _, s = _home(req.property_id, request)
+    mine = {c["id"]: c["catalog_id"] for c in list_commitments(req.property_id) if c["status"] != "dismissed"}
+    cids = []
+    for i in req.commitment_ids:
+        if (cid := i if i in CATALOG else mine.get(i)) is None:
+            raise _fail(422, "unknown_commitment", "One of those isn't an open commitment for this home. Pick from "
+                        "your accepted ones.")
+        cids.append(cid)
+    cids = list(dict.fromkeys(cids))
+    pid = "prj_" + secrets.token_hex(6)
+    body = {"id": pid, "projection_id": pid, "property_id": req.property_id, "commitment_ids": req.commitment_ids,
+            **what_if(s, cids, req.property_id)}
     with closing(_db()) as c, c:  # the projection only: never a snapshot, never the session (I3)
         c.execute("INSERT INTO projections (id, property_id, created_at, body) VALUES (?, ?, ?, ?)",
                   (pid, req.property_id, body["created_at"], json.dumps(body)))
