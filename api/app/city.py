@@ -20,7 +20,9 @@ from statistics import mean, median
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
-from app.geo import FOOTPRINTS_PATH
+from shapely.geometry import mapping
+
+from app.geo.footprints import _index, mailing_assignment, mailing_labels
 
 router = APIRouter()
 TABLE_PATH = Path(__file__).resolve().parents[1] / "data" / "city_scores.csv"
@@ -88,20 +90,33 @@ def city_costs(building_type: str) -> list[float]:
     return [row["cost_per_sqft"] for row in _table() if row["type"] == building_type]
 
 
+def _round_coordinates(coords):
+    # Six decimal WGS84 degrees are about 0.1 m: below the source imagery precision.
+    return [_round_coordinates(c) if isinstance(c, (list, tuple)) else round(c, 6) for c in coords]
+
+
 @cache
 def _city_payload() -> tuple[bytes, bytes]:
-    rows = _table()
+    rows = {row["footprint_id"]: row for row in _table()}
     try:
-        footprints = json.loads(FOOTPRINTS_PATH.read_text())["features"]
-        geometries = {int(f["properties"]["OBJECTID"]): f["geometry"] for f in footprints}
-        features = [{"type": "Feature", "id": row["footprint_id"],
-                     "geometry": geometries[row["footprint_id"]],
-                     "properties": {key: row[key] for key in ("score", "grade", "excess_usd_per_sqft", "type")}}
-                    for row in rows]
-        payload = json.dumps({"type": "FeatureCollection", "description": "Predicted heating + cooling scores, relative to the same building type.", "features": features},
+        ix = _index()
+        labels = mailing_labels(ix, mailing_assignment(ix))
+        features = []
+        for i, p in enumerate(ix.props):
+            fid = int(p["OBJECTID"])
+            props = {"id": fid, "h": round(p.get("ABG_BLD_HG") or 0, 1),
+                     "r": int(p.get("Struc_Type") == "Residential")}
+            if i in labels:
+                props["a"] = labels[i]
+            if fid in rows:
+                props.update({key: rows[fid][key] for key in ("score", "grade", "excess_usd_per_sqft", "type")})
+            geometry = mapping(ix.wgs[i])
+            geometry["coordinates"] = _round_coordinates(geometry["coordinates"])
+            features.append({"type": "Feature", "geometry": geometry, "properties": props})
+        payload = json.dumps({"type": "FeatureCollection", "features": features},
                              separators=(",", ":"), allow_nan=False).encode()
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        raise _unavailable("City footprint geometry is unavailable; refresh the footprint cache and rescore.") from exc
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+        raise _unavailable("City footprint or mailing-address data is unavailable; refresh the footprint cache.") from exc
     return payload, gzip.compress(payload, compresslevel=6, mtime=0)
 
 
@@ -122,7 +137,7 @@ def _accepts_gzip(header: str) -> bool:
 
 @router.get("/city")
 def city(request: Request) -> Response:
-    """Every scored footprint; never expose mailing addresses or private building names."""
+    """Every footprint with P3 map attributes and scores where available; no landlord names."""
     raw, compressed = _city_payload()
     headers = {"Vary": "Accept-Encoding", "Cache-Control": "public, max-age=3600"}
     if _accepts_gzip(request.headers.get("accept-encoding", "")):
