@@ -9,4 +9,4 @@
 7. Integration gate: at each §8 checkpoint, one agent runs the end-to-end demo path against real (not mock) services and logs breakages to the owning agent's notes.
 8. Branches: `main` = docs/coordination only (PLAN, DEV_STRATEGY, TASK_TEMPLATE, `tasks/`, `notes/`); `dev` = integration code, must always run the demo; tasks branch `p<#>/<task>` off `dev` and merge back via a `type: merge` task. Never edit docs off `main` or code on `main`.
 9. Worktrees: repo root stays on `main` as the shared coordination folder; each agent works in `git worktree add ../mhacks-<task> -b p<#>/<task> dev` and reads/writes `tasks/` + `notes/` via the root's absolute path (live, no merging). Agents on other machines commit notes straight to `main` and `git fetch` before each task.
-10. Freeze: at 8 AM merge `dev` → `main` so the submitted repo has code + docs on one branch.
+10. We'll manually merge `dev` → `main` so the repo has code + docs on one branch.
