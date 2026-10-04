@@ -157,7 +157,7 @@ test("mock interview (USE_MOCK_API): link → grade span + question → answers 
   assert.match(first, /Grade B–D: answer a few questions/);
   assert.ok(first.endsWith(UNIT_SIZE_QUESTION));
   const afterUnit = await chat.reply("judge", "850");
-  assert.match(afterUnit, /Is the heat gas or electric\?/);
+  assert.match(afterUnit, /Is the heat gas or electric, or included in your rent\?/);
   assert.doesNotMatch(afterUnit, /\(was/); // same size → same range → no "was"
   const update = await chat.reply("judge", "gas");
   assert.match(update, /Heating \+ cooling a year: \$980–\$1,740.*\(was \$760–\$1,960\)/);
