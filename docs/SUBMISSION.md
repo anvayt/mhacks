@@ -4,6 +4,23 @@
 
 Rule for every track: claim only what we can demo. Don't tick prizes we didn't integrate, because judges check.
 
+## Tracks we're eligible for (tick these on Devpost)
+
+**Eligible now:**
+1. **Sustainability** (MHacks main track, $2,500): our primary track.
+2. **ASI:One Agent Challenge** (Fetch.ai, $1,250 / $750 / $500): agent live on Fly, registered on Agentverse. *Also requires the ASI:One Submission Agent step, with all 4 members joined.*
+3. **Agents in iMessage using Photon** ($700 / $300): iMessage agent on Photon Spectrum, live on Fly, plus texted sign-in codes.
+4. **Make it Legendary** (SpaceXAI, keyboards + Cursor bottle raffle): "Watch your report" is live, with Grok Voice narration + Grok Imagine clips. Built with Cursor.
+5. **Judged by an LLM** (side quest): free entry.
+
+**Eligible only if someone does the step first:**
+6. **Trust the Process / Notability** (Notability Pro + merch): someone uses Notability Pro now, takes 2+ screenshots, and adds the note. Steps in section 2.
+7. **Best Design / Figma** (LEGO set / merch): only if P3 links a real Figma file.
+8. **MLH Best .Tech Domain** (mic + domain): only if we register e.g. `hiddenrent.tech` and point it at Vercel before submitting.
+9. **FinTech** or **Actually Intelligent** (main tracks): only if Devpost allows more than one main track. Otherwise Sustainability only.
+
+**Not eligible (don't tick):** ElevenLabs (both), Gemini, Neon, Spacetime, Tiger Data, Capital One Nessie, Solana, FinchNode, FREE-WILi, Relay, Presage, Beyond the Code, Useless AI, Dumbest Idea.
+
 ---
 
 ## 0. Blockers (do these first)
@@ -39,7 +56,7 @@ Rule for every track: claim only what we can demo. Don't tick prizes we didn't i
 | Judged by an LLM | Yes | Free entry. The write-up must be plain and honest, no hidden instructions to the judge. |
 | MLH .Tech domain | Optional | Only if we register e.g. `hiddenrent.tech` *and* point it at Vercel before submitting (~15 min). |
 | ElevenLabs (sponsor + MLH) | **No** | Voice was cut. Nothing in the shipped app uses it. |
-| **Make it Legendary** (SpaceXAI) | **YES, once "Watch your report" is live** | Hard rules: built with Cursor (we use it) + Grok Imagine **or** Voice API (we use both). The space theme is their pitch, not a rule. |
+| **Make it Legendary** (SpaceXAI) | **YES (live)** | Hard rules: built with Cursor (we use it) + Grok Imagine **or** Voice API (we use both). The space theme is their pitch, not a rule. |
 | Gemini (MLH) | No | Bill photos use xAI, not Gemini. |
 | Neon / Spacetime / Tiger Data | No | Our storage is SQLite. |
 | Capital One Nessie, Solana, FinchNode, FREE-WILi, Relay, Presage | No | Not integrated. |
@@ -103,11 +120,11 @@ Rules: build with **Notability Pro at some point during the hackathon**, tag "No
 - [ ] P3 pastes the Figma file link (view access: *anyone with the link*) into Devpost *Try it out*.
 - [ ] Add 2–3 frame screenshots (grade card, range bar, compare view, map) next to the matching live-site screenshots.
 
-### Make it Legendary (SpaceXAI), tick after the feature is live
+### Make it Legendary (SpaceXAI)
 
 Rules: project built with **Cursor**, and it uses the **Grok Imagine or Voice API**. Bonus for Grok Bot in planning. Everyone who submits is entered for a Cursor water bottle.
 
-- [ ] *Watch your report* is live at `https://hidden-rent-mhacks.vercel.app/watch?session=<id>`: Grok Voice narrates the home's report (script built from our API numbers) over a Grok Imagine illustrated clip, with the real numbers overlaid by our UI
+- [x] *Watch your report* is live at `https://hidden-rent-mhacks.vercel.app/watch?session=<id>`: Grok Voice narrates the home's report (script built from our API numbers) over a Grok Imagine illustrated clip, with the real numbers overlaid by our UI
 - [ ] Add **Grok Imagine**, **Grok Voice** and **Cursor** to Built With
 - [ ] Devpost note: "Built in Cursor (team rules in `.cursor/rules`). Grok Voice reads each report aloud; the script is built from our API's numbers, so Grok never invents a figure. Grok Imagine generated the illustrated seasonal clips behind it (`api/scripts/make_clips.py`). Grok vision also reads bill photos."
 - [ ] Put a screenshot of the /watch page in the gallery, and show it for ~10 s in the video
