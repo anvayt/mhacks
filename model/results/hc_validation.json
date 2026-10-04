@@ -25,28 +25,28 @@
   "models": {
     "gas": {
       "mlr": {
-        "monthly_r2": 0.588,
-        "monthly_mae_per_1000ft2_day": 0.4381,
-        "building_annual_heating_r2": -0.105,
-        "building_annual_heating_mape": 0.417,
-        "n_buildings": 108,
-        "n_building_months": 2638,
-        "n_buildings_scored": 104
-      },
-      "random_forest": {
-        "monthly_r2": 0.497,
-        "monthly_mae_per_1000ft2_day": 0.4849,
-        "building_annual_heating_r2": 0.005,
+        "monthly_r2": 0.596,
+        "monthly_mae_per_1000ft2_day": 0.4401,
+        "building_annual_heating_r2": -0.082,
         "building_annual_heating_mape": 0.392,
         "n_buildings": 108,
         "n_building_months": 2638,
         "n_buildings_scored": 104
       },
+      "random_forest": {
+        "monthly_r2": 0.454,
+        "monthly_mae_per_1000ft2_day": 0.5078,
+        "building_annual_heating_r2": -0.093,
+        "building_annual_heating_mape": 0.4,
+        "n_buildings": 108,
+        "n_building_months": 2638,
+        "n_buildings_scored": 104
+      },
       "xgboost": {
-        "monthly_r2": 0.472,
-        "monthly_mae_per_1000ft2_day": 0.5008,
-        "building_annual_heating_r2": 0.094,
-        "building_annual_heating_mape": 0.33,
+        "monthly_r2": 0.45,
+        "monthly_mae_per_1000ft2_day": 0.4987,
+        "building_annual_heating_r2": 0.03,
+        "building_annual_heating_mape": 0.355,
         "n_buildings": 108,
         "n_building_months": 2638,
         "n_buildings_scored": 104
@@ -54,28 +54,28 @@
     },
     "elec": {
       "mlr": {
-        "monthly_r2": 0.122,
-        "monthly_mae_per_1000ft2_day": 6.4273,
-        "building_annual_cooling_r2": -0.98,
-        "building_annual_cooling_mape": 0.823,
+        "monthly_r2": 0.164,
+        "monthly_mae_per_1000ft2_day": 6.3059,
+        "building_annual_cooling_r2": -0.949,
+        "building_annual_cooling_mape": NaN,
         "n_buildings": 113,
         "n_building_months": 2844,
         "n_buildings_scored": 86
       },
       "random_forest": {
-        "monthly_r2": 0.204,
-        "monthly_mae_per_1000ft2_day": 6.271,
-        "building_annual_cooling_r2": -0.88,
-        "building_annual_cooling_mape": 0.73,
+        "monthly_r2": 0.142,
+        "monthly_mae_per_1000ft2_day": 6.5125,
+        "building_annual_cooling_r2": -1.019,
+        "building_annual_cooling_mape": NaN,
         "n_buildings": 113,
         "n_building_months": 2844,
         "n_buildings_scored": 86
       },
       "xgboost": {
-        "monthly_r2": 0.142,
-        "monthly_mae_per_1000ft2_day": 6.7384,
-        "building_annual_cooling_r2": -0.23,
-        "building_annual_cooling_mape": 0.441,
+        "monthly_r2": 0.146,
+        "monthly_mae_per_1000ft2_day": 6.655,
+        "building_annual_cooling_r2": -0.152,
+        "building_annual_cooling_mape": 0.442,
         "n_buildings": 113,
         "n_building_months": 2844,
         "n_buildings_scored": 86
@@ -84,6 +84,6 @@
   },
   "chosen": {
     "gas": "xgboost",
-    "elec": "xgboost"
+    "elec": "mlr"
   }
 }

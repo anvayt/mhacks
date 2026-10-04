@@ -145,17 +145,17 @@
         },
         "ols": {
           "n": 947,
-          "medape": 0.24672744315328998,
-          "medape_se": 0.012000613281485049,
+          "medape": 0.2467274431532902,
+          "medape_se": 0.012000613281485056,
           "within_25pct": 0.5068637803590285,
           "within_50pct": 0.8215417106652587,
-          "bias_median_signed": -0.017384271081070435,
+          "bias_median_signed": -0.017384271081070657,
           "r2_log": 0.6107344600448679,
           "spearman": 0.8070699153314566,
           "label": "Ordinary least squares",
           "complexity": 3,
-          "train_medape": 0.239817893417848,
-          "overfit_gap": 0.006909549735441972,
+          "train_medape": 0.23981789341784818,
+          "overfit_gap": 0.006909549735442028,
           "params_per_fold": [
             {},
             {},
@@ -169,22 +169,22 @@
             {}
           ],
           "per_region_medape": {
-            "Capital District": 0.19265279327088103,
-            "Central New York": 0.266931857293209,
+            "Capital District": 0.1926527932708808,
+            "Central New York": 0.2669318572932091,
             "Finger Lakes": 0.20877687574495396,
-            "Long Island": 0.2694179904912089,
+            "Long Island": 0.26941799049120846,
             "Mid-Hudson": 0.28809608881425064,
-            "Mohawk Valley": 0.2914452223374351,
-            "New York City": 0.25545519250044246,
-            "North Country": 0.23572102761478797,
-            "Southern Tier": 0.28596845678837857,
-            "Western New York": 0.19109801524080006
+            "Mohawk Valley": 0.2914452223374347,
+            "New York City": 0.25545519250044235,
+            "North Country": 0.2357210276147883,
+            "Southern Tier": 0.28596845678837846,
+            "Western New York": 0.19109801524080017
           }
         },
         "lasso": {
           "n": 947,
           "medape": 0.2466262297573889,
-          "medape_se": 0.011304574956563328,
+          "medape_se": 0.011304574956563325,
           "within_25pct": 0.5079197465681098,
           "within_50pct": 0.8204857444561774,
           "bias_median_signed": -0.022849313209529987,
@@ -236,13 +236,13 @@
             "New York City": 0.25455985644144263,
             "North Country": 0.23570706258538943,
             "Southern Tier": 0.28709882935094166,
-            "Western New York": 0.18844317442389358
+            "Western New York": 0.1884431744238937
           }
         },
         "ridge": {
           "n": 947,
           "medape": 0.2491671156086388,
-          "medape_se": 0.011990554463781888,
+          "medape_se": 0.011990554463781887,
           "within_25pct": 0.5015839493136219,
           "within_50pct": 0.8215417106652587,
           "bias_median_signed": -0.021666725459659086,
@@ -250,8 +250,8 @@
           "spearman": 0.8068199898530651,
           "label": "Ridge (squared loss, L2 penalty)",
           "complexity": 3,
-          "train_medape": 0.2394714218429562,
-          "overfit_gap": 0.009695693765682606,
+          "train_medape": 0.23947142184295617,
+          "overfit_gap": 0.009695693765682634,
           "params_per_fold": [
             {
               "alpha": 0.01
@@ -300,7 +300,7 @@
         "elastic_net": {
           "n": 947,
           "medape": 0.24642539460378554,
-          "medape_se": 0.01233505388164353,
+          "medape_se": 0.012335053881643528,
           "within_25pct": 0.5068637803590285,
           "within_50pct": 0.8204857444561774,
           "bias_median_signed": -0.021216760222469988,
@@ -367,17 +367,17 @@
         },
         "huber": {
           "n": 947,
-          "medape": 0.24951610921424472,
-          "medape_se": 0.012629562045908191,
+          "medape": 0.2495161092142446,
+          "medape_se": 0.012629562045908174,
           "within_25pct": 0.5026399155227033,
           "within_50pct": 0.8183738120380147,
           "bias_median_signed": -0.0013133990122921047,
-          "r2_log": 0.612376884795649,
+          "r2_log": 0.6123768847956492,
           "spearman": 0.8069956851471095,
           "label": "Huber regression (robust loss, L2 penalty)",
           "complexity": 3,
           "train_medape": 0.24064931715151597,
-          "overfit_gap": 0.008866792062728751,
+          "overfit_gap": 0.00886679206272864,
           "params_per_fold": [
             {
               "alpha": 0.0001,
@@ -425,27 +425,27 @@
             "Central New York": 0.28209742798016735,
             "Finger Lakes": 0.2246273667924532,
             "Long Island": 0.2644284938476107,
-            "Mid-Hudson": 0.2904538307809844,
+            "Mid-Hudson": 0.2904538307809843,
             "Mohawk Valley": 0.30407143435584283,
             "New York City": 0.2648876041068422,
             "North Country": 0.24687011528971237,
-            "Southern Tier": 0.27638925607107967,
+            "Southern Tier": 0.2763892560710796,
             "Western New York": 0.18673659840810652
           }
         },
         "random_forest": {
           "n": 947,
-          "medape": 0.23612673797642825,
-          "medape_se": 0.008508076489848707,
+          "medape": 0.23612673797642814,
+          "medape_se": 0.008499879332827613,
           "within_25pct": 0.5269271383315733,
           "within_50pct": 0.8342133051742344,
           "bias_median_signed": -0.013898908814612643,
-          "r2_log": 0.6345392795055604,
-          "spearman": 0.8174093031453428,
+          "r2_log": 0.6345742831842001,
+          "spearman": 0.8174317834426021,
           "label": "Random forest (tuned)",
           "complexity": 5,
-          "train_medape": 0.19276798330983785,
-          "overfit_gap": 0.04335875466659039,
+          "train_medape": 0.19278238159450198,
+          "overfit_gap": 0.04334435638192616,
           "params_per_fold": [
             {
               "max_features": 0.66,
@@ -492,13 +492,13 @@
             "Capital District": 0.20610435305864228,
             "Central New York": 0.25788528382650067,
             "Finger Lakes": 0.21972238766950447,
-            "Long Island": 0.22863147312045928,
+            "Long Island": 0.2286314731204594,
             "Mid-Hudson": 0.24547682486020783,
             "Mohawk Valley": 0.31443057006094044,
-            "New York City": 0.3089834021065404,
+            "New York City": 0.30808848139849054,
             "North Country": 0.23004815527949285,
             "Southern Tier": 0.21495887979041228,
-            "Western New York": 0.21572438238321312
+            "Western New York": 0.21572438238321334
           }
         },
         "xgboost": {
@@ -631,17 +631,17 @@
         },
         "mlp": {
           "n": 947,
-          "medape": 0.2370318700870785,
-          "medape_se": 0.00881560442718511,
+          "medape": 0.2370318700870787,
+          "medape_se": 0.00881560442718514,
           "within_25pct": 0.5258711721224921,
           "within_50pct": 0.8310454065469906,
-          "bias_median_signed": -0.036560140582372114,
+          "bias_median_signed": -0.036560140582372336,
           "r2_log": 0.6250569156835386,
           "spearman": 0.8110469774344267,
           "label": "Neural network (MLP, tuned)",
           "complexity": 7,
           "train_medape": 0.2276429250745376,
-          "overfit_gap": 0.009388945012540895,
+          "overfit_gap": 0.009388945012541117,
           "params_per_fold": [
             {
               "learning_rate_init": 0.003,
@@ -719,16 +719,16 @@
             }
           ],
           "per_region_medape": {
-            "Capital District": 0.20491371000721248,
+            "Capital District": 0.2049137100072127,
             "Central New York": 0.2571896235664596,
             "Finger Lakes": 0.1954964652463166,
-            "Long Island": 0.24039754868104207,
-            "Mid-Hudson": 0.2729341412435934,
-            "Mohawk Valley": 0.29558386279414073,
+            "Long Island": 0.24039754868104213,
+            "Mid-Hudson": 0.2729341412435933,
+            "Mohawk Valley": 0.2955838627941407,
             "New York City": 0.31451669888920053,
             "North Country": 0.20447941747059306,
-            "Southern Tier": 0.24363190676020074,
-            "Western New York": 0.18432938686546196
+            "Southern Tier": 0.24363190676020086,
+            "Western New York": 0.18432938686546174
           }
         },
         "year_built_median_reg": {
@@ -761,7 +761,7 @@
         }
       },
       "best_by_mean": "random_forest",
-      "threshold": 0.24463481446627694,
+      "threshold": 0.24462661730925575,
       "within_1se": [
         "random_forest",
         "xgboost",
@@ -773,12 +773,12 @@
       "random_forest": {
         "n": 947,
         "medape": 0.23567462761320768,
-        "medape_se": 0.009930371406785031,
+        "medape_se": 0.009871387120503259,
         "within_25pct": 0.5269271383315733,
         "within_50pct": 0.8331573389651531,
-        "bias_median_signed": -0.020608557706079056,
-        "r2_log": 0.640874849796137,
-        "spearman": 0.8210618548278952
+        "bias_median_signed": -0.021094632748179243,
+        "r2_log": 0.6408990816739351,
+        "spearman": 0.8211307016099257
       },
       "baseline_median": {
         "n": 947,
@@ -795,8 +795,8 @@
       "train_rsbs2015_test_rbsa2018": {
         "random_forest": {
           "n": 361,
-          "medape": 0.2597421092040355,
-          "medape_se": 0.014592101782861345,
+          "medape": 0.2597421092040362,
+          "medape_se": 0.014592101782861336,
           "within_25pct": 0.4792243767313019,
           "within_50pct": 0.7562326869806094,
           "bias_median_signed": 0.08630111138677288,
@@ -818,10 +818,10 @@
         "random_forest": {
           "n": 586,
           "medape": 0.24339478611669513,
-          "medape_se": 0.01098326104332863,
+          "medape_se": 0.010983261043328635,
           "within_25pct": 0.5085324232081911,
           "within_50pct": 0.8549488054607508,
-          "bias_median_signed": -0.10630032758083163,
+          "bias_median_signed": -0.10630032758083174,
           "r2_log": 0.6111701676331904,
           "spearman": 0.8185010562496594
         },
@@ -840,38 +840,38 @@
     "year_built_scenarios": {
       "a_true_year_built": {
         "n": 947,
-        "medape": 0.23612673797642825,
-        "medape_se": 0.00826362881140304,
+        "medape": 0.23612673797642814,
+        "medape_se": 0.008250362162282376,
         "within_25pct": 0.5269271383315733,
         "within_50pct": 0.8342133051742344,
         "bias_median_signed": -0.013898908814612643,
-        "r2_log": 0.6345392795055604,
-        "spearman": 0.8174093031453428
+        "r2_log": 0.6345742831842001,
+        "spearman": 0.8174317834426021
       },
       "b_no_year_built": {
         "n": 947,
         "medape": 0.3226626474635934,
-        "medape_se": 0.010721651312067195,
+        "medape_se": 0.010721651312067173,
         "within_25pct": 0.3833157338965153,
         "within_50pct": 0.7117212249208026,
-        "bias_median_signed": -0.025242775794347305,
-        "r2_log": 0.3767614924803163,
-        "spearman": 0.6232903519015426
+        "bias_median_signed": -0.025242775794347194,
+        "r2_log": 0.37680044445731,
+        "spearman": 0.6232872433749892
       },
       "c_noisy_year_built_trained_on_true": {
         "n": 947,
-        "medape": 0.2779050646288169,
-        "medape_se": 0.009842193162250549,
+        "medape": 0.2779050646288168,
+        "medape_se": 0.009889099798172304,
         "within_25pct": 0.4551214361140444,
-        "within_50pct": 0.7539598732840549,
-        "bias_median_signed": 0.010128283847780084,
-        "r2_log": 0.433172644358082,
-        "spearman": 0.6923704144303294
+        "within_50pct": 0.7550158394931362,
+        "bias_median_signed": 0.010128283847780306,
+        "r2_log": 0.4332065986280206,
+        "spearman": 0.6923906198500717
       },
       "c_noisy_year_built_trained_on_noisy": {
         "n": 947,
         "medape": 0.2731242548715508,
-        "medape_se": 0.009717135480241525,
+        "medape_se": 0.009717135480241505,
         "within_25pct": 0.4614572333685322,
         "within_50pct": 0.7866948257655755,
         "bias_median_signed": -0.03829919672924076,
@@ -883,7 +883,7 @@
       "lasso": {
         "n": 947,
         "medape": 0.2462299237574117,
-        "medape_se": 0.010915061550490336,
+        "medape_se": 0.010915061550490343,
         "within_25pct": 0.5068637803590285,
         "within_50pct": 0.8278775079197466,
         "bias_median_signed": -0.017338563980392574,
@@ -893,12 +893,12 @@
       "random_forest": {
         "n": 947,
         "medape": 0.23724982897376967,
-        "medape_se": 0.008514173487942268,
+        "medape_se": 0.008514173487942244,
         "within_25pct": 0.5205913410770855,
         "within_50pct": 0.8321013727560718,
         "bias_median_signed": -0.013443032904625563,
-        "r2_log": 0.6314413380499746,
-        "spearman": 0.8108334818567104
+        "r2_log": 0.6314307676000424,
+        "spearman": 0.8108242410564508
       }
     }
   },
@@ -938,54 +938,5 @@
       "climate_zone": 0.063
     }
   },
-  "runtime_s": 157,
-  "ann_arbor": {
-    "houses_scored": 15416,
-    "houses_total": 17286,
-    "in_training_range": 14774,
-    "by_home_type": {
-      "detached": 13381,
-      "attached_or_2to4": 2043,
-      "apartment_5plus": 1862
-    },
-    "floor_area_median_detached_ann_arbor": 2741.4940329089545,
-    "floor_area_median_detached_training": 2010.0,
-    "stories_calibration": {
-      "labelled_houses": 12317,
-      "median_height_by_stories": {
-        "1": 10.811760195,
-        "2": 23.47390321,
-        "3": 31.60765243
-      },
-      "cuts_ft": [
-        17.1428317025,
-        27.540777820000002
-      ],
-      "rule_accuracy_on_labelled": 0.8769180807014695,
-      "share_with_recorded_stories": 0.38051086823038194
-    },
-    "floor_area_sensitivity": {
-      "floor_area_x0.75": {
-        "median_ratio_cfm50_per_ft2": 1.1771987904427885
-      },
-      "floor_area_x0.6": {
-        "median_ratio_cfm50_per_ft2": 1.4455420962539829
-      }
-    },
-    "predicted_cfm50_per_ft2_quantiles": [
-      0.5198509374804505,
-      0.8224873709636933,
-      1.2017314115550861
-    ],
-    "predicted_ach50_quantiles": [
-      3.898882031103379,
-      6.1686552822277,
-      9.012985586663145
-    ],
-    "training_ach50_quantiles": [
-      3.322795109445613,
-      8.01605504587156,
-      19.04552627206511
-    ]
-  }
+  "runtime_s": 183
 }
