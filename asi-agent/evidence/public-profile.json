@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-10-04T13:00:08.662985+00:00",
+  "authenticated_status": 200,
+  "address": "agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum",
+  "name": "Hidden Rent",
+  "handle": "hidden-rent-mhacks",
+  "agent_type": "mailbox",
+  "description": "Predicted Ann Arbor rental heating/cooling costs, grades, carbon and landlord questions. API-grounded figures; ASI:One intent parsing. Sustainability, housing, energy, Hidden Rent, Zillow rentals.",
+  "readme_present": true
+}
