@@ -8,13 +8,19 @@ Source: https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress
 import json
 
 import httpx
+from fastapi import HTTPException
 from pyproj import Geod
+from shapely.geometry import Point, shape
 
+from app import city as city_scores  # not `city`: geocode() has a local of that name
 from app.geo import DATA_DIR
 from app.geo.footprints import CITY_POINT_MAX_M, city_address
 
 URL = "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress"
 CACHE_PATH = DATA_DIR / "geocode_cache.json"
+# TIGERweb block-group outlines (ACS 2023 = 2020 block groups), cached as <GEOID>.geojson by
+# app.map_widget._block_group and scripts/warm_city.py (make demo-warm-city: the city's 145).
+BG_OUTLINES = DATA_DIR / "map_block_groups"
 
 
 def _key(address: str) -> str:
@@ -32,8 +38,9 @@ def geocode(address: str) -> dict | None:
     """Census match, with the exact city mailing point when Census misses or moves it over 250 m.
 
     A corrected point gets its own Census coordinate geography; the displaced address's block
-    group is never reused. If that optional lookup is down, the city point still works and ACS
-    falls back to the county median. Both address and successful coordinate lookups are cached.
+    group is never reused. If that optional lookup is down, the city point still works and
+    get_features derives its block group offline (offline_block_group). Both address and successful
+    coordinate lookups are cached.
     """
     cache = json.loads(CACHE_PATH.read_text()) if CACHE_PATH.exists() else {}
     key = _key(address)
@@ -74,3 +81,21 @@ def geocode(address: str) -> dict | None:
     except httpx.HTTPError:
         pass  # Coordinate geography is optional; do not discard the authoritative city point.
     return city
+
+
+def offline_block_group(lon: float, lat: float, footprint_id: int) -> tuple[str | None, str | None]:
+    """(2020 block group GEOID, source) from disk only, for when the Census geocoder gave no block.
+
+    The cached TIGERweb outline covering the point, else the footprint's row in api/data/city_scores.csv
+    (scripts/score_city.py: the TIGERweb 2020 outline holding the footprint), else (None, None).
+    ponytail: reads every cached outline per call (145 files, ~660 KB); only the Census-miss path pays it.
+    """
+    pt = Point(lon, lat)
+    for path in sorted(BG_OUTLINES.glob("*.geojson")):
+        if shape(json.loads(path.read_text())).covers(pt):
+            return path.stem, "tigerweb_outline_cache"
+    try:
+        row = next((r for r in city_scores._table() if r["footprint_id"] == footprint_id), None)
+    except HTTPException:  # city_scores.csv unreadable
+        row = None
+    return (row["block_group"], "city_scores") if row else (None, None)
