@@ -37,6 +37,11 @@ function keep(e: Estimate): Estimate {
   return e;
 }
 
+/** P4's onboarding page; with a session it pre-fills "(ref <id>)" so the iMessage agent resumes this report. */
+export const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787";
+export const imessageUrl = (session?: string | null) =>
+  session ? `${ONBOARD.replace(/\/$/, "")}/?session=${encodeURIComponent(session)}` : ONBOARD;
+
 export const listingInput = (listing: string) => (/https?:\/\//i.test(listing) ? { url: listing } : { address: listing });
 
 /** A new lookup becomes the current session; the saved home (`property`) only moves on an explicit save. */
