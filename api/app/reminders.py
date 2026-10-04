@@ -29,7 +29,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app import accounts, commitments, db, forecast
+from app import accounts, commitments, db, forecast, habits
 
 router = APIRouter()
 QUIET_END, QUIET_START = 8, 22
@@ -167,7 +167,7 @@ def _candidate(user, home, control, sent, now, *, kind=None, demo=False, forecas
         if tasks:
             task = tasks[0]
             return {"kind": "task", "commitment_id": task["id"],
-                    "text_hint": f"Your target for {task['safe_title']} is {task['target_date']}.",
+                    "text_hint": f"Your target for {task['safe_title']} is {task['target_date']}. {habits.reminder_hint(user)}",
                     "fact_key": "task:" + task["id"]}
     if kind not in (None, "weather") or not home.get("session_id") or not eligible(user, control, sent, now, kind="weather", demo=demo):
         return None
@@ -277,16 +277,37 @@ def due(request: Request, now: str | None = None) -> list[dict]:
     return result
 
 
+def _replying_to(con, user, control):
+    """The reminder this inbound text answers: the latest one delivered (or a demo one shown) since the previous
+    inbound text, if it's from today or yesterday (a late reply after midnight) in the user's timezone."""
+    local = _local(user, _now())
+    since = _instant(control["last_inbound"]) if control.get("last_inbound") else None
+    rows = con.execute("SELECT * FROM reminder_queue WHERE user_id=? AND (status='sent' OR (demo=1 AND status='queued'))",
+                       (user["id"],)).fetchall()
+    shown = [(_instant(r["sent_at"] or r["created_at"]), dict(r)) for r in rows]
+    shown = [x for x in shown if since is None or x[0] > since]
+    if local is None or not shown:
+        return None
+    at, row = max(shown, key=lambda x: x[0])
+    day = at.astimezone(local.tzinfo).date()
+    if (local.date() - day).days > 1:
+        return None
+    return {"reminder_id": row["id"], "kind": row["kind"], "local_date": day.isoformat(),
+            **({"commitment_id": row["commitment_id"]} if row["commitment_id"] else {})}
+
+
 @router.post("/reminders/inbound")
 def inbound(body: UserRequest, request: Request):
     _agent_only(request)
     user = _user(request, body.user_id)
     with closing(_con()) as con, con:
+        replying_to = _replying_to(con, user, _history(con, body.user_id)[0])
         con.execute("INSERT OR IGNORE INTO reminder_controls (user_id) VALUES (?)", (body.user_id,))
         con.execute("UPDATE reminder_controls SET unanswered=0,auto_paused=0,last_inbound=? WHERE user_id=?", (_now().isoformat(), body.user_id))
         con.execute("UPDATE reminder_queue SET status='cancelled',slot=slot||':cancelled:'||id WHERE user_id=? AND status='queued'", (body.user_id,))
         control, _ = _history(con, body.user_id)
-    return {"user_id": body.user_id, "unanswered": 0, "stopped": bool(control["stopped"]), "paused": bool(control["paused"] or (user.get("reminder_prefs") or {}).get("paused"))}
+    return {"user_id": body.user_id, "unanswered": 0, "stopped": bool(control["stopped"]), "paused": bool(control["paused"] or (user.get("reminder_prefs") or {}).get("paused")),
+            "replying_to": replying_to}
 
 
 @router.post("/reminders/demo-send")

@@ -178,3 +178,25 @@ def test_streak_and_commitment_flags_without_impact_do_not_publish(records):
     for kind in ['streak','follow_through']:
         b=boards.board_result(kind)
         assert b['entries']==[] and b['empty_reason']
+
+
+def test_habit_streak_board_named_opt_in_only_ties_by_best(records, monkeypatch):
+    from datetime import datetime
+    from app import habits
+    monkeypatch.setattr(habits, '_now', lambda: datetime.fromisoformat('2026-10-04T12:00:00-04:00'))
+    for n in (1, 2, 3, 4, 5): records['add'](n)
+    records['impacts'].clear()  # habit streaks need no verified impact: self-reported, never savings
+    records['users']['secret-user-3']['alias'] = None  # opted in without an alias: never listed
+    records['users']['secret-user-4']['leaderboard_opt_in'] = False
+    days = {1: ['2026-10-03', '2026-10-04'], 2: ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-03', '2026-10-04'],
+            3: ['2026-10-04'], 4: ['2026-10-04'], 5: ['2026-10-01']}  # 5's streak is broken: not listed
+    with habits._con() as con:
+        for n, ds in days.items():
+            con.executemany("INSERT INTO habit_checkins VALUES (?, ?, NULL, 'imessage', 'x')", [(f'secret-user-{n}', d) for d in ds])
+        con.executemany("INSERT INTO habit_best VALUES (?, ?)", [('secret-user-2', 3), ('secret-user-5', 1)])
+    r = TestClient(app).get('/leaderboard?board=habit_streak'); b = r.json()
+    assert [(e['alias'], e['value'], e['best'], e['rank']) for e in b['entries']] == [('Tree 2', 2, 3, 1), ('Tree 1', 2, 2, 2)]
+    assert all(e['unit'] == 'days' and e['evidence'] == 'self_reported_checkins' and e['demo'] is False for e in b['entries'])
+    assert 'not savings' in b['metric_note']
+    for private in ['Private', 'secret-user', 'secret-property', '+17345559876']:
+        assert private not in r.text

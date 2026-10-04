@@ -18,7 +18,8 @@ def seed() -> int:
         for i, alias in enumerate(("Maple", "Oak", "Elm", "Pine", "Birch", "Cedar"), 1):
             row = {"alias": "Demo " + alias, "home": ["demo", str(i)], "tract": "26161400400",
                    "co2_kg_avoided": i * 20, "baseline_co2_kg_yr": 2000,
-                   "streak_months": i, "accepted": 4, "verified": 1 + i % 3, "verified_impact_count": 1, "demo": True}
+                   "streak_months": i, "accepted": 4, "verified": 1 + i % 3, "verified_impact_count": 1, "demo": True,
+                   "named": True, "habit_streak": i + 1, "habit_best": i + 3}
             con.execute("INSERT OR REPLACE INTO board_demo_entries (id, body) VALUES (?, ?)",
                         (f"demo-{i}", json.dumps(row)))
     return 6

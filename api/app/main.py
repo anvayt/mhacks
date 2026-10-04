@@ -18,6 +18,7 @@ from app.estimate import estimate, router as estimate_router
 from app.fixes import router as fixes_router
 from app.forecast import router as forecast_router
 from app.gcal import router as gcal_router
+from app.habits import router as habits_router
 from app.geo.features import get_features
 from app.map_widget import router as map_router
 from app.reminders import router as reminders_router
@@ -43,6 +44,7 @@ app.include_router(calibrate_router)
 app.include_router(accounts_router)
 app.include_router(commitments_router)
 app.include_router(boards_router)
+app.include_router(habits_router)
 
 
 class EstimateRequest(BaseModel):
