@@ -1,0 +1,208 @@
+footprint_id,event,relative_snow_loss,reason,clear_dates,first_day,last_day
+6,2025-12-10,,fewer than two clear observation dates,1,7,7
+6,2026-02-06,,fewer than two clear observation dates,1,9,9
+6,2026-02-22,,ground not majority snow at first observation,2,5,8
+7,2025-12-10,,fewer than two clear observation dates,1,7,7
+7,2026-01-25,,fewer than two clear observation dates,1,1,1
+7,2026-01-27,,fewer than two clear observation dates,1,1,1
+7,2026-02-22,,ground not majority snow at first observation,2,5,8
+4694,2025-12-10,,fewer than two clear observation dates,1,7,7
+4694,2026-01-27,,fewer than two clear observation dates,1,1,1
+4694,2026-02-06,,fewer than two clear observation dates,1,9,9
+4694,2026-02-22,,ground not majority snow at first observation,2,5,8
+4695,2025-12-10,,ground not majority snow at first observation,2,2,7
+4695,2026-02-06,-0.6517478016216609,eligible,2,4,9
+4695,2026-02-22,,ground not majority snow at first observation,2,5,8
+4698,2025-12-10,,fewer than two clear observation dates,1,7,7
+4698,2026-01-25,,fewer than two clear observation dates,1,1,1
+4698,2026-02-06,-0.07012195121951226,eligible,2,4,9
+4698,2026-02-22,,ground not majority snow at first observation,2,5,8
+4703,2025-12-10,,fewer than two clear observation dates,1,7,7
+4703,2026-01-25,,fewer than two clear observation dates,1,1,1
+4703,2026-02-06,-0.2382530564147886,eligible,3,1,9
+4703,2026-02-22,,ground not majority snow at first observation,2,5,8
+8840,2025-12-10,,fewer than two clear observation dates,1,7,7
+8840,2026-01-25,,fewer than two clear observation dates,1,1,1
+8840,2026-02-06,,ground not majority snow at first observation,2,4,9
+8840,2026-02-22,,ground not majority snow at first observation,2,5,8
+8841,2025-12-10,,fewer than two clear observation dates,1,7,7
+8841,2026-01-27,,fewer than two clear observation dates,1,1,1
+8841,2026-02-06,,fewer than two clear observation dates,1,9,9
+13148,2025-12-10,,fewer than two clear observation dates,1,7,7
+13148,2026-01-25,,fewer than two clear observation dates,1,1,1
+13148,2026-01-27,,fewer than two clear observation dates,1,1,1
+13148,2026-02-06,,ground not majority snow at first observation,3,1,9
+13148,2026-02-22,,ground not majority snow at first observation,2,5,8
+13149,2025-12-10,,fewer than two clear observation dates,1,7,7
+13149,2026-01-27,,fewer than two clear observation dates,1,1,1
+13149,2026-02-06,,fewer than two clear observation dates,1,9,9
+13149,2026-02-22,,ground not majority snow at first observation,2,5,8
+13152,2025-12-10,,fewer than two clear observation dates,1,7,7
+13152,2026-01-25,,fewer than two clear observation dates,1,1,1
+13152,2026-01-27,,fewer than two clear observation dates,1,1,1
+13152,2026-02-06,-0.051239404058566654,eligible,3,1,9
+13152,2026-02-22,,ground not majority snow at first observation,2,5,8
+17787,2025-12-10,,fewer than two clear observation dates,1,7,7
+17787,2026-01-25,,fewer than two clear observation dates,1,1,1
+17787,2026-01-27,,fewer than two clear observation dates,1,1,1
+17787,2026-02-06,-0.2044002699648418,eligible,3,1,9
+17787,2026-02-22,,ground not majority snow at first observation,2,5,8
+21674,2025-12-10,,fewer than two clear observation dates,1,7,7
+21674,2026-01-27,,fewer than two clear observation dates,1,1,1
+21674,2026-02-06,,fewer than two clear observation dates,1,9,9
+21674,2026-02-22,,ground not majority snow at first observation,2,5,8
+21675,2025-12-10,,fewer than two clear observation dates,1,7,7
+21675,2026-01-25,,fewer than two clear observation dates,1,1,1
+21675,2026-01-27,,fewer than two clear observation dates,1,1,1
+21675,2026-02-06,,fewer than two clear observation dates,1,4,4
+21675,2026-02-22,,ground not majority snow at first observation,2,5,8
+21677,2025-12-10,,fewer than two clear observation dates,1,7,7
+21677,2026-02-06,0.148433618859801,eligible,2,1,9
+21677,2026-02-22,,ground not majority snow at first observation,2,5,8
+21678,2025-12-10,,ground not majority snow at first observation,2,2,7
+21678,2026-01-25,,fewer than two clear observation dates,1,1,1
+21678,2026-02-06,0.34523809523809523,eligible,2,4,9
+21678,2026-02-22,,ground not majority snow at first observation,2,5,8
+21679,2025-12-10,,fewer than two clear observation dates,1,7,7
+21679,2026-01-25,,fewer than two clear observation dates,1,1,1
+21679,2026-02-06,-0.37213037842439256,eligible,3,1,9
+21679,2026-02-22,,ground not majority snow at first observation,2,5,8
+21680,2025-12-10,,fewer than two clear observation dates,1,7,7
+21680,2026-01-27,,fewer than two clear observation dates,1,1,1
+21680,2026-02-06,,fewer than two clear observation dates,1,9,9
+21680,2026-02-22,,ground not majority snow at first observation,2,5,8
+26396,2025-12-10,,fewer than two clear observation dates,1,7,7
+26396,2026-01-27,,fewer than two clear observation dates,1,1,1
+26396,2026-02-06,,fewer than two clear observation dates,1,9,9
+26396,2026-02-22,,ground not majority snow at first observation,2,5,8
+26397,2025-12-10,,fewer than two clear observation dates,1,7,7
+26397,2026-01-25,,fewer than two clear observation dates,1,1,1
+26397,2026-02-06,-0.137978560490046,eligible,2,4,9
+26397,2026-02-22,,ground not majority snow at first observation,2,5,8
+26398,2025-12-10,-0.4031462438068901,eligible,2,2,7
+26398,2026-01-27,,fewer than two clear observation dates,1,4,4
+26398,2026-02-06,0.03693181818181819,eligible,2,4,9
+26398,2026-02-22,,ground not majority snow at first observation,2,5,8
+26399,2025-12-10,-0.1412967103161929,eligible,2,2,7
+26399,2026-01-25,,fewer than two clear observation dates,1,1,1
+26399,2026-02-06,0.07695269526952697,eligible,2,4,9
+26399,2026-02-22,,ground not majority snow at first observation,2,5,8
+26400,2025-12-10,,fewer than two clear observation dates,1,7,7
+26400,2026-01-27,,fewer than two clear observation dates,1,1,1
+26400,2026-02-06,-0.3400184275184276,eligible,2,1,9
+26400,2026-02-22,,fewer than two clear observation dates,1,8,8
+26401,2025-12-10,,fewer than two clear observation dates,1,7,7
+26401,2026-01-27,,fewer than two clear observation dates,1,1,1
+26401,2026-02-06,-0.4317615742941344,eligible,2,1,9
+26401,2026-02-22,,ground not majority snow at first observation,2,5,8
+26402,2025-12-10,,ground not majority snow at first observation,2,2,7
+26402,2026-01-25,,fewer than two clear observation dates,1,1,1
+26402,2026-02-06,-0.5746468971157885,eligible,3,1,9
+30405,2025-12-10,,fewer than two clear observation dates,1,7,7
+30405,2026-01-27,,fewer than two clear observation dates,1,1,1
+30405,2026-02-06,,fewer than two clear observation dates,1,9,9
+30405,2026-02-22,,ground not majority snow at first observation,2,5,8
+30406,2025-12-10,,fewer than two clear observation dates,1,7,7
+30406,2026-01-27,,fewer than two clear observation dates,1,1,1
+30406,2026-02-06,,fewer than two clear observation dates,1,9,9
+30406,2026-02-22,,ground not majority snow at first observation,2,5,8
+30409,2025-12-10,,fewer than two clear observation dates,1,7,7
+30409,2026-01-25,,fewer than two clear observation dates,1,1,1
+30409,2026-02-06,,ground not majority snow at first observation,2,4,9
+30409,2026-02-22,,ground not majority snow at first observation,2,5,8
+34730,2025-12-10,,fewer than two clear observation dates,1,7,7
+34730,2026-02-06,-0.21272355095884513,eligible,2,4,9
+34730,2026-02-22,,ground not majority snow at first observation,2,5,8
+34735,2025-12-10,,fewer than two clear observation dates,1,7,7
+34735,2026-01-25,,fewer than two clear observation dates,1,1,1
+34735,2026-01-27,,fewer than two clear observation dates,1,1,1
+34735,2026-02-06,0.2728034875922199,eligible,2,4,9
+34735,2026-02-22,,ground not majority snow at first observation,2,5,8
+34737,2025-12-10,,fewer than two clear observation dates,1,7,7
+34737,2026-01-25,,fewer than two clear observation dates,1,1,1
+34737,2026-01-27,,fewer than two clear observation dates,1,1,1
+34737,2026-02-06,-0.13130608056510118,eligible,2,4,9
+34737,2026-02-22,,ground not majority snow at first observation,2,5,8
+34829,2025-12-10,,fewer than two clear observation dates,1,7,7
+34829,2026-01-25,,fewer than two clear observation dates,1,1,1
+34829,2026-01-27,,fewer than two clear observation dates,1,1,1
+34829,2026-02-06,,fewer than two clear observation dates,1,9,9
+34829,2026-02-22,,ground not majority snow at first observation,2,5,8
+34858,2025-12-10,,fewer than two clear observation dates,1,7,7
+34858,2026-01-25,,fewer than two clear observation dates,1,1,1
+34858,2026-01-27,,fewer than two clear observation dates,1,1,1
+34858,2026-02-06,,fewer than two clear observation dates,1,9,9
+34858,2026-02-22,,ground not majority snow at first observation,2,5,8
+34859,2025-12-10,,fewer than two clear observation dates,1,7,7
+34859,2026-01-25,,fewer than two clear observation dates,1,1,1
+34859,2026-01-27,,fewer than two clear observation dates,1,1,1
+34859,2026-02-06,0.4761083743842365,eligible,3,1,9
+34859,2026-02-22,,ground not majority snow at first observation,2,5,8
+34874,2025-12-10,,fewer than two clear observation dates,1,7,7
+34874,2026-01-25,,fewer than two clear observation dates,1,1,1
+34874,2026-02-06,-0.1479961371318204,eligible,2,4,9
+34874,2026-02-22,,ground not majority snow at first observation,2,5,8
+34880,2025-12-10,,fewer than two clear observation dates,1,7,7
+34880,2026-01-25,,fewer than two clear observation dates,1,1,1
+34880,2026-02-06,-0.31009359637537603,eligible,3,1,9
+34880,2026-02-22,,ground not majority snow at first observation,2,5,8
+34909,2025-12-10,,fewer than two clear observation dates,1,7,7
+34909,2026-01-27,,fewer than two clear observation dates,1,1,1
+34909,2026-02-06,,fewer than two clear observation dates,1,1,1
+34909,2026-02-22,,ground not majority snow at first observation,2,5,8
+34947,2025-12-10,,fewer than two clear observation dates,1,7,7
+34947,2026-01-25,,fewer than two clear observation dates,1,1,1
+34947,2026-02-06,0.2949061662198391,eligible,2,4,9
+34947,2026-02-22,,ground not majority snow at first observation,2,5,8
+34954,2025-12-10,,fewer than two clear observation dates,1,7,7
+34954,2026-01-25,,fewer than two clear observation dates,1,1,1
+34954,2026-02-06,,fewer than two clear observation dates,1,4,4
+34954,2026-02-22,,ground not majority snow at first observation,2,5,8
+34963,2025-12-10,,fewer than two clear observation dates,1,7,7
+34963,2026-01-25,,fewer than two clear observation dates,1,1,1
+34963,2026-02-06,,fewer than two clear observation dates,1,9,9
+34963,2026-02-22,,ground not majority snow at first observation,2,5,8
+34992,2025-12-10,-0.21501706484641633,eligible,2,2,7
+34992,2026-01-25,,fewer than two clear observation dates,1,1,1
+34992,2026-02-06,-0.0850551475261106,eligible,3,1,9
+34992,2026-02-22,,ground not majority snow at first observation,2,5,8
+35003,2025-12-10,,fewer than two clear observation dates,1,7,7
+35003,2026-01-25,,fewer than two clear observation dates,1,1,1
+35003,2026-02-22,,ground not majority snow at first observation,2,5,8
+35083,2025-12-10,,fewer than two clear observation dates,1,7,7
+35083,2026-01-25,,fewer than two clear observation dates,1,1,1
+35083,2026-02-06,0.058104327793319074,eligible,2,1,9
+35083,2026-02-22,,ground not majority snow at first observation,2,5,8
+35129,2025-12-10,,fewer than two clear observation dates,1,7,7
+35129,2026-01-25,,fewer than two clear observation dates,1,1,1
+35129,2026-02-06,-0.5002284961904055,eligible,3,1,9
+35129,2026-02-22,,ground not majority snow at first observation,2,5,8
+35131,2025-12-10,,fewer than two clear observation dates,1,7,7
+35131,2026-01-25,,fewer than two clear observation dates,1,1,1
+35131,2026-01-27,,fewer than two clear observation dates,1,1,1
+35131,2026-02-06,-0.1940190059003287,eligible,3,1,9
+35131,2026-02-22,,ground not majority snow at first observation,2,5,8
+35138,2026-02-06,,fewer than two clear observation dates,1,1,1
+35152,2025-12-10,,fewer than two clear observation dates,1,7,7
+35152,2026-01-25,,fewer than two clear observation dates,1,1,1
+35152,2026-02-06,-0.21337496209301685,eligible,2,4,9
+35152,2026-02-22,,ground not majority snow at first observation,2,5,8
+49014,2025-12-10,,fewer than two clear observation dates,1,7,7
+49014,2026-02-06,0.054324931024593764,eligible,2,1,9
+49014,2026-02-22,,ground not majority snow at first observation,2,5,8
+50723,2025-12-10,,fewer than two clear observation dates,1,7,7
+50723,2026-01-27,,fewer than two clear observation dates,1,1,1
+50723,2026-02-06,,fewer than two clear observation dates,1,9,9
+50723,2026-02-22,,ground not majority snow at first observation,2,5,8
+50724,2025-12-10,,fewer than two clear observation dates,1,7,7
+50724,2026-01-27,,fewer than two clear observation dates,1,1,1
+50724,2026-02-06,,fewer than two clear observation dates,1,9,9
+50724,2026-02-22,,ground not majority snow at first observation,2,5,8
+50726,2025-12-10,,fewer than two clear observation dates,1,7,7
+50726,2026-01-27,,fewer than two clear observation dates,1,1,1
+50726,2026-02-06,,fewer than two clear observation dates,1,9,9
+50726,2026-02-22,,ground not majority snow at first observation,2,5,8
+51294,2025-12-10,,fewer than two clear observation dates,1,7,7
+51294,2026-01-27,,fewer than two clear observation dates,1,1,1
+51294,2026-02-06,,fewer than two clear observation dates,1,9,9
+51294,2026-02-22,,ground not majority snow at first observation,2,5,8

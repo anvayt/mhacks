@@ -1,0 +1,248 @@
+[
+  {
+    "scene_id": "S2C_17TKG_20251212_0_L2A",
+    "c1_id": "S2C_T17TKG_20251212T163712_L2A",
+    "band": "green",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2025/12/S2C_17TKG_20251212_0_L2A/B03.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2025/12/S2C_T17TKG_20251212T163712_L2A/B03.tif",
+    "window": [
+      7502,
+      1604,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  },
+  {
+    "scene_id": "S2C_17TKG_20251212_0_L2A",
+    "c1_id": "S2C_T17TKG_20251212T163712_L2A",
+    "band": "swir16",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2025/12/S2C_17TKG_20251212_0_L2A/B11.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2025/12/S2C_T17TKG_20251212T163712_L2A/B11.tif",
+    "window": [
+      3751,
+      802,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  },
+  {
+    "scene_id": "S2B_17TKG_20260126_0_L2A",
+    "c1_id": "S2B_T17TKG_20260126T164010_L2A",
+    "band": "green",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2026/1/S2B_17TKG_20260126_0_L2A/B03.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2026/1/S2B_T17TKG_20260126T164010_L2A/B03.tif",
+    "window": [
+      7502,
+      1604,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  },
+  {
+    "scene_id": "S2B_17TKG_20260126_0_L2A",
+    "c1_id": "S2B_T17TKG_20260126T164010_L2A",
+    "band": "swir16",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2026/1/S2B_17TKG_20260126_0_L2A/B11.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2026/1/S2B_T17TKG_20260126T164010_L2A/B11.tif",
+    "window": [
+      3751,
+      802,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  },
+  {
+    "scene_id": "S2B_17TKG_20260215_0_L2A",
+    "c1_id": "S2B_T17TKG_20260215T163904_L2A",
+    "band": "green",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2026/2/S2B_17TKG_20260215_0_L2A/B03.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2026/2/S2B_T17TKG_20260215T163904_L2A/B03.tif",
+    "window": [
+      7502,
+      1604,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 10,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  },
+  {
+    "scene_id": "S2B_17TKG_20260215_0_L2A",
+    "c1_id": "S2B_T17TKG_20260215T163904_L2A",
+    "band": "swir16",
+    "legacy_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/17/T/KG/2026/2/S2B_17TKG_20260215_0_L2A/B11.tif",
+    "collection1_url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/17/T/KG/2026/2/S2B_T17TKG_20260215T163904_L2A/B11.tif",
+    "window": [
+      3751,
+      802,
+      100,
+      100
+    ],
+    "legacy_boa_offset_applied": true,
+    "valid_pixels": 10000,
+    "difference_c1_minus_legacy_quantiles": [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    "fraction_exactly_1000_DN": 1.0,
+    "legacy_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ],
+    "c1_asset_metadata": [
+      {
+        "nodata": 0,
+        "data_type": "uint16",
+        "spatial_resolution": 20,
+        "scale": 0.0001,
+        "offset": -0.1
+      }
+    ]
+  }
+]
