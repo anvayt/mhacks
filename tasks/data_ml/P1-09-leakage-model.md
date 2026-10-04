@@ -2,7 +2,7 @@
 id: P1-09
 title: Air-leakage (blower-door) model for Ann Arbor homes without a test
 owner: P1
-status: in-progress
+status: review
 branch: p1/leakage-model           # off p1/heating-cooling (needs its building features); worktree ../mhacks-leakage
 type: build
 checkpoint: 5:00 AM checkpoint
@@ -54,3 +54,10 @@ point estimate per house plus an honest held-out error.
 - [ ] Honest statement of applicability: dataset region/era/house types vs Ann Arbor rentals
 
 ## Handoff
+- Branch `p1/leakage-model` (f482992), off `p1/heating-cooling`; only `/model` touched (new `model/leakage/`, Makefile target, README §6, tests).
+- **Data:** 947 real blower-door tests (NYSERDA RSBS 2014–15 + RBSA 2018, public, data.ny.gov). ResDB raw data is not public (contact-only); NEEA needs registration; neither used. ResStock was used only as a baseline.
+- **Model:** target log(CFM50/ft²). Inputs: year built, log floor area, stories, home type, climate zone; no survey answers. 10 families + MLP, nested CV, inner GroupKFold by region, outer leave-one-region-out, one-SE rule → random forest (min_samples_leaf 5, max_features 0.66).
+- **Held-out error (CFM50):** 23.6% leave-one-region-out (baseline 42.9%, ResStock lookup 39.4%); cross-survey 24.3–26.0%; with Ann Arbor's real block-group year-built noise 27.3%; with no year built 32.3%.
+- **Ann Arbor:** `predict_leakage(lat, lon | address)` and `data/processed/leakage_ann_arbor.{parquet,csv}` (15,416 one-to-four-unit houses scored; 5+ unit buildings excluded). Inputs come from footprints (stories calibrated on LiDAR, 87.7% accurate), city mailing addresses (unit count), and ACS block-group year built.
+- **Known gaps:** NY training homes, not Michigan. Footprint floor area includes garages/porches (median 2,741 vs 2,010 ft² in training), so per-ft² and ACH50 are biased low; total CFM50 is more robust. Predictions are compressed by block-group year built.
+- **Next:** merge with P1-08 (P1 branches into dev). Any product use should present this as a predicted range-of-typical, not a measurement.
