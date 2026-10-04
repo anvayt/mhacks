@@ -20,6 +20,7 @@ import {
 import { ApiError, save } from "./lib/api";
 import styles from "./ranking-screen.module.css";
 import { ScoreBoost } from "./score-boost";
+import { GradeMap } from "./grade-map";
 
 const pct = (x: number) => Math.round(x * 100);
 
@@ -224,6 +225,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
             </aside>
           </section>
         ) : null}
+        {e ? <GradeMap session={e.session_id} /> : null}
         {e ? <ScoreBoost session={e.session_id} /> : null}
         <button className="ghost-action ranking-next" type="button" disabled={!nextReady || !e} onClick={onNext}>
           Next
