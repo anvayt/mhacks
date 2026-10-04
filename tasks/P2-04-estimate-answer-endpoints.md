@@ -2,7 +2,7 @@
 id: P2-04
 title: Real /estimate and /answer endpoints
 owner: P2
-status: todo
+status: done
 branch: p2/estimate-answer
 type: build
 checkpoint: 1:00 AM GO/NO-GO
@@ -37,10 +37,11 @@ contract_change: additive   # bill.seasonal {winter, spring, summer, fall} each 
 - Contract additions for §10 (additive): request field `unit_sqft`; `GET /session/{id}`; `POST /imessage/start`.
 
 ## Done when
-- [ ] Link or address → full §10 response, sessions persisted (SQLite), answers narrow the range; the 1 AM end-to-end path works
+- [x] Link or address → full §10 response, sessions persisted (SQLite), answers narrow the range; the 1 AM end-to-end path works
 
-## Handoff (fill in when done; DEV_STRATEGY #1)
-- What changed (files, endpoints)
-- How to use it / run it
-- Known gaps, TODOs, anything mocked that still needs to be real
-- Who needs to act next (`blocks` owners)
+## Handoff (Oct 4, ~3 AM; merged into `dev` at `fd8c31c` via `p2/merge-wave2`)
+- **What changed:** `api/app/estimate.py` (`POST /estimate`, `POST /answer`, `GET /session/{id}`), `api/app/sessions.py` (SQLite, `SESSIONS_DB`), `api/app/score.py` (score/grade/percentiles/hidden rent). Questions `heating_fuel`, `window_panes`, `floor_level` (multi-family), `cooling_code`, asked biggest swing first, `{id, text, options: [{value, label}]}`. p10/p90 = grade range (`grade_band_usd`, from the open questions only) widened by P1's held-out meter error; never wider after an answer. At merge: `co2_t`, `badges` (incl. grade-jumper vs the previous answer); peers = every city building of the same type (`api/data/city_scores.csv`, P2-06), `percentile_city` vs all 25,670, < 30 of a type falls back to P1's 591 buildings; "No AC" never sends `cooling_code=0` to P1 (cooling zeroed instead); at most 4 concurrent model calls per process.
+- **How to run:** `cd api && uv sync && uv run python scripts/fetch_footprints.py` (once), P1's model on :8001 (`make -C model dashboard`), `uv run uvicorn app.main:app --port 8000`; tests `uv run pytest -q` (377 pass).
+- **Live (912 Mary St):** F (electric assumed, $3,199) → gas → B ($1,440) → No AC → A ($1,201), span ABCDF → AB → A. On the old 591-apartment peers it stayed F throughout.
+- **Gaps:** no unit-size question in iMessage yet (P4 can pass `unit_sqft`); `bill` is heating + cooling only; sessions never expire.
+- **Next:** P3/P4 read the additive fields in notes/contract-changes.md (merge wave 2).
