@@ -20,7 +20,7 @@ make demo-video
 BASE_URL=http://localhost:3005 API=http://localhost:8051 make demo-video
 ```
 
-The web must have been started with `NEXT_PUBLIC_API_BASE_URL` matching `API` and `NEXT_PUBLIC_USE_MOCKS=0`. The recorder checks the origin of every browser POST. Use a dedicated API with throwaway `APP_DB`, `SESSIONS_DB`, and `CALIBRATION_DB`; the video adds fictional accounts and hypothetical bills. **Never point its setup at the team's real account database.**
+The web must have been started with `NEXT_PUBLIC_API_BASE_URL` matching `API` and `NEXT_PUBLIC_USE_MOCKS=0`. The recorder checks the origin of every browser POST. Use a dedicated API with throwaway `APP_DB`, `SESSIONS_DB`, and `CALIBRATE_DB`; the video adds fictional accounts and hypothetical bills. **Never point its setup at the team's real account database.**
 
 The bill's `bill_signal` requires a saved property. For that beat, run the isolated API with **`USE_MOCKS=1`** (this mocks Photon onboarding only; estimates, projections and bill checks remain real), then give the recorder the same agent key through the existing env-file loader. This local-only setup does not open SMS links, send messages, opt in to reminders, or contact Calendar. Reserved fictional numbers `+12025550181` and `+12025550182` are used for the two viewports.
 
@@ -66,21 +66,23 @@ The recorder neither starts nor stops the model. If `:8001` is unavailable, ask 
 
 Selectors use accessible role, label and visible text. Map-only structural checks read P3's existing `data-building-id` and `data-city-count` attributes; no styling classes or pixel clicks drive the recording. Captions are browser-only overlays and do not alter product code.
 
-## Dry-run evidence (October 4, 2026, 03:59 EDT)
+## Real dry-run evidence (October 4, 2026, 04:06–04:08 EDT)
 
-Tested web: isolated temporary integration of `p3/int-flow` **5735ccb**, `p3/int-board` **421dcfa**, and `p3/int-map-compare` **d8e555a**, served on `:3005`. API: dev **534f67a**, port `:8051`, isolated `/tmp/video-{a,s,c}.sqlite`, `USE_MOCKS=1`, model slots capped at two. These preview web merges are not in this deliverable branch.
+Tested web: isolated temporary integration of `p3/int-flow` **5735ccb**, `p3/int-board` **421dcfa**, and `p3/int-map-compare` **d8e555a**, served on `:3005`. API: dev **534f67a**, port `:8051`, isolated `/tmp/video-a.sqlite` and `/tmp/video-s.sqlite`; the original rehearsal launch misspelled `CALIBRATE_DB`, so its calibration streak store used this private worktree’s git-ignored `data/calibrate.sqlite` (not the team database), `USE_MOCKS=1` for authentication only, model slots capped at two. These preview web merges are not in this deliverable branch. P1 independently restored the model before this run; the recorder did not manage it.
 
-Both viewport runs completed their diagnostics and exited **1**, as expected for an unavailable model:
+**All six real beats passed at both sizes (12/12), with no browser errors.** The full command exited 0. It checked fresh real sessions, actual API responses, existing P3 controls, and rendered city geometry. Initial screenshots were inspected at both sizes; the final framing adds separate mobile rank-bars and provisional-bill captures so the caption never hides the critical evidence.
 
-| Beat | Desktop | Mobile | Evidence |
-|---|---|---|---|
-| Address → grade/rank | BLOCKED | BLOCKED | Address input/submission works; `/estimate` returns 503 `model_unavailable`. |
-| Listing battle | BLOCKED | BLOCKED | Both card inputs/submission work; `/compare` returns 422 with per-listing `model_unavailable`. |
-| Arrowwood grade lock | BLOCKED | BLOCKED | Address input/submission works; `/estimate` returns 503. |
-| Window ghost | BLOCKED | BLOCKED | Depends on the unavailable real Morton session. |
-| Monthly bill/signal | BLOCKED | BLOCKED | Depends on the unavailable real Morton session. |
-| City map | BLOCKED | BLOCKED | The Yard `/estimate` returns 503. |
+| Beat | Desktop / mobile | Exact live result |
+|---|---|---|
+| Address → grade/rank | PASS / PASS | Morton: grade **C**, possible **B–D**, score **45**; **$1,283–$3,070/year**, midpoint **$2,185**; rank **11,610 / 21,173** same-type homes, city percentile **41.8%**. |
+| Listing battle | PASS / PASS | 624 Church wins: **$265/year** versus Forest **$2,179/year**; gap **$1,914/year**, `confident: true`. |
+| Arrowwood grade lock | PASS / PASS | **A–B → B locked** after Central AC; annual **$435–$505**, midpoint **$470**. |
+| Window ghost | PASS / PASS | Projected score **56** (current **45**), grade remains **C**, percentile **52.4%**, midpoint **$2,060**; **$125/year** and **699 kg CO₂/year** modeled savings. Solid current bar unchanged; ghost and page background moved. |
+| Monthly bill/signal | PASS / PASS | Hypothetical **120 therms**, Feb 1–28, 2026: **66% below normal**, noise floor **118.3%**, `verified: false`; provisional signal **A / 94** with **A–B** span, **$753–$1,803/year**. Current **C / 45**, rank and percentile unchanged, checked before/after against `/leaderboard/position`. |
+| City map | PASS / PASS | The Yard: **A / 100**, footprint **50892**, **35,007 footprints** loaded from real `/city`; selected-home and city views rendered with grade legend. |
 
-**No complete real beat has passed yet.** The browser successfully rendered both layouts, exercised real request/error paths, produced 19 screenshots plus the JSON report, and preserved the script's nonzero failure status. No success-path selectors after estimate, real bill signal, map loading, or final video are claimed as verified. Those must be rerun when P1 restores `:8001` and the web merge is approved. Syntax checks (`node --check`, `bash -n`) and `--help` pass. ffmpeg is installed, but final MP4 conversion awaits final recording.
+The final live report and **44 screenshots** are at `out/dry-run-2026-10-04T08-06-36-133Z/`. These files are intentionally untracked; the durable table above records their actual numbers. A preceding 03:59 run correctly reported all beats blocked while the model was down; no fixtures were used to disguise those failures.
 
-Local evidence: `out/dry-run-2026-10-04T07-59-18-798Z/`. This directory is intentionally untracked. The durable status above does not depend on these local files surviving.
+`node --check`, `bash -n`, and the npx `--help` path pass. ffmpeg is installed. **No final WebM/MP4 has been recorded**: that awaits the team lead's merged-web signal. After the successful run, only the owned API8051 was restarted with the correct `CALIBRATE_DB=/tmp/video-c.sqlite` for future runs; no model calls or model process changes were made during that correction.
+
+The success paths now work against the temporary integrated preview; rerun against merged dev before the final capture. Real external map tiles and API/model availability remain runtime dependencies.
