@@ -252,7 +252,11 @@ def post_answer(req: AnswerRequest) -> dict:
     if req.question_id not in QUESTIONS:
         raise _fail(422, "bad_answer", "I don't have that question. Answer one of the questions I sent, or say skip.")
     answers = {**s["answers"], req.question_id: _parse(req.question_id, req.answer)}
-    return _respond(s["session_id"], s["building"], s["model_params"], answers, s)
+    body = _respond(s["session_id"], s["building"], s["model_params"], answers, s)
+    from app import accounts, bills  # lazy: accounts imports this module
+    if prop := accounts.property_for_session(body["session_id"]):
+        bills.record_snapshot(prop["id"], "questionnaire", body)  # the saved home's history shows the grade path
+    return body
 
 
 @router.get("/session/{session_id}")
