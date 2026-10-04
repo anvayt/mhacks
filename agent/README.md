@@ -16,6 +16,7 @@ A Photon Spectrum (`spectrum-ts` 12.10.1) agent that answers iMessages, plus a Q
 | `npm run agent` | Agent loop on iMessage. Replies to every inbound DM. |
 | `npm run onboard` | Onboarding page on `:8787`: `GET /` form, `POST /join`, `GET /qr.svg`, `GET /card` (printable table card) |
 | `npm run doctor` | Preflight: credentials OK? who is allowlisted, and which line each texts |
+| `npm run remove-user -- <phone>` | Remove a phone from the allowlist (e.g. to re-test onboarding from scratch, or free a slot) |
 | `npm test` / `npm run typecheck` | Unit tests (Photon mocked) / types |
 
 Judges' phones can't reach `localhost`, so expose the onboarding page with a tunnel and set `PUBLIC_URL` to it before printing the QR:
