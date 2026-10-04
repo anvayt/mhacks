@@ -1,62 +1,67 @@
-# /agent: Hidden Rent iMessage agent (P4)
+# Hidden Rent iMessage agent (P4)
 
-A Photon Spectrum (`spectrum-ts` 12.10.1) agent that answers iMessages, plus a QR onboarding page so judges can allowlist their own phone.
+The agent calls the real API by default. Photon Spectrum handles iMessage; terminal mode never initializes Photon or sends texts. All predicted, projected and verified numbers come from the API.
 
-## Setup (once)
-1. Create a free Photon account + project at <https://app.photon.codes>. Copy the **Project ID** and **Secret** from project Settings.
-2. `cp .env.example .env` and fill in `PHOTON_PROJECT_ID` / `PHOTON_PROJECT_SECRET`. Never commit `.env`.
-3. `npm install` (Node 20+).
-4. `npm run doctor`: checks the credentials and lists allowlisted phones.
-5. Allowlist each teammate's phone: `npm run add-user -- +17345550123 Ada`. It prints the Photon number that phone should text.
-   If a phone still gets no reply, text <https://debug.photon.codes> from it and allowlist the handle it reports.
+## Setup and run
 
-## Run
-| Command | What it does |
+From `agent/`, run `npm ci`. Set `API_BASE_URL` (default `http://localhost:8000`) and `AGENT_API_KEY` to the API's key. Environment variables win, then nonempty values in `agent/.env`, then the root `.env`. Blank placeholders in `.env.example` do not hide root credentials. No keys or bill images are logged.
+
+| Command | Behavior |
 |---|---|
-| `npm run agent` | Agent loop on iMessage. Replies to every inbound DM. |
-| `npm run onboard` | Onboarding page on `:8787`: `GET /` form, `POST /join`, `GET /qr.svg`, `GET /card` (printable table card) |
-| `npm run doctor` | Preflight: credentials OK? who is allowlisted, and which line each texts |
-| `npm run remove-user -- <phone>` | Remove a phone from the allowlist (e.g. to re-test onboarding from scratch, or free a slot) |
-| `npm test` / `npm run typecheck` | Unit tests (Photon mocked) / types |
+| `npm run agent` | iMessage with Photon credentials; terminal otherwise |
+| `AGENT_TERMINAL=1 npm run agent` | Plain terminal chat; real API, no Photon |
+| `AGENT_TERMINAL=1 USE_MOCK_API=1 npm run agent` | Entire API simulated; every response labeled demo data |
+| `npm run checkin -- <phone>` | Queue a monthly check-in, then send only if `/reminders/due` permits it |
+| `npm run remind-now -- <phone>` | Explicit demo reminder; bypasses clock/cap on the API but respects stop/pause; does not call `/sent` |
+| `npm run onboard` | QR onboarding page on `:8787`; `GET /card` is printable |
+| `npm run doctor` | Check Photon credentials and allowlisted phones |
+| `npm run add-user -- <phone> [name]` / `remove-user` | Manage the Photon allowlist |
+| `npm test` / `npm run typecheck` | Tests with mocked external calls / TypeScript checks |
 
-Judges' phones can't reach `localhost`, so expose the onboarding page with a tunnel and set `PUBLIC_URL` to it before printing the QR:
-```bash
-brew install cloudflared
-cloudflared tunnel --url http://localhost:8787   # prints https://<random>.trycloudflare.com
-# put that URL in PUBLIC_URL, restart `npm run onboard`, open /card and print it
-```
-No tunnel? `npm run onboard` also prints the laptop's Wi-Fi address. It works for phones on the same network if the venue Wi-Fi lets devices see each other (many don't).
+For a real phone, configure `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET`, allowlist the phone, and have its user text first. `PUBLIC_URL` points at the publicly reachable onboarding page; `/?session=<id>` carries the web report into the opener as `(ref <id>)`. `USE_MOCKS=1` affects onboarding only; it does **not** mock the heating API. `USE_MOCK_API=1` mocks the full API. Default: off.
 
-## Judge flow
-Scan QR → enter number → server calls Photon `POST /projects/{id}/users` (`type: "shared"`) → 302 to Photon's `GET /users/{id}/redirect` → Messages opens with "Hi Hidden Rent! What's my apartment's hidden rent?" pre-filled → judge taps Send → agent replies.
-The opener is text-only and the judge texts first (inbound-first), which avoids Apple's "Report Junk" banner.
+Terminal identity defaults to the fictional `+12025550164`; override with `AGENT_TERMINAL_PHONE`. Do not use a real person's phone for automated checks. Terminal mode does not poll/consume the global reminder queue; the explicit CLI commands preview locally without acknowledging a text as delivered.
 
-## Mocks (DEV_STRATEGY #4)
-| Switch | Stands in for |
+## Conversation
+
+| Input | API and response |
 |---|---|
-| `AGENT_TERMINAL=1` (or no Photon creds) | iMessage → Spectrum's terminal chat provider |
-| `USE_MOCKS=1` (or no Photon creds) | Photon user API → fake user + plain `sms:` link |
-| `USE_MOCK_API=1` | The whole /api → `src/mockApi.ts`: `/estimate`, `/answer`, `GET /session/{id}`, `/calibrate`, `/fixes` in the PLAN.md §10 shapes. Every reply starts with "[demo data, not a real estimate]". Turn off once P2 serves them. |
+| First inbound from a phone/email | Cached, normalized `POST /auth/phone`; `GET /me` rehydrates the current home and pending check-in. Every inbound records `/reminders/inbound`. A new `(ref id)` is passed to auth even on a cached account. |
+| `login 123456` | Exact six-digit intent, case-insensitive; `/auth/web/confirm`; original API error message on failure |
+| Link/address | `/estimate` for a new account; `/properties` for a known home, archiving its old baseline/history |
+| Answers / option numbers / `skip` | `/answer`; the API controls the grade range and locking. Estimated unit size is asked first. |
+| Locked interview / `save` | `/properties {user_id, session_id}` adopts the answered session |
+| `options` / `what can I do` | Suggested commitments. Modeled options show API $/yr, kg CO₂/yr and GRH points; placeholders are tips with no effect numbers. Thermostat safety note is quoted unchanged. |
+| `do 1 and 3 by 2026-11-01` | Accept commitments; target date optional. Only modeled selections enter `/projection`: **projected if completed**, current grade unchanged. |
+| `done 1` / `dismiss 1` | Update the commitment for that displayed option. A restart requires `options` again; the agent never guesses list order. Completion is reported, not verified. |
+| `checkin` → `yes` | Inbound demo trigger asks “Still at …?” then requests a bill |
+| `120 therms`, `120 ccf`, `$85` | `/calibrate` with saved property and session. Missing dates mean the last full calendar month. CCF uses `gas_unit: ccf`; dollars use `amount_usd`, labeled **estimated from your bill amount**. Explicit dates: `120 therms 2026-09-01 to 2026-09-30`. |
+| Bill photo | In-memory JPEG/base64 (HEIC conversion when available), `/calibrate`, then fixes and a landlord email. Vision errors invite typing the numbers. No image is persisted. |
+| Bill result | Weather comparison, API streak/badges. Provisional `bill_signal` is an early signal; the current grade stays unchanged. Only non-provisional bill regrades change the stated current grade. Verification is separate. |
+| `moved` | Ask for a new address; separate baseline, old history archived; pending check-in cleared by the API |
+| `stop` / `pause` / `resume` or `start` | Persist server controls; inbound messages still receive replies and do not clear stop/pause |
+| `reminders weekly` / `daily` / `monthly` (optional `at 10`) | Opt in through `/me` preferences; server validates the local hour |
+| `add to calendar` | Return OAuth URL; after connecting, say `calendar connected`. Creates events only for accepted commitments with a target date; failures never undo a commitment. Mock Calendar is labeled. |
+| `fixes` / `landlord` | Existing model-priced fixes + copyable landlord email |
 
-## Limits (Photon free plan)
-- 10 allowlisted users total (team phones included). Delete old users in the dashboard to free slots.
-- DMs only; no group chats on the shared pool.
-- Android numbers get SMS/RCS fallback.
-- Links and addresses go to the real `POST /estimate` at `API_BASE_URL` (default `http://localhost:8000`); replies only repeat numbers from API responses (PLAN.md §0 rule 4). API down → a "try again" text, no numbers.
-- **Interview loop** (`src/conversation.ts`, one state per chat): estimate card → if the unit size is estimated, "How big is the unit in sq ft?" (re-runs `/estimate` with `unit_sqft`, works on the real API today) → the API's `questions`, one at a time (reply with a number or the answer) → `POST /answer` → short update ("Grade B–C · $980–$1,740 (was …)") → "Grade B 🔒" when the API sets `locked`. A link without an address makes the next text the address. Until P2-04 serves `/answer`, real answers get an honest "can't refine yet" text.
+A replacement web session or corrected unit-size estimate is detached from the old property until saved. Billing asks for `save` first instead of attaching a bill to the wrong home. Every authenticated endpoint sends `X-Agent-Key`; ordinary public estimate calls do not need it.
 
-## Conversation reference (src/conversation.ts)
-| User sends | Agent does |
-|---|---|
-| Listing link or Ann Arbor address | `POST /estimate` → card (grade/span, percentile, range, hidden rent, CO₂ when the API has them) → unit-size question if `sqft_estimated`, else the API's first question |
-| A number / option text | Answer to the pending question → `POST /answer` → short update (grade, range "was …", badges) → next question, or "Grade B 🔒" |
-| `skip` | Skips the pending question (not sent to the API) |
-| First text with `(ref <id>)` | Website handoff: `GET /session/{id}` → "Picking up your report from the website" + next question |
-| Bill photo | `POST /calibrate {session_id, bill_image_base64}` (HEIC converted to JPEG) → "% above/below normal for this weather", streak, badges → `GET /fixes/{id}` → top fixes + Green Rental Housing points → landlord email as its own message |
-| `fixes` / `landlord` | `GET /fixes/{id}` → fixes + landlord email |
-| Anything else | Welcome text |
+## Reminder delivery and restart behavior
 
-API down → "try again" text. A 200 that breaks the §10 contract is logged as `[contract] …` and answered without numbers.
+Only one iMessage agent process should run. One serialized poller runs immediately and every five minutes, sending the API's `text_hint` verbatim. `/reminders/due` owns NEW_CHANGES §9.6/D4: opt-in, user timezone/quiet hours, at most one proactive text per day, stop/pause, and automatic pause after two unanswered messages. Manual non-demo check-ins use the same queue and guards. Stop does not disable replies.
 
-## Website → iMessage handoff
-Link to `PUBLIC_URL/?session=<session_id>`. The form carries it into the pre-filled first text as `(ref <session_id>)`; the agent resumes that session with `GET /session/{id}`.
+After a transport succeeds, a durable delivered receipt is saved before `/reminders/{id}/sent`. If acknowledgement fails, future polls retry the acknowledgement, never the text, and do not send new reminders while caps are stale. Failed transport leaves the reminder queued. Receipts contain only reminder IDs/statuses, in git-ignored `data/agent-reminder-receipts.json` with mode `600`; `REMINDER_RECEIPTS` can override that path.
+
+A crash between starting and confirming a transport leaves a `sending` receipt. All proactive sends fail closed until the operator checks delivery: mark it `delivered` if the text arrived (the next poll retries `/sent`), or remove only that ID if it definitely did not. This is conservative recovery, not a distributed exactly-once guarantee. Never delete the file merely to restart. Do not run the manual sender concurrently with the main agent; ask the existing agent `checkin`/`remind-now` instead when demonstrating.
+
+Dialog state stays in memory. `/me` is fetched on each inbound so an externally triggered pending check-in is visible without restarting. Auth resolution is cached for process lifetime (concurrent messages share one request); fresh ref openers invalidate only the ref association. Durable accounts, property history, bills, commitments, notification controls and grades live in the API.
+
+## Known API boundaries
+
+- A projection after a meaningful `bill_regrade` still uses the original session baseline. Commitments remain saveable; the agent withholds that stale projection until the API supports it.
+- Calendar creation is not durably idempotent and the API does not populate `Commitment.calendar_event_id`. The agent prevents repeat creation during a process lifetime. After a restart, inspect Calendar before repeating the command.
+- Calendar mock mode on the real API still requires following its callback URL; `calendar connected` does not bypass that check.
+- The heat-included API correctly exposes renter cooling-only bills and building CO₂/grades. An existing API issue in saved-property snapshot ranking needs P2; the agent does not compute a replacement ranking.
+- Real-phone delivery is for Bittermoss/the team lead to validate. This branch's development checks send no iMessages.
+
+See [PHASE2_REPORT.md](PHASE2_REPORT.md) for validation and terminal evidence.

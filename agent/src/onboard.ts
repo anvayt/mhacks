@@ -102,7 +102,7 @@ export function createHandler(register: Register, mock: boolean, publicUrl: stri
       if (!phone) return html(400, errorPage("That doesn't look like a phone number. Use the one your iMessage is on."));
       try {
         const user = await register(phone, fields.get("name")?.trim() || undefined);
-        console.log(`allowlisted ${phone} → user ${user.id}${mock ? " (mock)" : ""}`);
+        console.log(`allowlisted phone ending ${phone.slice(-4)}${mock ? " (mock)" : ""}`);
         const location = mock ? `sms:&body=${encodeURIComponent(opener)}` : redirectUrl(user.id, opener);
         return res.writeHead(302, { Location: location }).end();
       } catch (err) {
