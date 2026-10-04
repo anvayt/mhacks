@@ -96,7 +96,9 @@ The harder challenge is making uncertainty understandable. An answer can narrow 
 
 ## Accomplishments
 
-We connected local building records, weather and meter evidence to a renter-facing question loop. We preserved the model's numbers through a web interface and Photon conversation, made a complete scored-city table available for peer comparisons, and added an auditable separation between current estimates, hypothetical improvements and bill evidence. The documented Photon phone round trip passed; the expanded Phase 2 agent has terminal/mock evidence, with its final real-model run still needing completion. `notes/P4.md`; [`agent/PHASE2_REPORT.md`][agent-report].
+We connected local building records, weather and meter evidence to a renter-facing question loop. We preserved the model's numbers through a web interface and Photon conversation, made a complete scored-city table available for peer comparisons, and added an auditable separation between current estimates, hypothetical improvements and bill evidence. The documented Photon phone round trip passed. The expanded Phase 2 agent also completed the Morton interview, commitments, projection, hypothetical bill and stop flow against the real API/model in terminal mode; this did not send real iMessages or Calendar events. `notes/P4.md`; [`agent/PHASE2_REPORT.md`][agent-report].
+
+A real-browser rehearsal passed all six beats at both desktop and mobile sizes, with 44 screenshots and no browser errors. It used a temporary integration of the web branches and real model responses; only the fictional account onboarding was mocked. No final WebM/MP4 has been recorded: that still awaits the lead's merged-web signal. [`demo/video/README.md`][video-check].
 
 ## Limitations
 
@@ -135,10 +137,10 @@ Main entry: **Sustainability**. “Judged by an LLM” is the planned fun track,
 - **Repository:** [github.com/anvayt/mhacks](https://github.com/anvayt/mhacks).
 - **TODO P4:** add team names/roles, the final public judge URL, final video URL and screenshots; enter and submit by the team's 11:30 AM target. Reprint the QR card after any tunnel restart.
 - **TODO P1:** confirm running artifacts/results match; approve the 7.4% / 28.7% wording and record the final model/version. Do not silently substitute historical 28.3%.
-- **TODO P2/P3/P4:** rehearse on the final merged commit and recapture comparison/grade values if they differ; confirm the new web/agent branches are merged. The model was unavailable during this draft audit, so no fresh full live run is claimed.
+- **TODO P2/P3/P4:** rehearse on the final merged commit and recapture comparison/grade values if they differ; confirm the new web/agent branches are merged. P1 has restored the model; the public-demo handoff records successful real-model warm checks for all five estimates and maps, one forecast and the city layer. Final merged UI rehearsal is still required. [`README.md` public-demo verification][public-check].
 - **TODO P4/phone owner:** complete the real Phase 2 phone flow and a consenting real bill-photo check; otherwise demonstrate typed hypothetical numbers and say so.
 - **TODO P3/P4:** supply the actual Figma file if used; confirm sponsor eligibility, Photon slots, optional Calendar credentials and any domain claim.
-- **TODO video owner:** record and verify a local backup before 8 AM; replace any “offline” promise with the actual recorded artifact that can be played without Wi-Fi.
+- **TODO video owner:** after the lead confirms the web merge, record and verify the final local backup; replace any “offline” promise with the actual recorded artifact that can be played without Wi-Fi. Dry-run screenshots do not replace that final recording.
 
 [api]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/api/README.md
 [service]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/model/heating_cooling/service.py
@@ -158,6 +160,9 @@ Main entry: **Sustainability**. “Judged by an LLM” is the planned fun track,
 [fix-capture]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/demo/picks/bill/05-fixes.json
 [p2-notes]: https://github.com/anvayt/mhacks/blob/6d8638fcf330248a18512f83cd7b50411da8db88/notes/P2.md
 [agent-package]: https://github.com/anvayt/mhacks/blob/534f67afd15f0b427472c0fce281c92ee0b0cd7a/agent/package.json
-[agent-report]: https://github.com/anvayt/mhacks/blob/2f146d92b74fba0a29964c25fc14e583370df0c3/agent/PHASE2_REPORT.md
+[agent-report]: https://github.com/anvayt/mhacks/blob/d9a74423af6387f54284b875b94f59810769bea8/agent/PHASE2_REPORT.md
 [web-board]: https://github.com/anvayt/mhacks/blob/421dcfa/web/app/leaderboard.tsx
 [web-package]: https://github.com/anvayt/mhacks/blob/d8e555a/web/package.json
+
+[public-check]: https://github.com/anvayt/mhacks/blob/b369a65b2289e75b66447ed9f49226d74ed4b94f/README.md
+[video-check]: https://github.com/anvayt/mhacks/blob/4e3b134348f9c88578e8035fa4667c536f755bee/demo/video/README.md
