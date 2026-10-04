@@ -24,9 +24,17 @@ function survivors(all: number[], now: number[]): boolean[] {
   });
 }
 
-export function LookalikeStrip({ steps, step }: Props) {
+export function LookalikeStrip(props: Props) {
+  const current = props.steps[props.step].lookalikes;
+  if (!current.count || !current.usd_yr.length || current.p10 == null || current.p90 == null || !props.steps[0].lookalikes.usd_yr.length) {
+    return <p className={styles.emptyCloud}>The similar-home distribution is not available yet (pending model data). Your real estimate and answer history are shown below.</p>;
+  }
+  return <PopulatedStrip {...props} />;
+}
+
+function PopulatedStrip({ steps, step }: Props) {
   const start = steps[0].lookalikes;
-  const current = steps[step].lookalikes;
+  const current = steps[step].lookalikes as typeof start & { p10: number; p90: number };
   const estimate = steps[step].estimate.annual_usd;
 
   // When the starting cloud was sampled, values can't be matched across steps; show the current sample only.
@@ -40,7 +48,7 @@ export function LookalikeStrip({ steps, step }: Props) {
     const ests = steps.map((s) => s.estimate.annual_usd);
     const min = Math.min(sorted[0], ...ests);
     const max = Math.max(p97, ...ests);
-    const pad = (max - min) * 0.04;
+    const pad = Math.max(1, (max - min) * 0.04);
     return { lo: Math.max(0, min - pad), hi: max + pad };
   }, [start.usd_yr, steps]);
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapCanvas } from "./MapCanvas";
 import { costColor } from "./format";
+import { GRADE_COLORS } from "./grade-colors";
 import styles from "./hidden-rent-map.module.css";
 import type { Focus, MapWidgetData } from "./types";
 
@@ -36,6 +37,7 @@ function useReducedMotion() {
 export function homeColorFor(data: MapWidgetData, step: number) {
   const start = data.steps[0].lookalikes;
   const s = data.steps[Math.min(Math.max(step, 0), data.steps.length - 1)];
+  if (start.p10 == null || start.p90 == null) return "#173bfa";
   return costColor((s.estimate.annual_usd - start.p10) / Math.max(1, start.p90 - start.p10));
 }
 
@@ -93,17 +95,10 @@ export function HiddenRentMap({
         ))}
       </div>
 
-      <div className={styles.legend} aria-hidden="true">
-        <span className={styles.legendItem}>
-          <i className={styles.legendRamp} />
-          this home: cheaper → pricier
-        </span>
-        {hasSimilar && (
-          <span className={styles.legendItem}>
-            <i className={styles.legendDot} />
-            similar
-          </span>
-        )}
+      <div className={styles.legend} aria-label="City predicted grades">
+        <span>Predicted</span>
+        {Object.entries(GRADE_COLORS).map(([grade, color]) => <span key={grade} className={styles.legendItem}><i style={{background:color, width:10, height:10}} />{grade}</span>)}
+        <span className={styles.legendItem}><i style={{background:"#bdbab0", width:10, height:10}} />Unscored</span>
       </div>
 
       <details className={styles.sources}>
@@ -117,7 +112,7 @@ export function HiddenRentMap({
             </li>
           ))}
         </ul>
-        <p>Predicted, typical-weather estimates, not a bill.</p>
+        <p>Predicted heating + cooling in typical weather, not a bill. City colors compare cost per square foot within the same building type. The selected home has a blue outline; its city grade uses public records.</p>
       </details>
     </section>
   );
