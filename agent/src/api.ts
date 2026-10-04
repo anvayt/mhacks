@@ -25,7 +25,7 @@ export interface Estimate {
     year_built?: number | null;
     year_built_source?: string | null;
   };
-  bill: { annual: Band; seasonal?: Partial<Record<"winter" | "spring" | "summer" | "fall", Band>> };
+  bill: { annual: Band; building_annual?: Band; note?: string; seasonal?: Partial<Record<"winter" | "spring" | "summer" | "fall", Band>> };
   co2_t?: Band | null;
   score?: number | null;
   grade?: string | null;
@@ -34,6 +34,8 @@ export interface Estimate {
   percentile_peers?: number | null;
   percentile_city?: number | null;
   hidden_rent_usd_mo?: number | null;
+  hidden_rent_method?: string;
+  answers?: Record<string, unknown>;
   badges?: string[];
   questions?: Question[];
   heating_cooling?: {
@@ -61,11 +63,47 @@ export interface Calibration {
   /** Percent: P1's typical winter-month error for this estimate path (null outside winter). */
   noise_floor?: number | null;
   note?: string;
+  bill_id?: string;
+  verified?: boolean;
+  snapshot?: { source: string; grade: string; provisional?: boolean; label: string } | null;
+  bill_signal?: { grade: string; score: number; annual_usd: number; label: string };
+  extracted?: { estimated_from_amount?: boolean; note?: string };
 }
 
-export type CalibrateRequest =
-  | { session_id: string; bill_image_base64: string }
-  | { session_id: string; therms: number; kwh?: number; start: string; end: string };
+export type CalibrateRequest = { session_id: string; property_id?: string } & (
+  | { bill_image_base64: string }
+  | { therms: number; gas_unit?: "therms" | "ccf"; kwh?: number; start: string; end: string }
+  | { amount_usd: number; kwh?: number; start: string; end: string }
+);
+
+export interface Account { user_id: string; created: boolean; current_property_id: string | null }
+export interface Property { id: string; user_id: string; address: string; session_id: string; active: boolean }
+export interface Me {
+  user_id: string; current_property_id: string | null; properties: Property[];
+  current_estimate: Estimate | null;
+  current_grade?: { source: string; grade: string; score: number; bill_annual: Band; label?: string } | null;
+  pending_checkin: Checkin | null; calendar_connected: boolean;
+  timezone: string; reminder_prefs: { channel: string; cadence: string; hour_local: number; paused: boolean };
+}
+export interface Checkin { property_id: string; address: string; created_at: string; message_hint: string }
+export interface Suggestion {
+  catalog_id: string; title: string; who_acts: string; pending_model: boolean;
+  grh_points: number | null; note?: string;
+  projected: { usd_saved_yr: number | null; co2_kg_saved_yr: number | null; score_delta: number | null; new_grade: string | null; label: string } | null;
+}
+export interface Commitment { id: string; user_id: string; property_id: string; catalog_id: string; title: string; status: string; evidence: string; target_date?: string | null; calendar_event_id?: string | null }
+export interface Projection {
+  label: string;
+  current: { grade: string; score: number; bill_annual: Band; co2_kg_yr: Band };
+  projected: { grade: string; score: number; bill_annual: Band; co2_kg_yr: Band; label: string };
+  delta: { usd_saved_yr: number | null; co2_kg_saved_yr: number | null; score: number | null; label: string };
+  modeled: string[]; not_modeled: string[];
+}
+export interface Reminder { reminder_id: string; user_id: string; handle: string; kind: "checkin" | "task" | "weather"; text_hint: string; property_id: string; commitment_id?: string; demo?: boolean }
+export interface ReminderState { user_id?: string; stopped: boolean; paused: boolean; unanswered?: number; reminder_prefs?: Me["reminder_prefs"] }
+export interface CalendarConnection { auth_url: string; mock: boolean; message?: string }
+export interface CalendarReminder { reminder_id: string; event_id: string; html_link: string | null; mock: boolean }
+export type PropertyRequest = { user_id: string } & ({ session_id: string } | EstimateRequest);
 
 /** One fix. P2 leaves a number null when it can't price it (no invented numbers), and usd_saved_yr can be negative. */
 export interface Fix {
@@ -99,6 +137,25 @@ export interface Api {
   session(id: string): Promise<ApiResult>;
   calibrate(req: CalibrateRequest): Promise<ApiResult<Calibration>>;
   fixes(sessionId: string): Promise<ApiResult<Fixes>>;
+  authPhone(req: { phone: string; photon_user_id?: string; session_id?: string }): Promise<ApiResult<Account>>;
+  confirmLogin(req: { code: string; phone: string }): Promise<ApiResult<{ user_id: string }>>;
+  me(id: string): Promise<ApiResult<Me>>;
+  patchMe(id: string, req: { pending_checkin?: null; reminder_prefs?: Partial<Me["reminder_prefs"]> }): Promise<ApiResult<Me>>;
+  property(req: PropertyRequest): Promise<ApiResult<{ property_id: string; estimate: Estimate; active: boolean }>>;
+  checkin(userId: string): Promise<ApiResult<Checkin>>;
+  suggestions(propertyId: string): Promise<ApiResult<{ commitments: Suggestion[] }>>;
+  commitments(propertyId: string): Promise<ApiResult<{ commitments: Commitment[] }>>;
+  commit(req: { user_id: string; property_id: string; catalog_id: string; target_date?: string }): Promise<ApiResult<Commitment>>;
+  updateCommitment(id: string, status: "completed" | "dismissed"): Promise<ApiResult<Commitment>>;
+  projection(req: { property_id: string; commitment_ids: string[] }): Promise<ApiResult<Projection>>;
+  remindersDue(): Promise<ApiResult<Reminder[]>>;
+  reminderSent(id: string): Promise<ApiResult<ReminderState>>;
+  reminderInbound(userId: string): Promise<ApiResult<ReminderState>>;
+  reminderControl(userId: string, action: "stop" | "pause" | "resume"): Promise<ApiResult<ReminderState>>;
+  reminderDemo(userId: string): Promise<ApiResult<Reminder>>;
+  calendarConnect(userId: string): Promise<ApiResult<CalendarConnection>>;
+  calendarReminder(req: { user_id: string; commitment_id: string; start?: string; cadence: "once" | "daily" | "weekly" }): Promise<ApiResult<CalendarReminder>>;
+
 }
 
 export const CONTRACT_ERROR = "Something went wrong on our side reading that answer. Try again in a bit.";
@@ -160,19 +217,20 @@ export const UNREACHABLE =
   "Send it again in a bit and you'll get the heating and cooling cost for that place.";
 
 /** The real /api over HTTP. 422/503 bodies are {detail: {code, message, hint?}}. */
-export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Logger = console.warn): Api {
+export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Logger = console.warn, agentKey = ""): Api {
   async function call<T = Estimate>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH",
     path: string,
     body: unknown,
     timeoutMs: number,
     check: Check = checkEstimate,
+    authenticated = false,
   ): Promise<ApiResult<T>> {
     let res: Response;
     try {
       res = await fetchFn(`${baseUrl}${path}`, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(authenticated && agentKey ? { "X-Agent-Key": agentKey } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -196,6 +254,8 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     if (res.status === 404 || res.status === 405) return { ok: false, code: "not_served", message: UNREACHABLE };
     return { ok: false, code: String(res.status), message: UNREACHABLE };
   }
+  const generic: Check = (body) => ({ fatal: isObj(body) || Array.isArray(body) ? [] : ["body missing"], warnings: [] });
+  const accountCall = <T>(method: "GET" | "POST" | "PATCH", path: string, body?: unknown) => call<T>(method, path, body, 200_000, generic, true);
   return {
     mock: false,
     // the first look-up of a new area downloads its weather history once
@@ -203,7 +263,25 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     answer: (req) => call("POST", "/answer", req, 60_000),
     session: (id) => call("GET", `/session/${encodeURIComponent(id)}`, undefined, 30_000),
     // a vision model reads the bill photo, so give it time
-    calibrate: (req) => call<Calibration>("POST", "/calibrate", req, 120_000, checkCalibration),
+    calibrate: (req) => call<Calibration>("POST", "/calibrate", req, 120_000, checkCalibration, Boolean(req.property_id)),
     fixes: (id) => call<Fixes>("GET", `/fixes/${encodeURIComponent(id)}`, undefined, 60_000, checkFixes),
+    authPhone: (req) => accountCall("POST", "/auth/phone", req),
+    confirmLogin: (req) => accountCall("POST", "/auth/web/confirm", req),
+    me: (id) => accountCall("GET", `/me/${encodeURIComponent(id)}`),
+    patchMe: (id, req) => accountCall("PATCH", `/me/${encodeURIComponent(id)}`, req),
+    property: (req) => accountCall("POST", "/properties", req),
+    checkin: (user_id) => accountCall("POST", "/checkins/trigger", { user_id }),
+    suggestions: (id) => accountCall("GET", `/commitments/suggested/${encodeURIComponent(id)}`),
+    commitments: (id) => accountCall("GET", `/commitments?property_id=${encodeURIComponent(id)}`),
+    commit: (req) => accountCall("POST", "/commitments", req),
+    updateCommitment: (id, status) => accountCall("PATCH", `/commitments/${encodeURIComponent(id)}`, { status }),
+    projection: (req) => accountCall("POST", "/projection", req),
+    remindersDue: () => accountCall("GET", "/reminders/due"),
+    reminderSent: (id) => accountCall("POST", `/reminders/${encodeURIComponent(id)}/sent`),
+    reminderInbound: (user_id) => accountCall("POST", "/reminders/inbound", { user_id }),
+    reminderControl: (id, action) => accountCall("POST", `/reminders/${encodeURIComponent(id)}/${action}`),
+    reminderDemo: (user_id) => accountCall("POST", "/reminders/demo-send", { user_id }),
+    calendarConnect: (user_id) => accountCall("POST", "/calendar/connect", { user_id }),
+    calendarReminder: (req) => accountCall("POST", "/calendar/reminders", req),
   };
 }
