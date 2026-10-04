@@ -21,6 +21,7 @@ from app.gcal import router as gcal_router
 from app.habits import router as habits_router
 from app.geo.features import get_features
 from app.map_widget import router as map_router
+from app.narration import router as narration_router
 from app.reminders import router as reminders_router
 from app.simulate import router as simulate_router
 from app.public_guard import PublicGuard
@@ -47,6 +48,7 @@ app.include_router(commitments_router)
 app.include_router(boards_router)
 app.include_router(habits_router)
 app.include_router(simulate_router)
+app.include_router(narration_router)
 
 
 class EstimateRequest(BaseModel):
