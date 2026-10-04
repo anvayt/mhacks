@@ -1,0 +1,326 @@
+{
+ "note": "Build api/data/demo_competitors.json: 10 real Ann Arbor homes behind the DEMO leaderboard competitors.",
+ "built_from": "Zillow listing URLs (URL text only) + City of Ann Arbor GIS + api/data/city_scores.csv",
+ "competitors": [
+  {
+   "alias": "Demo Maple",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/1035-N-Main-St-Ann-Arbor-MI-48104/24697657_zpid/",
+    "street": "1035 N Main St",
+    "footprint_id": 15151,
+    "type": "Single-Family Detached",
+    "block_group": "261614032001",
+    "sqft": 1345,
+    "annual_usd": 1224.0,
+    "heating_usd": 905.0,
+    "score": 26.918717,
+    "grade": "D",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "15151"
+   ],
+   "tract": "26161403200",
+   "baseline_co2_kg_yr": 6157,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 739,
+   "streak_months": 4,
+   "accepted": 4,
+   "verified": 2,
+   "verified_impact_count": 1,
+   "habit_streak": 9,
+   "habit_best": 12,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Oak",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/1200-Gardner-Ave-Ann-Arbor-MI-48104/24708332_zpid/",
+    "street": "1200 Gardner Ave",
+    "footprint_id": 16584,
+    "type": "Single-Family Detached",
+    "block_group": "261614004002",
+    "sqft": 1520,
+    "annual_usd": 1667.0,
+    "heating_usd": 1310.0,
+    "score": 13.028385,
+    "grade": "F",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "16584"
+   ],
+   "tract": "26161400400",
+   "baseline_co2_kg_yr": 8688,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 782,
+   "streak_months": 3,
+   "accepted": 3,
+   "verified": 2,
+   "verified_impact_count": 1,
+   "habit_streak": 6,
+   "habit_best": 10,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Elm",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/314-Mark-Hannah-Pl-Ann-Arbor-MI-48103/24703317_zpid/",
+    "street": "314 Mark Hannah Pl",
+    "footprint_id": 11216,
+    "type": "Single-Family Attached",
+    "block_group": "261614034003",
+    "sqft": 1161,
+    "annual_usd": 834.0,
+    "heating_usd": 623.0,
+    "score": 23.40714,
+    "grade": "D",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "11216"
+   ],
+   "tract": "26161403400",
+   "baseline_co2_kg_yr": 4220,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 295,
+   "streak_months": 2,
+   "accepted": 3,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 5,
+   "habit_best": 8,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Pine",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/710-W-Stadium-Blvd-Ann-Arbor-MI-48103/24706701_zpid/",
+    "street": "710 W Stadium Blvd",
+    "footprint_id": 25106,
+    "type": "Single-Family Detached",
+    "block_group": "261614006006",
+    "sqft": 2145,
+    "annual_usd": 1880.0,
+    "heating_usd": 1580.0,
+    "score": 37.030652,
+    "grade": "D",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "25106"
+   ],
+   "tract": "26161400600",
+   "baseline_co2_kg_yr": 10198,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 612,
+   "streak_months": 3,
+   "accepted": 2,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 4,
+   "habit_best": 7,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Birch",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/214-W-Kingsley-St-Ann-Arbor-MI-48103/2080748899_zpid/",
+    "street": "214 W Kingsley St",
+    "footprint_id": 24690,
+    "type": "Single-Family Detached",
+    "block_group": "261614007002",
+    "sqft": 1698,
+    "annual_usd": 1896.0,
+    "heating_usd": 1613.0,
+    "score": 8.659614,
+    "grade": "F",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "24690"
+   ],
+   "tract": "26161400700",
+   "baseline_co2_kg_yr": 10361,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 518,
+   "streak_months": 1,
+   "accepted": 4,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 3,
+   "habit_best": 9,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Cedar",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/401-Hiscock-St-Ann-Arbor-MI-48103/24697630_zpid/",
+    "street": "401 Hiscock St",
+    "footprint_id": 5103,
+    "type": "Single-Family Detached",
+    "block_group": "261614007002",
+    "sqft": 1274,
+    "annual_usd": 1396.0,
+    "heating_usd": 1095.0,
+    "score": 13.302319,
+    "grade": "F",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "5103"
+   ],
+   "tract": "26161400700",
+   "baseline_co2_kg_yr": 7267,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 291,
+   "streak_months": 2,
+   "accepted": 2,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 2,
+   "habit_best": 5,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Willow",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/3217-Pinebluff-Ct-Ann-Arbor-MI-48105/24692176_zpid/",
+    "street": "3217 Pinebluff Ct",
+    "footprint_id": 6241,
+    "type": "Single-Family Detached",
+    "block_group": "261614036003",
+    "sqft": 4175,
+    "annual_usd": 1460.0,
+    "heating_usd": 1082.0,
+    "score": 97.756577,
+    "grade": "A",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "6241"
+   ],
+   "tract": "26161403600",
+   "baseline_co2_kg_yr": 7354,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 221,
+   "streak_months": 1,
+   "accepted": 3,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 7,
+   "habit_best": 7,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Aspen",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/3415-Bayswater-Ln-Ann-Arbor-MI-48105/54793038_zpid/",
+    "street": "3415 Bayswater Ln",
+    "footprint_id": 32320,
+    "type": "Single-Family Detached",
+    "block_group": "261614027003",
+    "sqft": 3261,
+    "annual_usd": 1453.0,
+    "heating_usd": 1151.0,
+    "score": 93.668824,
+    "grade": "A",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "32320"
+   ],
+   "tract": "26161402700",
+   "baseline_co2_kg_yr": 7608,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 609,
+   "streak_months": 0,
+   "accepted": 2,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 1,
+   "habit_best": 4,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Spruce",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/1803-Hill-St-Ann-Arbor-MI-48104/24700628_zpid/",
+    "street": "1803 Hill St",
+    "footprint_id": 6590,
+    "type": "Multi-Family with 2 - 4 Units",
+    "block_group": "261614003003",
+    "sqft": 2619,
+    "annual_usd": 1224.0,
+    "heating_usd": 1025.0,
+    "score": 92.567568,
+    "grade": "A",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "6590"
+   ],
+   "tract": "26161400300",
+   "baseline_co2_kg_yr": 6625,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 662,
+   "streak_months": 2,
+   "accepted": 4,
+   "verified": 2,
+   "verified_impact_count": 1,
+   "habit_streak": 0,
+   "habit_best": 6,
+   "demo": true,
+   "named": true
+  },
+  {
+   "alias": "Demo Hickory",
+   "basis": {
+    "listing_url": "https://www.zillow.com/homedetails/1253-Island-Dr-APT-104-Ann-Arbor-MI-48105/24698476_zpid/",
+    "street": "1253 Island Dr",
+    "footprint_id": 26494,
+    "type": "Multi-Family with 5+ Units",
+    "block_group": "261614021002",
+    "sqft": 1273,
+    "annual_usd": 538.0,
+    "heating_usd": 399.0,
+    "score": 64.669811,
+    "grade": "B",
+    "source": "api/data/city_scores.csv (our model's city batch)"
+   },
+   "home": [
+    "demo",
+    "26494"
+   ],
+   "tract": "26161402100",
+   "baseline_co2_kg_yr": 2711,
+   "baseline_note": "approximate, from the model's $ (see script header)",
+   "co2_kg_avoided": 54,
+   "streak_months": 1,
+   "accepted": 1,
+   "verified": 1,
+   "verified_impact_count": 1,
+   "habit_streak": 3,
+   "habit_best": 3,
+   "demo": true,
+   "named": true
+  }
+ ]
+}

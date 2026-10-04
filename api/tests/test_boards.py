@@ -119,9 +119,12 @@ def test_missing_baseline_empty_and_alias_safety(records):
 
 def test_demo_seed_gating_idempotence_and_every_entry_flagged(records,monkeypatch):
     with pytest.raises(SystemExit):seed_demo_board.seed()
-    monkeypatch.setenv('DEMO_SEED','1');assert seed_demo_board.seed()==seed_demo_board.seed()==6
+    monkeypatch.setenv('DEMO_SEED','1');assert seed_demo_board.seed()==seed_demo_board.seed()==10
     for kind in boards.BOARDS:
-        entries=boards.board_result(kind)['entries'];assert entries
+        entries=boards.board_result(kind)['entries']
+        # the 10 demo homes are real Ann Arbor homes spread over 9 tracts: none reaches MIN_HOMES, so stays private
+        if kind=='neighborhood':assert entries==[];continue
+        assert entries
         assert all(e['demo'] is True and e['evidence']=='demo' for e in entries)
         assert all(e.get('alias','Demo ').startswith('Demo ') for e in entries)
     monkeypatch.delenv('DEMO_SEED')
