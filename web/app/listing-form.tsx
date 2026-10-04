@@ -2,11 +2,33 @@
 
 import { FormEvent, useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"; // /api (PLAN.md §10)
+const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787"; // P4's iMessage onboarding page
+
 export function ListingForm() {
   const [listing, setListing] = useState("");
+  const [result, setResult] = useState<string | null>(null);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  // ponytail: integration wiring only; the real report card (grade, range bar, questions) is P3's to build.
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setResult("Looking it up…");
+    const input = /https?:\/\//i.test(listing) ? { url: listing } : { address: listing };
+    try {
+      const res = await fetch(`${API}/estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const e = await res.json();
+      setResult(
+        res.ok
+          ? `${e.building.address}: heating + cooling about $${Math.round(e.bill.annual.p50).toLocaleString("en-US")} a year (typical weather, predicted)`
+          : e.detail?.message ?? "Something went wrong. Try again.",
+      );
+    } catch {
+      setResult("The Hidden Rent API isn't reachable right now.");
+    }
   }
 
   return (
@@ -35,11 +57,13 @@ export function ListingForm() {
           Find my hidden rent
           <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
         </button>
-        <a className="imessage" href="sms:">
+        <a className="imessage" href={ONBOARD}>
           Or start by iMessage ↗
         </a>
       </div>
-      <p className="fine-print">Use a listing URL or address. No account needed to explore this design.</p>
+      <p className="fine-print" aria-live="polite">
+        {result ?? "Use a listing URL or address. No account needed to explore this design."}
+      </p>
     </form>
   );
 }
