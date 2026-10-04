@@ -121,7 +121,7 @@ def test_dedupes_period_and_does_not_rerun_model_or_regrade(state):
 
 
 def test_image_hash_dedupe_before_vision_and_never_stores_photo(state):
-    raw = b"synthetic private photograph" * 260000  # >6 MB decoded; no server upload-size truncation
+    raw = b"synthetic private photograph" * 160000  # substantial photo, below the public 8 MiB base64 cap
     image = base64.b64encode(raw).decode()
     r = submit(bill_image_base64=image)
     assert r.status_code == 200, r.text
