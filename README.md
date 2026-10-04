@@ -239,3 +239,14 @@ Start with `results/pivot-round2/00-synthesis.md` (why Hidden Rent). `results/SU
 | `ideation/` | An earlier set of alternative ideas |
 
 Every file opens with the prompt its agent was given, and every factual claim cites its source.
+
+## ASI:One agent
+
+Hidden Rent also has an isolated Fetch.ai chat-protocol uAgent in [`asi-agent/`](asi-agent/README.md). It uses an Agentverse mailbox and ASI:One only for intent parsing; every bill, grade and savings figure comes from the existing API. It does not launch or manage the demo stack.
+
+```bash
+API_BASE_URL=http://localhost:8000 make asi-agent
+make asi-agent-test
+```
+
+Load existing keys through `ASI_ENV_FILE` (default `/Users/anvaytodkar/Code/mhacks/.env`): `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY`, `AGENT_API_KEY`. Set `WEB_BASE_URL` and `ONBOARD_URL` when public URLs are available; until then report links are labelled local previews. See [verification status](asi-agent/VERIFICATION.md), the agent address and exact ASI:One test steps before claiming sponsor integration.
