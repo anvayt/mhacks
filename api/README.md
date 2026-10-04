@@ -12,11 +12,18 @@ uv run uvicorn app.main:app --reload --port 8000
 ```
 
 - `GET /health` → `{"status": "ok"}`
+- `POST /estimate` `{"url": "<listing or map link>"}` | `{"address": "..."}` (+ optional `unit_sqft`) → PLAN.md §10 shape
+  (`app/estimate.py`): link → `resolve_link` → `get_features` → P1's model over HTTP (`GET $MODEL_BASE_URL/hc/estimate`,
+  default `http://localhost:8001`; start it with `make -C model dashboard`). Real today: `building`, `bill.annual` /
+  `bill.seasonal` / `bill.monthly` p50 (heating + cooling only), `heating_cooling` (P1's full answer). Null/empty until
+  P2-03/P2-04: `session_id`, p10/p90, `co2_t`, score, grade, percentiles, hidden rent, badges, questions.
+  Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` + `hint`, `not_found`, `not_a_home`,
+  `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS` (default `http://localhost:3000`, for `/web`).
 - `GET /debug/features?address=...&unit_sqft=...&year_built=...` (internal, not part of PLAN.md §10) → building features; 404 if the address can't be geocoded or has no Ann Arbor footprint within 25 m.
 
 CLI, same output: `uv run python -m app.geo.features "912 Mary St, Ann Arbor, MI" [--unit-sqft 850] [--year-built 1965]`
 
-Tests: `uv run pytest -q` (real-address tests skip until the footprint cache exists).
+Tests: `uv run pytest -q` (real-address tests skip until the footprint cache exists; `/estimate` end-to-end tests skip unless the model server is up).
 
 ## Address → features (`app/geo/`)
 

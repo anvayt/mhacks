@@ -1,0 +1,14 @@
+{
+  "gas": {
+    "blend_weight_meter_model": 0.30000000000000004,
+    "resstock_calibration": 1.1414626302161783,
+    "meter_model_family": "random_forest",
+    "rule": "weight w on log(meter model) and 1\u2212w on log(calibrated ResStock), chosen on out-of-fold predictions to minimize median abs % error"
+  },
+  "elec": {
+    "blend_weight_meter_model": 0.5,
+    "resstock_calibration": 0.7001023818326592,
+    "meter_model_family": "baseline_median",
+    "rule": "weight w on log(meter model) and 1\u2212w on log(calibrated ResStock), chosen on out-of-fold predictions to minimize median abs % error"
+  }
+}
