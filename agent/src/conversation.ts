@@ -65,7 +65,12 @@ export class Conversations {
 
     const p = s.pending;
     // A clear command works at any point, even mid-interview.
-    if (s.sessionId && /^(fix|fixes|landlord|email)\b/i.test(text)) return (await this.fixes(s)).join("\n\n");
+    if (s.sessionId && /^(fix|fixes|landlord|email)\b/i.test(text)) {
+      const out = await this.fixes(s);
+      // still mid-interview: remind them of the open question
+      if (p?.kind === "question") out.push(`Back to your question:\n${questionText(p.question)}`);
+      return out.join("\n\n");
+    }
     if (p?.kind === "address") return this.estimate(s, { address: text });
     if (p?.kind === "unit_sqft") return this.unitSize(s, text);
     if (p?.kind === "question") return this.answer(s, p.question, text);
