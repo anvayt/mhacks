@@ -96,6 +96,20 @@ table.left td, table.left th { text-align: left; vertical-align: top; }
 a { color: var(--accent); }
 code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
 [data-v] { font-variant-numeric: tabular-nums; font-weight: 600; }
+#modeling h3 { font-size: 15px; margin: 24px 0 6px; font-weight: 650; }
+.prose ul { padding-left: 20px; margin: 0 0 8px; }
+.note { color: var(--text-secondary); font-size: 13px; margin: 0 0 10px; max-width: 1000px; }
+.sub2 { font-size: 12px; color: var(--text-secondary); margin: 4px 0 6px; font-weight: 600; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 960px) { .two { grid-template-columns: 1fr; } }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 10px 0; font-size: 13px; color: var(--text-secondary); }
+.stats b { color: var(--text-primary); font-size: 16px; font-variant-numeric: tabular-nums; }
+details.more { margin-top: 10px; }
+details.more > div { margin-top: 8px; }
+tr.chosen td { font-weight: 650; }
+tr.chosen td:first-child::after { content: "  ← used"; color: var(--accent); font-weight: 600; font-size: 12px; }
+.calc { font-size: 13px; }
+.calc code { white-space: normal; }
 .flow-wrap { overflow-x: auto; }
 #flow svg { display: block; min-width: 980px; width: 100%; height: auto; }
 #flow .stage { fill: var(--surface-2); stroke: var(--border); }
@@ -156,6 +170,8 @@ code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: va
       <div id="chart"></div>
       <div id="season-table" hidden></div>
     </div>
+    <h2 style="margin-top:16px">How this number was made</h2>
+    <div id="detail" class="muted">Run an estimate</div>
   </section>
 
   <section class="card">
@@ -163,6 +179,57 @@ code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: va
     <dl class="meta" id="bmeta"><dt class="muted">Run an estimate</dt><dd></dd></dl>
     <h2 style="margin-top:16px">Weather at this building (PRISM 800 m cell)</h2>
     <div id="wx"></div>
+  </section>
+
+  <section class="card span2" id="modeling">
+    <h2>Model performance</h2>
+    <div class="prose">
+      <p><b>What exactly is estimated.</b> Two quantities per season for one apartment:</p>
+      <ul>
+        <li><b>Heating energy</b>: the natural gas (ccf; 1 ccf ≈ 1.04 therms) burned for space heating. The building's gas use minus its year-round baseload (hot water, cooking). For electrically heated buildings it is the electricity (kWh) used for heating instead.</li>
+        <li><b>Cooling energy</b>: the electricity (kWh) used for air conditioning. The building's electricity minus its baseload (lights, plugs, appliances).</li>
+        <li><b>Cost</b> = energy × that month's Michigan price, scaled from the whole building to your unit by floor area.</li>
+      </ul>
+      <p>Heating and cooling can't be read off a meter directly; a meter only records the total. For buildings with real meters, the split comes from a change-point regression: how much the total rises per degree-day of cold (heating) or heat (cooling). So the honest test of the whole pipeline is to <b>predict each building's total monthly gas and electricity for data the model never saw, and compare with what the meter actually recorded</b>. That's what the scatter and the building explorer below show.</p>
+      <p><b>Metered</b> = one of the Ann Arbor properties that report monthly utility readings (gas and electricity, 2021–2023) to the city's energy benchmarking program. Everything else is <b>unmetered</b>, and its estimate comes from models trained on the metered ones (and on ResStock).</p>
+    </div>
+
+    <h3>1 · Which model? Comparison for unmetered buildings</h3>
+    <p class="note" id="cv-scheme">Loading…</p>
+    <div class="two">
+      <div><div class="sub2">Heating intensity (gas per ft² per degree-day)</div><div id="cv-heat"></div></div>
+      <div><div class="sub2">Cooling intensity (electricity per ft² per degree-day)</div><div id="cv-cool"></div></div>
+    </div>
+    <details class="more"><summary>Earlier approach: one model over all building-months (GroupKFold by building)</summary><div id="cv-panel"></div></details>
+    <details class="more"><summary>ResStock model: train/test split on simulated homes</summary><div id="cv-resstock"></div></details>
+
+    <h3>2 · Predicted vs actual on real meters (data the models never saw)</h3>
+    <form class="controls" id="sc-form">
+      <label class="f">Energy<select id="sc-fuel"><option value="gas">Gas (heating season)</option><option value="elec">Electricity (cooling season)</option></select></label>
+      <label class="f">Estimate path<select id="sc-path">
+        <option value="metered">Metered: own fit, other years</option><option value="blend" selected>Unmetered: blend (served)</option>
+        <option value="meter_model">Unmetered: meter-trained model</option><option value="resstock">Unmetered: ResStock</option><option value="null">No-skill median</option></select></label>
+      <label class="f">Season<select id="sc-season"><option value="">All</option><option>winter</option><option>spring</option><option>summer</option><option>fall</option></select></label>
+      <label class="f">Units<select id="sc-units"><option value="">Energy (ccf / kWh)</option><option value="_usd">Cost ($)</option></select></label>
+    </form>
+    <div class="stats" id="sc-stats"></div>
+    <div class="two">
+      <div id="scatter"></div>
+      <div><div class="sub2">All paths, this energy type (median absolute error per building-season; bias = median signed error)</div><div id="sc-table"></div></div>
+    </div>
+
+    <h3>3 · Metered building explorer: monthly actual vs model</h3>
+    <form class="controls" id="mb-form">
+      <label class="f">Metered property<select id="mb-sel" style="max-width:360px"></select></label>
+      <label class="f">Units<select id="mb-units"><option value="">Energy (ccf / kWh)</option><option value="_usd">Cost ($, at the estimate's prices)</option></select></label>
+    </form>
+    <div class="stats" id="mb-stats"></div>
+    <div class="legend" id="mb-legend"></div>
+    <div class="two">
+      <div><div class="sub2">Natural gas per month</div><div id="mb-gas"></div></div>
+      <div><div class="sub2">Electricity per month</div><div id="mb-elec"></div></div>
+    </div>
+    <div id="mb-table"></div>
   </section>
 
   <section class="card">
@@ -221,8 +288,8 @@ code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: va
     <h2 style="margin-top:20px">Data sources and APIs</h2>
     <div class="tscroll"><table class="left">
       <tr><th>Source</th><th>What we take</th><th>Access</th><th>Used for</th><th>Cached</th></tr>
-      <tr><td>City of Ann Arbor energy benchmarking</td><td>Monthly electricity and natural gas per property, 2021–2023, plus floor area, year built and the property polygon. The fields are labelled kBtu, but the values are kWh and ccf: the reported Site EUI × floor area equals 3.412·kWh + <span data-v="meters.unit_check.kbtu_per_gas_unit_median" data-f="num">–</span>·gas (n = <span data-v="meters.unit_check.n_building_years" data-f="int">–</span> building-years).</td><td>ArcGIS REST <a href="https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0">FeatureServer</a></td><td>Ground truth; per-building meter fits; training</td><td>once (GeoJSON)</td></tr>
-      <tr><td>City of Ann Arbor building footprints</td><td>35,007 footprints: height (LiDAR), stories, area, perimeter, building name</td><td>ArcGIS REST <a href="https://a2maps.a2gov.org/a2arcgis/rest/services/OSI/BuildingFootprints/FeatureServer/0">FeatureServer</a></td><td>Finding the building or complex; size and shape features</td><td>once (GeoJSON)</td></tr>
+      <tr><td>City of Ann Arbor energy benchmarking</td><td>Monthly electricity and natural gas per property, 2021–2023, plus floor area, year built and the property polygon. The fields are labelled kBtu, but the values are kWh and ccf: the reported Site EUI × floor area equals 3.412·kWh + <span data-v="meters.unit_check.kbtu_per_gas_unit_median" data-f="num">–</span>·gas (n = <span data-v="meters.unit_check.n_building_years" data-f="int">–</span> building-years).</td><td>ArcGIS FeatureServer (a JSON web API for map layers; queried with <code>?f=geojson</code>). <a href="https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0?f=pjson">layer schema (JSON)</a> · <a href="https://www.arcgis.com/home/item.html?id=1e3bed4240284b40b0c4fea6f8cb4522">ArcGIS item</a> · <a href="https://a2gov.org/benchmarkingmap">city map</a></td><td>Ground truth; per-building meter fits; training</td><td>once (GeoJSON)</td></tr>
+      <tr><td>City of Ann Arbor building footprints</td><td>35,007 footprints: height (LiDAR), stories, area, perimeter, building name</td><td>ArcGIS FeatureServer, queried with <code>?f=geojson</code>. <a href="https://a2maps.a2gov.org/a2arcgis/rest/services/OSI/BuildingFootprints/FeatureServer/0">layer page</a></td><td>Finding the building or complex; size and shape features</td><td>once (GeoJSON)</td></tr>
       <tr><td>US Census geocoder</td><td>Address → latitude/longitude and block group</td><td><a href="https://geocoding.geo.census.gov/geocoder/">geocoding.geo.census.gov</a></td><td>Locating the address</td><td>per address, kept</td></tr>
       <tr><td>American Community Survey 5-yr (via Census Reporter)</td><td>B25037 median year built (renter-occupied) and B25040 house heating fuel, per block group</td><td><a href="https://api.censusreporter.org">api.censusreporter.org</a></td><td>Year built and heating fuel for unmetered buildings</td><td>one request per county</td></tr>
       <tr><td>PRISM Climate Group, Oregon State University</td><td>800 m monthly mean temperature (2021 → latest) and 1991–2020 monthly normals</td><td><a href="https://prism.oregonstate.edu/documents/PRISM_downloads_web_service.pdf">web service</a> + normals download</td><td>The local temperature level at each building</td><td>each grid once, cropped to Michigan</td></tr>
@@ -311,7 +378,8 @@ function render(e) {
   $("t-cool-s").textContent = `${Math.round(e.seasons.reduce((s, x) => s + x.cooling.electric_kwh, 0))} kWh`;
   const acc = e.accuracy && e.accuracy.seasonal_gas_median_abs_error;
   $("t-acc").textContent = acc ? `typical error ±${pct(acc.all)} (real meters)` : "";
-  renderChart(e); renderTable(e); renderMeta(e); renderWx(e);
+  renderChart(e); renderTable(e); renderMeta(e); renderWx(e); renderDetail(e);
+  if (e.method === "metered" && e.building.benchmarking_id && $("mb-sel").options.length) { $("mb-sel").value = e.building.benchmarking_id; loadMetered(); }
   const ul = $("srcs"); ul.replaceChildren(...e.sources.map((s) => el("li", {}, s)));
 }
 
@@ -450,6 +518,7 @@ function hideTip() { $("tip").style.display = "none"; }
     t.querySelectorAll("td:nth-child(3), th:nth-child(3)").forEach((td) => td.style.textAlign = "left");
     box.append(t);
     fillHow(v);
+    renderModeling(v);
   } catch (err) { $("valid").textContent = "Validation unavailable: " + err.message; }
 })();
 
@@ -568,6 +637,256 @@ function colorExpr() {
   return ["interpolate", ["linear"], ["get", "total"], s[0], c[0], s[1], c[1], s[2], c[2], s[3], c[3], s[4], c[4]];
 }
 function recolorMap() { if (window._map.getLayer("b")) window._map.setPaintProperty("b", "circle-color", colorExpr()); }
+
+// ---------------------------------------------------------------- "How this number was made"
+const MODEL_NAME = { mlr: "ridge multiple regression", random_forest: "random forest", xgboost: "XGBoost", null_median: "no-skill median" };
+const f3 = (x, d = 3) => x == null ? "–" : Number(x).toLocaleString(undefined, { maximumFractionDigits: d });
+function renderDetail(e) {
+  const d = e.model_detail, box = $("detail"); box.className = "calc"; box.replaceChildren();
+  if (!d) return;
+  const p = (t) => { const n = el("p", { style: "margin:0 0 8px" }); n.append(...t); box.append(n); return n; };
+  const b = (t) => el("b", {}, t), c = (t) => el("code", {}, t), tx = (t) => document.createTextNode(t);
+  const win = e.seasons.find((s) => s.season === "winter"), sum = e.seasons.find((s) => s.season === "summer");
+  if (d.method === "metered") {
+    const g = d.gas_fit, el_ = d.elec_fit;
+    p([b("Path: this building's own meters. "), tx(`A change-point regression was fit to its ${g.n ?? "–"} months of gas and ${el_.n ?? "–"} months of electricity (2021–23): `), c(d.equation), tx(".")]);
+    p([b("Gas: "), tx(`base ${f3(g.alpha, 1)} ccf/day + ${f3(g.beta_h, 2)} ccf per heating degree-day below ${g.tau_h ?? "–"} °F (R² ${f3(g.r2)}, CV(RMSE) ${f3(g.cv_rmse)}). Per 1,000 ft²: ${f3(g.heat_ccf_per_1000ft2_per_hdd, 4)} ccf/HDD.`)]);
+    p([b("Electricity: "), tx(`base ${f3(el_.alpha, 0)} kWh/day + ${f3(el_.beta_c, 1)} kWh per cooling degree-day above ${el_.tau_c ?? "–"} °F (R² ${f3(el_.r2)}). Per 1,000 ft²: ${f3(el_.cool_kwh_per_1000ft2_per_cdd, 3)} kWh/CDD.`)]);
+  } else {
+    p([b(d.method === "resstock" ? "Path: ResStock model (no meters, small building). " : "Path: no meters, so two models are averaged. "), tx("Each predicts this building's intensity (energy per 1,000 ft² per degree-day) from its features:")]);
+    const t = el("table"), hd = el("tr"); ["Model", "Heating ccf / 1,000 ft² / HDD", "Cooling kWh / 1,000 ft² / CDD", ""].forEach((h) => hd.append(el("th", {}, h))); t.append(hd);
+    d.intensities.forEach((r) => { const tr = el("tr"); if (r.used) tr.className = "chosen";
+      [r.model, f3(r.heat_ccf_per_1000ft2_per_hdd, 4), f3(r.cool_kwh_per_1000ft2_per_cdd, 3), ""].forEach((v) => tr.append(el("td", {}, v))); t.append(tr); });
+    box.append(t);
+    p([tx("Then "), c(d.equation), tx(".")]).style.marginTop = "8px";
+  }
+  if (win && d.method !== "metered") {
+    const used = d.intensities.find((r) => r.used);
+    const hk = d.heating_fuel === "gas" ? "hdd60" : "hdd55";
+    p([b("Winter heating, worked: "), tx(`${f3(used.heat_ccf_per_1000ft2_per_hdd, 4)} × ${win.weather[hk] ?? win.weather.hdd60} ${hk.toUpperCase()} × ${f3(d.building_ft2 / 1000, 1)} × ${f3(d.unit_share, 5)} ≈ ${win.heating.gas_ccf} ccf → × gas price ≈ ${usd(win.heating.usd)}.`)]);
+  } else if (win) {
+    p([b("Winter heating: "), tx(`the fit's heating term for Dec–Feb weather, × unit share ${f3(d.unit_share, 5)} (${d.unit_ft2} of ${f3(d.building_ft2, 0)} ft²) = ${win.heating.gas_ccf} ccf → ${usd(win.heating.usd)}.`)]);
+  }
+  if (sum) p([b("Summer cooling: "), tx(`${sum.cooling.electric_kwh} kWh at CDD65 ${sum.weather.cdd65} → ${usd(sum.cooling.usd)}.`)]);
+}
+
+// ---------------------------------------------------------------- model comparison
+function cvTable(target, el_) {
+  const box = $(el_); box.replaceChildren();
+  if (!target || !target.cv) { box.append(el("p", { class: "muted" }, target && target.note ? target.note : "n/a")); return; }
+  const order = ["null_median", "mlr", "random_forest", "xgboost"];
+  const rows = order.filter((k) => target.cv[k]).map((k) => ({ k, ...target.cv[k] }));
+  // bar chart: median absolute % error (lower is better)
+  const W = Math.max(300, box.clientWidth || 460), rowH = 30, m = { l: 168, r: 56, t: 8, b: 26 }, H = m.t + m.b + rowH * rows.length;
+  const max = Math.ceil(Math.max(...rows.map((r) => r.median_ape)) * 1.1 * 10) / 10;  // round up to a 10% step
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Median absolute error by model" });
+  const x = (v) => m.l + (W - m.l - m.r) * v / max;
+  for (let i = 0; i <= Math.round(max * 10); i++) { const v = i / 10; svg.append(sv("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, stroke: css("--grid") }));
+    const t = sv("text", { x: x(v), y: H - 8, "text-anchor": "middle" }); t.textContent = Math.round(v * 100) + "%"; svg.append(t); }
+  rows.forEach((r, i) => {
+    const y0 = m.t + i * rowH + 6, h = rowH - 12, w = Math.max(2, x(r.median_ape) - m.l);
+    const lab = sv("text", { x: m.l - 8, y: y0 + h / 2 + 4, "text-anchor": "end" }); lab.textContent = MODEL_NAME[r.k] + (r.k === target.chosen ? "  ✓" : "");
+    if (r.k === target.chosen) lab.setAttribute("class", "val");
+    const bar = sv("path", { d: `M${m.l},${y0} H${m.l + w - 4} Q${m.l + w},${y0} ${m.l + w},${y0 + 4} V${y0 + h - 4} Q${m.l + w},${y0 + h} ${m.l + w - 4},${y0 + h} H${m.l} Z`,
+      fill: r.k === "null_median" ? css("--text-muted") : css("--accent") });
+    const val = sv("text", { x: m.l + w + 6, y: y0 + h / 2 + 4, class: "val" }); val.textContent = (r.median_ape * 100).toFixed(1) + "%";
+    const hit = sv("rect", { x: 0, y: y0 - 6, width: W, height: rowH, fill: "transparent" });
+    hit.addEventListener("pointermove", (ev) => tip(ev, (r.median_ape * 100).toFixed(1) + "% median error", MODEL_NAME[r.k], `within ±25%: ${(r.within_25pct * 100).toFixed(0)}% of buildings · R² (log) ${r.r2_log}`));
+    hit.addEventListener("pointerleave", hideTip);
+    svg.append(lab, bar, val, hit);
+  });
+  box.append(svg);
+  const t = el("table"), hd = el("tr");
+  ["Model", "Median abs. error", "Within ±25%", "R² (log scale)", "Mean abs. error"].forEach((h) => hd.append(el("th", {}, h))); t.append(hd);
+  rows.forEach((r) => { const tr = el("tr"); if (r.k === target.chosen) tr.className = "chosen";
+    [MODEL_NAME[r.k], pct(r.median_ape), pct(r.within_25pct), String(r.r2_log), pct(r.mean_ape)].forEach((v) => tr.append(el("td", {}, v))); t.append(tr); });
+  box.append(t);
+  if (target.feature_importance) {
+    const fi = Object.entries(target.feature_importance).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${(v * 100).toFixed(0)}%`).join(" · ");
+    box.append(el("p", { class: "note", style: "margin-top:6px" }, "Feature importance (chosen model): " + fi));
+  }
+}
+
+function renderModeling(v) {
+  const bm = v.building_model, h = bm.targets.heat_gas, c = bm.targets.cool_elec;
+  $("cv-scheme").textContent =
+    `Training data: one row per metered property. Target = that property's weather-normalized intensity from its own change-point fit ` +
+    `(heating: ${h.unit}, n = ${h.n}; cooling: ${c.unit}, n = ${c.n}), modelled as log(intensity). Features (public record only, so they exist for any building): ` +
+    `floor area (log), year built, max stories, max height, wall+roof per volume, number of buildings, footprint / floor area. ` +
+    `Test scheme: repeated 5-fold cross-validation (5 folds × 4 repeats); every building is predicted 4 times by models that never saw it. ` +
+    `Lower error is better; the grey bar is a no-skill model that predicts the median for everyone, so a useful model must beat it. ✓ = model used in the service.`;
+  cvTable(h, "cv-heat"); cvTable(c, "cv-cool");
+  // monthly-panel comparison (earlier approach)
+  const pm = v.train && v.train.models;
+  if (pm) {
+    const t = el("table"), hd = el("tr");
+    ["Energy", "Model", "Monthly R²", "Building annual R²", "Building annual median abs. error", "Buildings / building-months"].forEach((x) => hd.append(el("th", {}, x))); t.append(hd);
+    for (const [fuel, ms] of Object.entries(pm)) for (const [k, r] of Object.entries(ms)) {
+      const ak = Object.keys(r).find((z) => z.endsWith("_r2") && z.startsWith("building")), mk = Object.keys(r).find((z) => z.endsWith("_mape"));
+      const tr = el("tr"); [fuel === "gas" ? "Gas (heating)" : "Electricity (cooling)", MODEL_NAME[k] || k, String(r.monthly_r2), String(r[ak]), pct(r[mk]), `${r.n_buildings} / ${r.n_building_months}`]
+        .forEach((x) => tr.append(el("td", {}, x))); t.append(tr); }
+    $("cv-panel").replaceChildren(el("p", { class: "note" }, "Rows = building-months (weather + building features → gas or electricity per ft² per day); 5-fold GroupKFold so a building's months are never split across train and test. It scored worse at the building level than the building-level models above, so it is kept only for comparison."), t);
+  }
+  const rs = v.resstock;
+  if (rs) {
+    const t = el("table"), hd = el("tr");
+    ["Target", "Homes", "Median abs. error: public record only", "with all renter answers", "R² (log): public → answers"].forEach((x) => hd.append(el("th", {}, x))); t.append(hd);
+    const nm = { heat_gas_per_hdd: "Gas heating per HDD", heat_elec_per_hdd: "Electric heating per HDD", cool_per_cdd: "Cooling per CDD" };
+    for (const [k, r] of Object.entries(rs.targets)) { const tr = el("tr");
+      [nm[k] || k, r.n.toLocaleString(), pct(r.public_record_only.test_median_ape), pct(r.all_answers.test_median_ape), `${r.public_record_only.test_r2_log} → ${r.all_answers.test_r2_log}`].forEach((x) => tr.append(el("td", {}, x))); t.append(tr); }
+    const cal = rs.calibration_to_meters;
+    $("cv-resstock").replaceChildren(el("p", { class: "note" }, `XGBoost on NREL ResStock simulated Michigan homes; random 80% train / 20% test split (seed 0). The test homes are scored twice: with only public-record inputs, and with renter answers. Multifamily predictions are then scaled to match real Ann Arbor meters: heating ×${cal.heat_gas}, cooling ×${cal.cool} (median metered ÷ median simulated, ${cal.evidence.n_metered_heat} / ${cal.evidence.n_metered_cool} buildings).`), t);
+  }
+}
+
+// ---------------------------------------------------------------- predicted vs actual (held-out)
+let HELD = null;
+const PATH_NAME = { metered: "Metered: own fit, other years", blend: "Unmetered: blend (served)", meter_model: "Unmetered: meter-trained model", resstock: "Unmetered: ResStock", null: "No-skill median" };
+async function loadHeld() { HELD = await getJSON("/hc/heldout"); drawScatter(); }
+function drawScatter() {
+  if (!HELD) return;
+  const fuel = $("sc-fuel").value, path = $("sc-path").value, season = $("sc-season").value, u = $("sc-units").value;
+  const unit = u ? "$" : (fuel === "gas" ? "ccf" : "kWh");
+  const rows = HELD.filter((r) => r.fuel === fuel && (!season || r.season === season) && r[path + u] > 0 && r["actual" + u] > 0);
+  const errs = rows.map((r) => r[path + u] / r["actual" + u] - 1).sort((a, b) => a - b);
+  const med = (a) => a.length ? a[Math.floor(a.length / 2)] : NaN;
+  const ae = errs.map(Math.abs).sort((a, b) => a - b);
+  const within = ae.filter((x) => x <= 0.25).length / Math.max(1, ae.length);
+  const st = $("sc-stats"); st.replaceChildren();
+  const stat = (k, v) => { const s = el("span"); s.append(el("b", {}, v), document.createTextNode(" " + k)); st.append(s); };
+  stat("building-seasons", rows.length.toLocaleString()); stat(`buildings`, String(new Set(rows.map((r) => r.building_id)).size));
+  stat("median abs. error", pct(med(ae))); stat("bias (median signed)", (med(errs) >= 0 ? "+" : "") + pct(med(errs))); stat("within ±25%", pct(within));
+  // scatter, log-log
+  const box = $("scatter"); box.replaceChildren();
+  const W = Math.max(300, box.clientWidth || 480), H = Math.min(W, 420), m = { l: 58, r: 12, t: 10, b: 40 };
+  const vals = rows.flatMap((r) => [r[path + u], r["actual" + u]]);
+  const lo = Math.log10(Math.min(...vals)) - 0.05, hi = Math.log10(Math.max(...vals)) + 0.05;
+  const X = (v) => m.l + (W - m.l - m.r) * (Math.log10(v) - lo) / (hi - lo), Y = (v) => H - m.b - (H - m.t - m.b) * (Math.log10(v) - lo) / (hi - lo);
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Predicted versus actual, held out" });
+  for (let k = Math.ceil(lo); k <= Math.floor(hi); k++) {
+    const v = 10 ** k, lab = unit === "$" ? "$" + v.toLocaleString() : v.toLocaleString();
+    svg.append(sv("line", { x1: X(v), x2: X(v), y1: m.t, y2: H - m.b, stroke: css("--grid") }), sv("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: css("--grid") }));
+    const tx_ = sv("text", { x: X(v), y: H - m.b + 16, "text-anchor": "middle" }); tx_.textContent = lab; svg.append(tx_);
+    const ty = sv("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end" }); ty.textContent = lab; svg.append(ty);
+  }
+  // ±25% band and 1:1 line
+  const a = 10 ** lo, b = 10 ** hi;
+  svg.append(sv("path", { d: `M${X(a)},${Y(a * 1.25)} L${X(b / 1.25)},${Y(b)} L${X(b)},${Y(b)} L${X(b)},${Y(b * 0.75)} L${X(a / 0.75 * 0.75)},${Y(a * 0.75)} Z`, fill: css("--accent"), "fill-opacity": 0.08 }));
+  svg.append(sv("line", { x1: X(a), y1: Y(a), x2: X(b), y2: Y(b), stroke: css("--text-muted"), "stroke-width": 1.5, "stroke-dasharray": "4 4" }));
+  const pts = rows.map((r) => ({ r, x: X(r["actual" + u]), y: Y(r[path + u]) }));
+  pts.forEach((p) => svg.append(sv("circle", { cx: p.x, cy: p.y, r: 3.5, fill: css("--accent"), "fill-opacity": 0.55, stroke: css("--surface-1"), "stroke-width": 1 })));
+  const xl = sv("text", { x: (m.l + W - m.r) / 2, y: H - 6, "text-anchor": "middle" }); xl.textContent = `Actual (meter), ${unit} per season, log scale`; svg.append(xl);
+  const yl = sv("text", { x: 12, y: (m.t + H - m.b) / 2, "text-anchor": "middle", transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})` }); yl.textContent = `Predicted, ${unit}`; svg.append(yl);
+  const lab1 = sv("text", { x: X(b) - 4, y: Y(b) + 14, "text-anchor": "end" }); lab1.textContent = "perfect (1:1)"; svg.append(lab1);
+  const hl = sv("circle", { r: 6, fill: "none", stroke: css("--text-primary"), "stroke-width": 2, visibility: "hidden" }); svg.append(hl);
+  const hit = sv("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }); svg.append(hit);
+  hit.addEventListener("pointermove", (ev) => {
+    const bb = svg.getBoundingClientRect(), mx = (ev.clientX - bb.left) * W / bb.width, my = (ev.clientY - bb.top) * H / bb.height;
+    let best = null, bd = 1e9; for (const p of pts) { const d = (p.x - mx) ** 2 + (p.y - my) ** 2; if (d < bd) { bd = d; best = p; } }
+    if (!best || bd > 900) { hl.setAttribute("visibility", "hidden"); hideTip(); return; }
+    hl.setAttribute("cx", best.x); hl.setAttribute("cy", best.y); hl.setAttribute("visibility", "visible");
+    const r = best.r, e = r[path + u] / r["actual" + u] - 1, fmt = (x) => unit === "$" ? usd(x) : Math.round(x).toLocaleString() + " " + unit;
+    tip(ev, `${e >= 0 ? "+" : ""}${pct(e)}`, `${r.name} · ${r.season} ${r.year}`, `actual ${fmt(r["actual" + u])} · predicted ${fmt(r[path + u])}`);
+  });
+  hit.addEventListener("pointerleave", () => { hl.setAttribute("visibility", "hidden"); hideTip(); });
+  box.append(svg);
+  // all-paths table for this fuel/season/units
+  const t = el("table"), hd = el("tr");
+  ["Path", "n", "Median abs. error", "Bias", "Within ±25%"].forEach((x) => hd.append(el("th", {}, x))); t.append(hd);
+  for (const pth of Object.keys(PATH_NAME)) {
+    const rr = HELD.filter((r) => r.fuel === fuel && (!season || r.season === season) && r[pth + u] > 0 && r["actual" + u] > 0);
+    const es = rr.map((r) => r[pth + u] / r["actual" + u] - 1).sort((x, y) => x - y), as = es.map(Math.abs).sort((x, y) => x - y);
+    const tr = el("tr"); if (pth === path) tr.className = "chosen";
+    [PATH_NAME[pth], String(rr.length), pct(med(as)), (med(es) >= 0 ? "+" : "") + pct(med(es)), pct(as.filter((x) => x <= .25).length / Math.max(1, as.length))].forEach((x) => tr.append(el("td", {}, x)));
+    t.append(tr);
+  }
+  $("sc-table").replaceChildren(t, el("p", { class: "note", style: "margin-top:8px" },
+    fuel === "gas" ? "Gas per season = hot water/cooking base + heating. Metered = the building's own fit from its other two years. Unmetered paths never saw the building; they add the median metered base load per ft²."
+                   : "Electricity per season = lights/plugs base + cooling (gas-heated buildings). Base load dominates electricity, and building features barely predict it: no unmetered path beats the no-skill median here."));
+}
+["sc-fuel", "sc-path", "sc-season", "sc-units"].forEach((id) => $(id).addEventListener("change", drawScatter));
+
+// ---------------------------------------------------------------- metered building explorer
+async function loadMeteredList() {
+  const L = await getJSON("/hc/metered");
+  $("mb-sel").replaceChildren(...L.map((b) => { const o = el("option", { value: b.building_id }, `${b.name} · ${Math.round(b.gfa_ft2).toLocaleString()} ft² · built ${b.year_built}`); return o; }));
+  const gb = L.find((b) => /GreenBrier/i.test(b.name)); if (gb) $("mb-sel").value = gb.building_id;
+  loadMetered();
+}
+let MB = null;
+async function loadMetered() { MB = await getJSON("/hc/metered/" + encodeURIComponent($("mb-sel").value)); drawMetered(); }
+function lineChart(boxId, months, series, unit) {
+  const box = $(boxId); box.replaceChildren();
+  const W = Math.max(300, box.clientWidth || 480), H = 230, m = { l: 62, r: 10, t: 10, b: 30 };
+  const all = series.flatMap((s) => s.values.filter((x) => x != null));
+  if (!all.length) { box.append(el("p", { class: "muted" }, "No data")); return; }
+  const max = Math.max(...all) * 1.08, n = months.length;
+  const X = (i) => m.l + (W - m.l - m.r) * (i + 0.5) / n, Y = (v) => H - m.b - (H - m.t - m.b) * v / max;
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img" });
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4; svg.append(sv("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: css("--grid") }));
+    const t = sv("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end" }); t.textContent = (unit === "$" ? "$" : "") + Math.round(v).toLocaleString(); svg.append(t); }
+  months.forEach((mo, i) => { if (mo.month === 1) { svg.append(sv("line", { x1: X(i) - (W - m.l - m.r) / n / 2, x2: X(i) - (W - m.l - m.r) / n / 2, y1: m.t, y2: H - m.b, stroke: css("--border") }));
+    const t = sv("text", { x: X(i) + 2, y: H - 10 }); t.textContent = String(mo.year); svg.append(t); } });
+  series.forEach((s) => {
+    let d = "", pen = false;
+    s.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + X(i) + "," + Y(v); pen = true; });
+    svg.append(sv("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-dasharray": s.dash || "" }));
+    if (s.dots) s.values.forEach((v, i) => { if (v != null) svg.append(sv("circle", { cx: X(i), cy: Y(v), r: 4, fill: s.color, stroke: css("--surface-1"), "stroke-width": 2 })); });
+  });
+  const cross = sv("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), visibility: "hidden" }); svg.append(cross);
+  const hit = sv("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }); svg.append(hit);
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  hit.addEventListener("pointermove", (ev) => {
+    const bb = svg.getBoundingClientRect(), mx = (ev.clientX - bb.left) * W / bb.width;
+    const i = Math.max(0, Math.min(n - 1, Math.floor((mx - m.l) / ((W - m.l - m.r) / n))));
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
+    const mo = months[i], fmt = (v) => v == null ? "–" : (unit === "$" ? usd(v) : Math.round(v).toLocaleString() + " " + unit);
+    const t = $("tip"); t.replaceChildren(el("div", {}, `${MON[mo.month - 1]} ${mo.year} · ${Math.round(mo.tmean_f)} °F · HDD65 ${Math.round(mo.hdd65)} · CDD65 ${Math.round(mo.cdd65)}`));
+    series.forEach((s) => { const r = el("div"); const k = el("span", { style: `display:inline-block;width:14px;height:0;border-top:2px ${s.dash ? "dashed" : "solid"} ${s.color};margin-right:6px;vertical-align:middle` });
+      r.append(k, el("b", {}, fmt(s.values[i])), document.createTextNode(" " + s.name)); t.append(r); });
+    t.style.display = "block"; t.style.left = Math.min(ev.clientX + 12, innerWidth - 280) + "px"; t.style.top = (ev.clientY + 12) + "px";
+  });
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+  box.append(svg);
+}
+function drawMetered() {
+  if (!MB) return;
+  const u = $("mb-units").value, M = MB.monthly, b = MB.building;
+  const S = (fuel, unit) => [
+    { name: "actual meter reading", values: M.map((r) => r[`${fuel}_actual${u}`]), color: css("--text-primary"), dots: true },
+    { name: "predicted for a year the model never saw", values: M.map((r) => r[`${fuel}_heldout${u}`]), color: css("--accent") },
+    { name: "fit on all 3 years", values: M.map((r) => r[`${fuel}_fit${u}`]), color: css("--text-muted"), dash: "5 4" },
+  ];
+  const lg = $("mb-legend"); lg.replaceChildren();
+  S("gas").forEach((s) => { const sp = el("span"); sp.append(el("span", { style: `display:inline-block;width:18px;height:0;border-top:2px ${s.dash ? "dashed" : "solid"} ${s.color}` }), document.createTextNode(s.name)); lg.append(sp); });
+  lineChart("mb-gas", M, S("gas"), u ? "$" : "ccf");
+  lineChart("mb-elec", M, S("elec"), u ? "$" : "kWh");
+  // per-year totals: actual vs held-out prediction (only months with a real reading)
+  const t = el("table"), hd = el("tr");
+  ["Year", "Gas actual", "Gas predicted (held-out)", "Error", "Electricity actual", "Electricity predicted (held-out)", "Error"].forEach((x) => hd.append(el("th", {}, x))); t.append(hd);
+  const fmtv = (v, unit) => u ? usd(v) : Math.round(v).toLocaleString() + " " + unit;
+  const errs = [];
+  [...new Set(M.map((r) => r.year))].forEach((y) => {
+    const tr = el("tr"); tr.append(el("td", {}, String(y)));
+    for (const [fuel, unit] of [["gas", "ccf"], ["elec", "kWh"]]) {
+      const rr = M.filter((r) => r.year === y && r[`${fuel}_actual${u}`] != null && r[`${fuel}_heldout${u}`] != null);
+      const a = rr.reduce((s, r) => s + r[`${fuel}_actual${u}`], 0), p = rr.reduce((s, r) => s + r[`${fuel}_heldout${u}`], 0);
+      const e = a > 0 ? p / a - 1 : null; if (e != null) errs.push([fuel, e]);
+      tr.append(el("td", {}, rr.length ? fmtv(a, unit) + ` (${rr.length} mo)` : "–"), el("td", {}, rr.length ? fmtv(p, unit) : "–"), el("td", {}, e == null ? "–" : (e >= 0 ? "+" : "") + pct(e)));
+    }
+    t.append(tr);
+  });
+  $("mb-table").replaceChildren(t);
+  const st = $("mb-stats"); st.replaceChildren();
+  const stat = (k, v) => { const s = el("span"); s.append(el("b", {}, v), document.createTextNode(" " + k)); st.append(s); };
+  const gf = b.gas_fit, ef = b.elec_fit;
+  stat("ft²", Math.round(b.gfa_ft2).toLocaleString()); stat("built", String(b.year_built));
+  if (gf) stat(`gas fit R² (base ${f3(gf.alpha, 1)} ccf/day + ${f3(gf.beta_h, 2)} ccf/HDD${gf.tau_h ?? ""})`, f3(gf.r2));
+  if (ef) stat(`electric fit R² (base ${f3(ef.alpha, 0)} kWh/day + ${f3(ef.beta_c, 1)} kWh/CDD${ef.tau_c ?? ""})`, f3(ef.r2));
+}
+$("mb-sel").addEventListener("change", loadMetered);
+$("mb-units").addEventListener("change", drawMetered);
+loadHeld(); loadMeteredList();
 
 run();
 </script>

@@ -39,49 +39,41 @@
       "feature_importance": null
     },
     "cool_elec": {
-      "n": 69,
+      "n": 96,
       "unit": "kWh/1000ft\u00b2/yr",
       "p10_p50_p90": [
-        100.9,
-        516.2,
-        887.8
+        176.0,
+        575.5,
+        1087.4
       ],
       "cv": {
         "null_median": {
-          "median_ape": 0.409,
-          "mean_ape": 5.057,
-          "within_25pct": 0.315,
-          "r2_log": -0.122
+          "median_ape": 0.346,
+          "mean_ape": 2.593,
+          "within_25pct": 0.375,
+          "r2_log": -0.076
         },
         "mlr": {
-          "median_ape": 0.459,
-          "mean_ape": 2.914,
-          "within_25pct": 0.236,
-          "r2_log": 0.05
+          "median_ape": 0.41,
+          "mean_ape": 1.965,
+          "within_25pct": 0.302,
+          "r2_log": 0.011
         },
         "random_forest": {
-          "median_ape": 0.403,
-          "mean_ape": 2.313,
-          "within_25pct": 0.337,
-          "r2_log": 0.105
+          "median_ape": 0.456,
+          "mean_ape": 1.96,
+          "within_25pct": 0.346,
+          "r2_log": -0.045
         },
         "xgboost": {
-          "median_ape": 0.441,
-          "mean_ape": 2.177,
-          "within_25pct": 0.333,
-          "r2_log": 0.016
+          "median_ape": 0.449,
+          "mean_ape": 2.24,
+          "within_25pct": 0.307,
+          "r2_log": -0.234
         }
       },
-      "chosen": "random_forest",
-      "feature_importance": {
-        "log_gfa": 0.161,
-        "year_built": 0.217,
-        "stories_max": 0.096,
-        "height_ft_max": 0.093,
-        "surface_to_volume": 0.132,
-        "fp_count": 0.062,
-        "fp_area_per_gfa": 0.239
-      }
+      "chosen": "null_median",
+      "feature_importance": null
     },
     "heat_elec": {
       "n": 8,
@@ -89,7 +81,7 @@
       "p10_p50_p90": [
         1668.3,
         4316.7,
-        7448.3
+        7150.6
       ],
       "note": "too few metered buildings for a feature model: the service uses the median"
     }

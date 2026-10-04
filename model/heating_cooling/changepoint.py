@@ -56,10 +56,14 @@ def fit(df: pd.DataFrame, col: str, heating: bool = True, cooling: bool = True, 
     y = (d[col] / d["days"]).to_numpy()
     days = d["days"].to_numpy()
     best = None
-    hs = list(HDD_BASES_F) if heating else [None]
-    cs = list(CDD_BASES_F) if cooling else [None]
+    # every subset is a candidate (heating only, cooling only, both): when one term would come out negative
+    # (physically invalid) the building still gets the best valid simpler model, not a flat baseload
+    hs = (list(HDD_BASES_F) + [None]) if heating else [None]
+    cs = (list(CDD_BASES_F) + [None]) if cooling else [None]
     for th in hs:
         for tc in cs:
+            if th is None and tc is None:
+                continue
             cols = [np.ones(len(d))]
             if th:
                 cols.append(d[f"hdd{th}"].to_numpy() / days)
@@ -67,7 +71,7 @@ def fit(df: pd.DataFrame, col: str, heating: bool = True, cooling: bool = True, 
                 cols.append(d[f"cdd{tc}"].to_numpy() / days)
             X = np.column_stack(cols)
             b, r = _ols(y, X)
-            # physically invalid slopes (negative heating/cooling, negative base): drop that term and refit
+            # physically invalid slopes (negative heating/cooling, negative base): skip this candidate
             if (th and b[1] < 0) or (tc and b[-1] < 0) or b[0] < 0:
                 continue
             ss = 1 - r.var() / y.var() if y.var() > 0 else 0.0
