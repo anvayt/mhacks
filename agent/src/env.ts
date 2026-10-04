@@ -18,6 +18,7 @@ export const env = {
   projectSecret: process.env.PHOTON_PROJECT_SECRET ?? "",
   publicUrl: process.env.PUBLIC_URL || `http://localhost:${process.env.ONBOARD_PORT || 8787}`,
   onboardPort: Number(process.env.ONBOARD_PORT || 8787),
+  apiBaseUrl: process.env.API_BASE_URL || "http://localhost:8000", // PLAN.md §10: the /api the agent calls
   get hasPhoton() {
     return Boolean(this.projectId && this.projectSecret);
   },
