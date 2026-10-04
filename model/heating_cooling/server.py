@@ -71,6 +71,26 @@ def buildings():
     return json.loads(pd.read_parquet(p).to_json(orient="records"))
 
 
+@app.get("/hc/heldout")
+def heldout(fuel: str | None = None):
+    """Real meters vs every estimate path, for building-seasons the models never saw."""
+    return service.heldout(fuel)
+
+
+@app.get("/hc/metered")
+def metered():
+    """The Ann Arbor properties with real monthly meter readings (City benchmarking, 2021–23)."""
+    return service.metered_list()
+
+
+@app.get("/hc/metered/{building_id}")
+def metered_building(building_id: str):
+    try:
+        return service.metered_building(building_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
 @app.get("/hc/validation")
 def validation():
     out = {}
