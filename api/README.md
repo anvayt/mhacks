@@ -18,9 +18,12 @@ uv run uvicorn app.main:app --reload --port 8000
   default `../data/sessions.sqlite`), `building` (+ P2-01 `warnings`), `bill.annual` / `seasonal` / `monthly` p10/p50/p90
   (heating + cooling only; how the band is made is in `bill.band_method`; "No AC" sets cooling to $0, `bill.note`),
   score / grade / grade_span / locked (grade range = only what the answers can change: `grade_band_usd`,
-  `grade_span_method`) / percentiles / hidden rent (`app/score.py`, vs P1's 591 scored apartment buildings), `questions` (`{id, text,
-  options: [{value, label}]}`), `heating_cooling` (P1's full answer), `answers`, `model_params`. Null/empty until
-  merged: `co2_t` (P2-03), `badges`. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
+  `grade_span_method`) / percentiles / hidden rent (`app/score.py`: vs every scored city building of the same type
+  in `data/city_scores.csv`, `percentile_city` vs all 25,670; a type with < 30 falls back to P1's 591 apartment
+  buildings), `co2_t` (`app/co2.py`), `badges` (`app/badges.py`), `questions` (`{id, text,
+  options: [{value, label}]}`), `heating_cooling` (P1's full answer), `answers`, `model_params`. "No AC"
+  (`cooling_code=0`) is never sent to P1's model (outside its training data); cooling is zeroed instead, in /estimate,
+  /answer, /fixes and /forecast alike. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
   `hint`, `not_found`, `not_a_home`, `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is
   down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS` (default `http://localhost:3000`, for `/web`).
 - `POST /answer` `{"session_id", "question_id", "answer"}` → same shape, re-run with every answer so far (narrower band,
@@ -36,7 +39,24 @@ uv run uvicorn app.main:app --reload --port 8000
   homes are near-resistance; anything on a metered building; anything the model says adds CO₂) keep their GRH points
   and rebate with null `usd_saved_yr` / `co2_kg_saved` / `new_grade`. Additive: per fix `unpriced`, `grh_item`,
   `cost_note`, `sources`; top level `grh_points_now_note`, `grh_points_required` (70). `landlord_email` is a fixed
-  template. Errors: 404 `not_found` (unknown session), 503 `model_unavailable`.
+  template. Errors: 404 `not_found` (unknown session), 503 `model_unavailable`. Saves `used_fixes: true` on the
+  session (badge leak-hunter).
+- `GET /forecast/{session_id}` (`app/forecast.py`) → `{session_id, days: [{date, low_f, high_f, heating_usd,
+  cooling_usd}], week: {heating_usd, cooling_usd, total_usd, normal_total_usd, vs_normal_pct}, alerts: [{type:
+  cold_snap|heat_wave|costly_week, date, detail}], source, method}`: next 7 days (Open-Meteo) priced with P1's
+  forecast-month $ per degree-day. 404 `not_found`, 503 `model_unavailable` / `forecast_unavailable`.
+- `POST /compare` `{"listings": [{url|address, unit_sqft?}, {…}]}` (`app/compare.py`) → `{a, b, winner, diff_usd_yr,
+  confident}` (`a`/`b` are full /estimate bodies; winner gets `battle-winner`; `confident` = the p10–p90 ranges don't
+  overlap). 422 `missing_input` (not exactly two), `estimate_failed` + `listing: "a"|"b"` + the estimate's error.
+- `GET /city` (`app/city.py`) → GeoJSON FeatureCollection of every scored footprint (`properties: {score, grade,
+  excess_usd_per_sqft, type}`), gzip when accepted. `GET /leaderboard?scope=city|neighborhood` → `{best: [10 public
+  benchmark buildings], worst_blocks: [10 block groups / tracts with ≥ 5 buildings]}`. Built by
+  `uv run python scripts/score_city.py` (P1's model on every footprint) into `data/city_scores.csv`. 503 `city_unavailable`.
+- `POST /calibrate` (`app/calibrate.py`) `{session_id, bill_image_base64}` (xAI Grok vision, `XAI_API_KEY`,
+  `XAI_VISION_MODEL`; two reads that must agree) or `{session_id, therms, kwh, start, end}` → `{pct_vs_expected_for_weather
+  (percent), streak_months, badges, estimate}` + additive `year, month, actual_gas_ccf, expected_gas_ccf, noise_floor,
+  meaningful, extracted, note` (P1's `/hc/bill_check`, gas only; streaks in `CALIBRATE_DB`). Errors: 404 `not_found`,
+  422 `missing_input` / `unreadable_bill` / `bad_bill`, 503 `vision_unavailable` / `model_unavailable`.
 
 ## CO₂ and fix sources (checked Oct 4, 2026)
 

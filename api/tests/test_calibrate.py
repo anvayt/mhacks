@@ -86,7 +86,7 @@ def test_manual_whole_month_percent_and_therms(fakes):
     sent = fakes["model"][0]
     assert sent == {"year": 2026, "month": 1, "gas_ccf": 100.0, "lat": 42.2701, "lon": -83.7402, "unit_sqft": 850}
     assert c["pct_vs_expected_for_weather"] == -20.0  # model fraction -0.2 -> percent
-    assert c["streak_months"] == 1 and c["badges"] == ["weather-beater"]
+    assert c["streak_months"] == 1 and c["badges"] == ["double-pane-club", "weather-beater"]  # app/badges.py
     assert (c["year"], c["month"], c["actual_gas_ccf"], c["expected_gas_ccf"]) == (2026, 1, 100.0, 125.0)
     assert c["noise_floor"] == 105.3 and c["meaningful"] is False
     assert "answers" not in c["estimate"] and "model_params" not in c["estimate"]
@@ -97,7 +97,7 @@ def test_manual_whole_month_percent_and_therms(fakes):
 
 def test_above_normal_no_badge_and_summer_noise_null():
     c = _manual(_session(), 150, "2025-07-01", "2025-07-31").json()
-    assert c["pct_vs_expected_for_weather"] == 20.0 and c["badges"] == [] and c["streak_months"] == 0
+    assert c["pct_vs_expected_for_weather"] == 20.0 and c["badges"] == ["double-pane-club"] and c["streak_months"] == 0
     assert c["noise_floor"] is None and c["meaningful"] is None
 
 
