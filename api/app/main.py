@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.accounts import router as accounts_router
+from app.boards import router as boards_router
 from app.calibrate import router as calibrate_router
 from app.city import router as city_router
 from app.commitments import router as commitments_router
@@ -30,6 +31,7 @@ app.include_router(city_router)
 app.include_router(calibrate_router)
 app.include_router(accounts_router)
 app.include_router(commitments_router)
+app.include_router(boards_router)
 
 
 class EstimateRequest(BaseModel):
