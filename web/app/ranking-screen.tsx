@@ -12,6 +12,7 @@ import {
   imessageUrl,
   sessionIsHome,
   usd,
+  usageHue,
   usdRange,
   type Estimate,
 } from "./flow-api";
@@ -82,7 +83,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
   const session = encodeURIComponent(e?.session_id ?? "");
 
   return (
-    <main className={`hero ranking reveal ${styles.screen}`}>
+    <main className={`hero ranking reveal board-screen ${styles.screen}`} style={usageHue(e?.percentile_city)}>
       <div className="hero-decor" aria-hidden="true">
         <img className="halo" src="/hero/halo.svg" alt="" />
         <img className="orbit" src="/hero/orbit.svg" alt="" />

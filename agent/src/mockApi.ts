@@ -84,6 +84,9 @@ export function mockApi(): Api {
   const api: Api = {
     ...phase2.methods,
     mock: true,
+    // the in-process mock has no website, so no sign-in codes are ever waiting
+    loginOutbox: async () => ({ ok: true, data: [] }),
+    loginSent: async (login_id: string) => ({ ok: true, data: { login_id, sent: true } }),
     async estimate(req: EstimateRequest): Promise<ApiResult> {
       if ("url" in req && !/\d/.test(req.url)) {
         return { ok: false, code: "needs_address", message: "That link doesn't show the street address. What's the address?", hint: "715 Arbor St, Ann Arbor, MI" };
