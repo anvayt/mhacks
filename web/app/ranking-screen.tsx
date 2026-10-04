@@ -11,7 +11,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
   }, []);
 
   return (
-    <main className="hero ranking">
+    <main className="hero ranking reveal">
       <div className="hero-decor" aria-hidden="true">
         <img className="halo" src="/hero/halo.svg" alt="" />
         <img className="orbit" src="/hero/orbit.svg" alt="" />
