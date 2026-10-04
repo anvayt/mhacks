@@ -2,7 +2,7 @@
 id: P1-09
 title: Air-leakage (blower-door) model for Ann Arbor homes without a test
 owner: P1
-status: review
+status: done
 branch: p1/leakage-model           # off p1/heating-cooling (needs its building features); worktree ../mhacks-leakage
 type: build
 checkpoint: 5:00 AM checkpoint
@@ -40,18 +40,18 @@ point estimate per house plus an honest held-out error.
   for analysis, never in the served model.
 
 ## Steps
-- [ ] Download and cache the NY datasets; harmonize leakage units (CFM50, ACH50, test type), clean, document exclusions
-- [ ] Check the ResDB publications for a reproducible published regression (coefficients) to use as an external baseline
-- [ ] Feature map: NY fields ↔ Ann Arbor-available features (year built, conditioned area, stories, ceiling height → volume, climate)
-- [ ] Model families: baseline median, median/linear regressions (lasso, ridge, elastic net), RF, XGBoost, small neural net (MLP); nested CV, grouped by region
-- [ ] Cross-dataset generalization test; ResStock-prior comparison
-- [ ] Apply to Ann Arbor houses (footprints + ACS/benchmarking year built) → table + `predict_leakage(...)`
-- [ ] Results JSON + README section; handoff
+- [x] Download and cache the NY datasets; harmonize leakage units (CFM50, ACH50, test type), clean, document exclusions
+- [x] Assess ResDB availability: public literature reviewed; raw data contact-only, so no claim of an independently reproduced ResDB regression/test set. Median and simulated ResStock comparisons are reported instead.
+- [x] Feature map: NY fields ↔ Ann Arbor-available features (year built, conditioned area, stories, ceiling height → volume, climate)
+- [x] Model families: baseline median, median/linear regressions (lasso, ridge, elastic net), RF, XGBoost, small neural net (MLP); nested CV, grouped by region
+- [x] Cross-dataset generalization test; ResStock-prior comparison
+- [x] Apply to Ann Arbor houses (footprints + ACS/benchmarking year built) → table + `predict_leakage(...)`
+- [x] Results JSON + README section; handoff
 
 ## Done when
-- [ ] Held-out (grouped) error reported for every family vs the baseline, with the chosen model and its settings
-- [ ] `model/leakage/` predicts leakage for an Ann Arbor lat/lon or address using only public features
-- [ ] Honest statement of applicability: dataset region/era/house types vs Ann Arbor rentals
+- [x] Held-out (grouped) error reported for every family vs the baseline, with the chosen model and its settings
+- [x] `model/leakage/` predicts leakage for an Ann Arbor lat/lon or address using only public features
+- [x] Honest statement of applicability: dataset region/era/house types vs Ann Arbor rentals
 
 ## Handoff
 - Branch `p1/leakage-model` (f482992), off `p1/heating-cooling`; only `/model` touched (new `model/leakage/`, Makefile target, README §6, tests).
@@ -60,4 +60,6 @@ point estimate per house plus an honest held-out error.
 - **Held-out error (CFM50):** 23.6% leave-one-region-out (baseline 42.9%, ResStock lookup 39.4%); cross-survey 24.3–26.0%; with Ann Arbor's real block-group year-built noise 27.3%; with no year built 32.3%.
 - **Ann Arbor:** `predict_leakage(lat, lon | address)` and `data/processed/leakage_ann_arbor.{parquet,csv}` (15,416 one-to-four-unit houses scored; 5+ unit buildings excluded). Inputs come from footprints (stories calibrated on LiDAR, 87.7% accurate), city mailing addresses (unit count), and ACS block-group year built.
 - **Known gaps:** NY training homes, not Michigan. Footprint floor area includes garages/porches (median 2,741 vs 2,010 ft² in training), so per-ft² and ACH50 are biased low; total CFM50 is more robust. Predictions are compressed by block-group year built.
-- **Next:** merge with P1-08 (P1 branches into dev). Any product use should present this as a predicted range-of-typical, not a measurement.
+- **Merged:** `f482992` entered dev with P1-08 at `4602d55`; the review status and merge-next instruction were stale. Implementation is complete, while external Michigan validation and product adoption remain separate work.
+- **Finishing-pass scope (`p1/finish`, Oct 4):** the copied leakage artifact/results are included in the 33-file hash audit; this pass does not claim to retrain or revalidate the NY leakage predictor. `/api` still does not call `predict_leakage`. New professional air-sealing scenarios use a separate ResStock hidden-envelope surrogate and explicit cohort medians, not a measured/inferred ACH50 for the selected home. This distinction avoids treating a bill as a blower-door test.
+- **Product limitation:** present leakage as a predicted range of typical values, never an actual measurement or verified retrofit saving. Historical handoff metrics in this section belong to their named artifact set; headline heating/cooling sign-off is separately documented in `model/results/SIGNOFF.md` on `p1/finish`.
