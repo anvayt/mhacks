@@ -2,7 +2,7 @@
 id: P2-02b
 title: Map links (Google/Apple), more listing sites, map short-link resolution
 owner: P2
-status: review
+status: done
 branch: p2/listing-maps          # off p2/listing-parser (extends listing.py)
 type: build
 checkpoint: 1:00 AM GO/NO-GO
@@ -50,3 +50,4 @@ Accept the links people actually share: Google Maps and Apple Maps (full and sho
 ### QUESTIONS FOR THE TEAM
 1. Zumper and Rent.com slugs often hold a street address, but the task says hint-only, and Zumper p238's slug names a different street than its listing. I kept them hint-only (the safe default). Should P2-04 geocode the hint without asking the user?
 2. Settled after verification (safest reversible option): bare map views and named pins (cities, businesses) now return `needs_address: true` with `lat`/`lon` kept, so P2-04 asks before scoring them. Only unnamed explicit points skip the question. If that's too many prompts, P2-04 could auto-accept a named pin whose hint isn't a city; tell P2 and the rule moves into `_map_result`.
+- **Merged into dev** at `d010260` (Oct 3, ~9:55 PM): P2-02b + unit format; all P2 tests together: 160 passed, 1 skipped.
