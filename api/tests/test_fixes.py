@@ -103,6 +103,13 @@ def test_no_ac_never_sends_cooling_code_0_and_marks_used_fixes(calls):
     assert sessions.get(sid)["used_fixes"]  # badges: leak-hunter
 
 
+def test_heat_included_saves_the_renter_cooling_only(calls):  # wave 6: the building's fuel stays the model's
+    w = {x["item"]: x for x in client.get(f"/fixes/{session(heating_fuel='included', window_panes=1)}").json()["fixes"]}
+    assert all("heating_fuel" not in c for c in calls)
+    win = w[fixes.WINDOWS["item"]]
+    assert win["usd_saved_yr"] == 0 and win["co2_kg_saved"] == round(co2_kg(70, 20))  # cooling $90 → $90; CO₂ is the building's
+
+
 def test_fix_the_model_says_adds_co2_is_listed_unpriced(calls):  # WINDOWS (450 ccf) adds 50 ccf to this base
     sid = session(base=hc(400.0, 900, 700))
     w = {x["item"]: x for x in client.get(f"/fixes/{sid}").json()["fixes"]}[fixes.WINDOWS["item"]]
