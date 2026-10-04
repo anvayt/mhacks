@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { ONBOARD, errorText, estimate, listingInput, needsUnitSize, type Estimate } from "./flow-api";
+
 import { apiFetch } from "./lib/api";
 import { LoadingSheet } from "./survey-fields";
+
+/** Our Fetch.ai agent's Agentverse profile; "Chat with Agent" there opens it in ASI:One. */
+const ASI_AGENT = "https://agentverse.ai/agents/details/agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum/profile";
 
 export function ListingForm({
   onPicked,
@@ -133,9 +137,14 @@ export function ListingForm({
           </button>
         </div>
         {unit ? null : (
-          <a className="imessage" href={ONBOARD}>
-            Or start by iMessage ↗
-          </a>
+          <>
+            <a className="imessage" href={ONBOARD}>
+              Or start by iMessage ↗
+            </a>
+            <a className="imessage" href={ASI_AGENT} target="_blank" rel="noreferrer">
+              Or chat with Hidden Rent on ASI:One ↗
+            </a>
+          </>
         )}
       </div>
       <p className="fine-print" aria-live="polite">
