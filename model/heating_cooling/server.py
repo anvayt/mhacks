@@ -34,12 +34,14 @@ def _mode(mode: str):
 def estimate(address: str | None = None, lat: float | None = None, lon: float | None = None,
              unit_sqft: float | None = None, mode: str = "normal", heating_fuel: str | None = None,
              building_type: str | None = None, window_panes: float | None = None, floor_level: float | None = None,
-             foundation_code: float | None = None, cooling_code: float | None = None, occupants: float | None = None):
+             foundation_code: float | None = None, cooling_code: float | None = None, occupants: float | None = None,
+             block_group: str | None = None):
     answers = {k: v for k, v in dict(window_panes=window_panes, floor_level=floor_level, foundation_code=foundation_code,
                                      cooling_code=cooling_code, occupants=occupants).items() if v is not None}
     try:
         return service.estimate_hc(address=address, lat=lat, lon=lon, unit_sqft=unit_sqft, mode=_mode(mode),
-                                   answers=answers, heating_fuel=heating_fuel, building_type=building_type)
+                                   answers=answers, heating_fuel=heating_fuel, building_type=building_type,
+                                   block_group=block_group)
     except ValueError as e:
         raise HTTPException(422, str(e))
 
