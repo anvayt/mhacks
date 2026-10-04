@@ -34,6 +34,8 @@ def _band(p50) -> dict:
 def estimate(url: str | None = None, address: str | None = None, unit_sqft: float | None = None) -> dict:
     if not (url or address):
         raise _fail(422, "missing_input", "Send a listing link or an Ann Arbor street address.")
+    if unit_sqft is not None and not 100 <= unit_sqft <= 10_000:  # the bill scales with it: -50 gave -$81/yr
+        raise _fail(422, "bad_unit_sqft", "Unit size should be the unit's floor area in square feet (100 to 10,000).")
     if url:
         link = resolve_link(url)
         if link["needs_address"] or not link["address"]:
@@ -63,7 +65,9 @@ def estimate(url: str | None = None, address: str | None = None, unit_sqft: floa
                     f"(start it: make -C model dashboard). {type(e).__name__}")
     if r.status_code == 422:
         raise _fail(422, "not_found", r.json().get("detail", "The model couldn't place this building."))
-    r.raise_for_status()
+    if r.is_error:  # any other model failure is a friendly 503, never a bare 500
+        raise _fail(503, "model_unavailable", f"The heating/cooling model failed on this building (HTTP {r.status_code}); "
+                    "try again or send another address.")
     hc = r.json()
     seasons = {s["season"]: s for s in hc["seasons"]}
     return {
