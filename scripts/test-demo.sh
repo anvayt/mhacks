@@ -51,6 +51,24 @@ printf 'PASS cleanup: nested child group stopped; unrelated sentinel survived.\n
 kill -0 "$sentinel"
 printf 'PASS selective restart: only owned target stopped, peer and unrelated sentinel survived.\n'
 
+# TUNNEL=localhostrun with a fake ssh (no network): only the tunnel line's URL counts (not the banner's
+# admin.localhost.run), ssh is the tracked PID, its open stdin never stops it, and cleanup removes it.
+mkdir "$TMP/bin"
+printf '#!/bin/bash\nprintf "go to https://admin.localhost.run/\\r\\nab12.lhr.life tunneled with tls termination, https://ab12.lhr.life\\r\\n"\ncat > /dev/null\n' > "$TMP/bin/ssh"
+chmod +x "$TMP/bin/ssh"
+PATH="$TMP/bin:$PATH" TUNNEL=localhostrun /bin/bash -c '
+    source "$1/scripts/demo-common.sh"
+    process_tracking
+    eval "$(sed -n "$3" "$1/scripts/demo-public.sh")"
+    start_tunnel web 3000
+    [[ "$TUNNEL_URL" == https://ab12.lhr.life ]]
+    sleep 1
+    [[ $(ps -o stat= -p "$LAST_PID") != T* ]]
+    echo "$LAST_PID" > "$2"
+' _ "$ROOT" "$TMP/ssh.pid" '/^start_tunnel() {/,/^}/p' > "$TMP/tunnel.log" 2>&1
+! kill -0 "$(cat "$TMP/ssh.pid")" 2>/dev/null
+printf 'PASS localhostrun: tunnel URL parsed past the banner; ssh tracked, running, cleaned up.\n'
+
 # A local HTTP stub exercises the future session/forecast contract. It is only a
 # test; demo-warm/check themselves always call real servers and never replay JSON.
 "$ROOT/api/.venv/bin/python" - "$TMP" <<'PYTEST' &
