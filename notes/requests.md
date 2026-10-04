@@ -1,6 +1,6 @@
 # Change requests
 <!-- - [ ] from P# → P#: what and why (task id) -->
-- [ ] from P1 → P2: wrap `model.hc.service.estimate_hc` in `/estimate` (season-level heating/cooling $ + weather) and `bill_check` in `/calibrate`. Branch `p1/heating-cooling`; see tasks/data_ml/P1-06-hc-service.md. Additive fields only (P1-06)
+- [ ] from P1 → P2: wrap `model.heating_cooling.service.estimate_hc` in `/estimate` (season-level heating/cooling $ + weather) and `bill_check` in `/calibrate`. Branch `p1/heating-cooling`; see tasks/data_ml/P1-06-hc-service.md. Additive fields only (P1-06)
 - [ ] from P1 → P2 (integration notes after merging P2 tasks, Oct 3):
   - **P2-03 overlap:** P1 already prices heating/cooling by month (EIA MI *marginal* gas $/ccf with fixed charges removed; EIA-861M avg electricity $/kWh, `model/data_sources/eia.py`) and splits by season from local degree-days. Either P2-03 reuses these for H+C, or P1 switches to P2-03's DTE tariffs once they exist. Pick one so H+C isn't priced twice.
   - **Building type + unit size:** P2-01's type from mailing-address unit counts beats P1's floor-area heuristic. Pass `building_type` and `unit_sqft` into `estimate_hc(...)`. Both are already parameters; 854 ft² default agrees.

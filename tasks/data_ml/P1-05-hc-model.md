@@ -27,7 +27,7 @@ For any building location, return **point estimates of heating and cooling energ
 5. ResStock (P1-02) heating/cooling intensities as the fallback and sanity check for small buildings.
 
 ## Outputs
-- `model/hc/train.py`, `model/hc/predict.py`, artifacts in `model/artifacts/` (git-ignored except small JSON)
+- `model/heating_cooling/train.py`, `model/heating_cooling/predict.py`, artifacts in `model/artifacts/` (git-ignored except small JSON)
 - `model/results/hc_validation.json` (held-out R², MAE, per model)
 
 ## Done when
@@ -35,7 +35,7 @@ For any building location, return **point estimates of heating and cooling energ
 - [ ] Seasonal heating/cooling $ for 5 real Ann Arbor complexes look plausible vs RECS/EIA
 
 ## Handoff
-- Code: `model/hc/changepoint.py`, `train.py` (monthly panel, for comparison), `building_model.py` (served), `validate.py`.
+- Code: `model/heating_cooling/changepoint.py`, `train.py` (monthly panel, for comparison), `building_model.py` (served), `validate.py`.
 - Metered: gas median R² 0.961 (n=108). Out-of-year annual error 4.2%; seasonal 7.4%.
 - Unmetered ≥10k ft²: blend of the ridge/MLR heating model + calibrated ResStock = **28.3%** seasonal median error on held-out real buildings (null 35.4%). Cooling is weak (features ≈ median).
 - Prices: EIA MI marginal gas $/ccf by month (R² 0.99); EIA-861M average electricity $/kWh by month.
