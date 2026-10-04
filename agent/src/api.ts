@@ -56,20 +56,27 @@ export interface Calibration {
   streak_months: number;
   badges: string[];
   estimate: Estimate;
+  /** P1: |pct| > noise_floor. Only winter months (Dec–Feb) are judged; null otherwise. */
+  meaningful?: boolean | null;
+  /** Percent: P1's typical winter-month error for this estimate path (null outside winter). */
+  noise_floor?: number | null;
+  note?: string;
 }
 
 export type CalibrateRequest =
   | { session_id: string; bill_image_base64: string }
-  | { session_id: string; therms: number; kwh: number; start: string; end: string };
+  | { session_id: string; therms: number; kwh?: number; start: string; end: string };
 
+/** One fix. P2 leaves a number null when it can't price it (no invented numbers), and usd_saved_yr can be negative. */
 export interface Fix {
   item: string;
   grh_points: number;
-  co2_kg_saved: number;
-  usd_saved_yr: number;
-  cost_usd: number;
-  rebate_usd: number;
-  new_grade: string;
+  co2_kg_saved: number | null;
+  usd_saved_yr: number | null;
+  cost_usd: number | null;
+  rebate_usd: number | null;
+  new_grade: string | null;
+  unpriced?: boolean;
 }
 
 /** GET /fixes/{session_id} (PLAN.md §10). */
@@ -77,6 +84,7 @@ export interface Fixes {
   fixes: Fix[];
   grh_points_now: number;
   grh_points_after: number;
+  grh_points_required?: number;
   landlord_email: string;
 }
 
