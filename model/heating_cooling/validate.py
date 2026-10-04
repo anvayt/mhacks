@@ -12,7 +12,7 @@
    - null:         the median metered heating slope for every building
    The three non-metered paths add the median metered non-heating gas (hot water, cooking) per ft²·day.
 
-Run: python -m model.hc.validate → results/validation_real.json
+Run: python -m model.heating_cooling.validate → results/validation_real.json
 """
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ from sklearn.model_selection import KFold
 
 from model import climate
 from model.data_sources.http import get_json
-from model.hc import changepoint
-from model.hc.building_model import TAU_H_GAS, zoo
-from model.hc.features import BUILDING, building_features
-from model.hc.service import DEFAULT_UNIT_SQFT_MF, _intensity_resstock
+from model.heating_cooling import changepoint
+from model.heating_cooling.building_model import TAU_H_GAS, zoo
+from model.heating_cooling.features import BUILDING, building_features
+from model.heating_cooling.service import DEFAULT_UNIT_SQFT_MF, _intensity_resstock
 from model.paths import PROCESSED, RESULTS
 
 NOAA = "https://www.ncei.noaa.gov/access/services/data/v1"

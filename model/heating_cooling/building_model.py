@@ -11,7 +11,7 @@ rescales it through degree-days at the building's own 800 m PRISM cell.
 Models compared with repeated 5-fold CV (one row per building, so no leakage): null (median), multiple linear
 regression, random forest, XGBoost. Targets are modelled in log space (they are right-skewed).
 
-Run: python -m model.hc.building_model
+Run: python -m model.heating_cooling.building_model
 """
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 
 from model import climate
-from model.hc.features import BUILDING, building_features
-from model.hc.train import building_table, cp_object
+from model.heating_cooling.features import BUILDING, building_features
+from model.heating_cooling.train import building_table, cp_object
 from model.paths import ARTIFACTS, PROCESSED, RESULTS
 
 # pooled balance points used to rescale predicted intensities by local weather (medians of the per-building fits)

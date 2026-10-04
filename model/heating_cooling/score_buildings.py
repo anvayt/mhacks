@@ -1,11 +1,11 @@
 """Pre-score every metered Ann Arbor residential property (typical year, per UNIT_SQFT apartment)
 plus every large residential footprint parcel (≥ 10,000 ft² estimated floor area) for the map/leaderboard.
 
-Run: python -m model.hc.score_buildings → data/processed/buildings_hc.parquet (+ .csv)
+Run: python -m model.heating_cooling.score_buildings → data/processed/buildings_hc.parquet (+ .csv)
 """
 import pandas as pd
 
-from model.hc import service
+from model.heating_cooling import service
 from model.paths import PROCESSED
 
 UNIT_SQFT = service.DEFAULT_UNIT_SQFT_MF
