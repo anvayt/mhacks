@@ -9,7 +9,9 @@ import {
   redirectUrl,
   removeSharedUserByPhone,
 } from "../src/photon.ts";
-import { NOT_LIVE, WELCOME, inboundText, replyFor } from "../src/replies.ts";
+import { UNREACHABLE, httpApi } from "../src/api.ts";
+import { Conversations } from "../src/conversation.ts";
+import { WELCOME, inboundText } from "../src/replies.ts";
 
 test("normalizePhone handles common US inputs and E.164", () => {
   assert.equal(normalizePhone("(734) 555-0123"), "+17345550123");
@@ -66,23 +68,24 @@ test("redirectUrl pre-fills the text-only opener", () => {
   assert.doesNotMatch(OPENER, /https?:/);
 });
 
-// API unreachable: links and addresses get NOT_LIVE (replies.test.ts covers the API answering).
+// API unreachable: links and addresses get UNREACHABLE (replies.test.ts covers the API answering).
 const down = (async () => {
   throw new TypeError("fetch failed");
 }) as typeof fetch;
+const reply = (text: string) => new Conversations(httpApi("http://api", down)).reply("chat", text);
 
-test("replyFor: listings and addresses get NOT_LIVE while the API is down, anything else the welcome, and no numbers are invented", async () => {
-  assert.equal(await replyFor("https://www.zillow.com/homedetails/123-Main-St-Ann-Arbor-MI-48104/1_zpid/", down), NOT_LIVE);
-  assert.equal(await replyFor("1100 S University Ave, Ann Arbor", down), NOT_LIVE);
-  assert.equal(await replyFor("hi", down), WELCOME);
-  assert.doesNotMatch(WELCOME + NOT_LIVE, /\$\d/);
+test("while the API is down, listings and addresses get UNREACHABLE, anything else the welcome, and no numbers are invented", async () => {
+  assert.equal(await reply("https://www.zillow.com/homedetails/123-Main-St-Ann-Arbor-MI-48104/1_zpid/"), UNREACHABLE);
+  assert.equal(await reply("1100 S University Ave, Ann Arbor"), UNREACHABLE);
+  assert.equal(await reply("hi"), WELCOME);
+  assert.doesNotMatch(WELCOME + UNREACHABLE, /\$\d/);
 });
 
 test("inboundText answers text and pasted links, ignores reactions and typing", async () => {
   assert.equal(inboundText({ type: "text", text: "hi" }), "hi");
   const url = "https://www.redfin.com/MI/Ann-Arbor/1-Main-St-48104/home/1";
   assert.equal(inboundText({ type: "richlink", url }), url);
-  assert.equal(await replyFor(inboundText({ type: "richlink", url })!, down), NOT_LIVE);
+  assert.equal(await reply(inboundText({ type: "richlink", url })!), UNREACHABLE);
   assert.equal(inboundText({ type: "reaction" }), null);
   assert.equal(inboundText({ type: "typing" }), null);
 });
