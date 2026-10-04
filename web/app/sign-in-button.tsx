@@ -15,7 +15,7 @@ function SignUpHeader() {
       <h1 className="board-title">Save your home and progress</h1>
       <ul className="board-note" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
         <li>Keep your grade and answers when you come back</li>
-        <li>Save commitments and track your habit streak</li>
+        <li>Save commitments and track the carbon and money you cut</li>
         <li>Optional monthly check-ins by text: you choose on the next step</li>
       </ul>
     </>

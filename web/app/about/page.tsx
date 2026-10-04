@@ -10,7 +10,7 @@ const steps = [
   "01 / Paste a listing",
   "02 / See the real cost",
   "03 / Ask three questions",
-  "04 / Compare. Improve. Share.",
+  "04 / Cut cost and carbon. Compete.",
 ];
 
 export default function AboutPage() {
@@ -35,8 +35,8 @@ export default function AboutPage() {
             </h1>
             <p className="subhead">The listing tells half the story.</p>
             <p className="description">
-              Hidden Rent shows the energy bill a rental listing doesn&apos;t, and turns it into a score you can
-              compare, improve and brag about.
+              Hidden Rent shows the energy bill a rental listing doesn&apos;t, and the carbon behind it, then turns
+              it into a score you can compare, improve and brag about.
             </p>
             <ListingForm />
           </div>

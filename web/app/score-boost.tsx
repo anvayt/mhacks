@@ -86,7 +86,7 @@ export function ScoreBoost({ session }: { session: string | null }) {
 
   return (
     <section className="board" aria-labelledby="boost-heading" style={{ marginTop: 24 }}>
-      <p className="eyebrow">What would change it</p>
+      <p className="eyebrow">Cut cost and carbon</p>
       <h2 className="board-title" id="boost-heading">Raise your score</h2>
       {!items && !error && <p role="status" className="board-note">Running our model on changes for this home…</p>}
       {items && !modeled.length && (
@@ -94,7 +94,10 @@ export function ScoreBoost({ session }: { session: string | null }) {
       )}
       {!!modeled.length && (
         <>
-          <p className="board-note">Pick one or more to see the projected effect. Projected only: your current score stays until a real bill shows the change.</p>
+          <p className="board-note">
+            Ranked by carbon avoided per dollar. Pick one or more to see the projected effect on your score, your bill and the
+            planet. Projected only: your current score stays until a real bill shows the change.
+          </p>
           <div className={styles.choices}>
             {modeled.map((s) => (
               <button key={s.catalog_id} type="button" className={`control choice ${styles.choice}`} aria-pressed={chosen.includes(s.catalog_id)}
@@ -102,8 +105,8 @@ export function ScoreBoost({ session }: { session: string | null }) {
                 <span>{s.title}</span>
                 <small>{who(s.who_acts)}</small>
                 <small>
-                  Score +{s.projected!.score_delta.toFixed(0)} → grade {s.projected!.new_grade} · {money(s.projected!.usd_saved_yr)}/yr ·{" "}
-                  {kg(s.projected!.co2_kg_saved_yr)} CO₂/yr{s.grh_points ? ` · +${s.grh_points} Green Rental Housing points` : ""}
+                  🌍 {kg(s.projected!.co2_kg_saved_yr)} CO₂/yr less · {money(s.projected!.usd_saved_yr)}/yr · score +{s.projected!.score_delta.toFixed(0)} → grade{" "}
+                  {s.projected!.new_grade}{s.grh_points ? ` · +${s.grh_points} Green Rental Housing points` : ""}
                 </small>
               </button>
             ))}
@@ -119,7 +122,7 @@ export function ScoreBoost({ session }: { session: string | null }) {
               {projection.current.grade !== projection.projected.grade ? ` (grade ${projection.current.grade} → ${projection.projected.grade})` : ` (grade ${projection.projected.grade})`}
             </strong>
             <span>
-              {money(projection.delta.usd_saved_yr)}/yr {projection.delta.usd_saved_yr >= 0 ? "saved" : "more"} · {kg(projection.delta.co2_kg_saved_yr)} CO₂/yr avoided
+              🌍 {kg(projection.delta.co2_kg_saved_yr)} CO₂/yr avoided · {money(projection.delta.usd_saved_yr)}/yr {projection.delta.usd_saved_yr >= 0 ? "saved" : "more"}
             </span>
             <span className="board-note">
               <strong>Why:</strong> {why(projection)}
@@ -167,7 +170,7 @@ function StayOnTrack() {
         <>
           <p className="board-note">
             Want a monthly text check-in? We&apos;ll ask if you still live here and check your bill against the weather, so you can see
-            whether these changes actually worked. Only if you say yes; at most one text a day; reply STOP anytime.
+            whether these changes actually cut your energy use and carbon. Only if you say yes; at most one text a day; reply STOP anytime.
           </p>
           <div className={styles.actions}>
             <Link className="action" href="/signin?next=/grade" style={{ textDecoration: "none" }}>
