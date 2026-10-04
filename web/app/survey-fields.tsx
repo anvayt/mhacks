@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Leaderboard } from "./leaderboard";
 import { RankingScreen } from "./ranking-screen";
@@ -23,10 +24,6 @@ const choices = [
 ] as const;
 
 const questions = [
-  {
-    id: "insulation-year",
-    label: "Insulation or air-sealing work since this year",
-  },
   {
     id: "this-month-gas-bill",
     label: "This month's gas bill",
@@ -113,7 +110,7 @@ function SurveyChoices({
   );
 }
 
-function LoadingSheet({ onFinished }: { onFinished: () => void }) {
+export function LoadingSheet({ onFinished }: { onFinished: () => void }) {
   const [raised, setRaised] = useState(false);
   const [filling, setFilling] = useState(false);
   const onFinishedRef = useRef(onFinished);
@@ -121,9 +118,9 @@ function LoadingSheet({ onFinished }: { onFinished: () => void }) {
 
   useEffect(() => {
     const raise = requestAnimationFrame(() => setRaised(true));
-    const fill = window.setTimeout(() => setFilling(true), 650);
-    const lower = window.setTimeout(() => setRaised(false), 2900);
-    const done = window.setTimeout(() => onFinishedRef.current(), 3600);
+    const fill = window.setTimeout(() => setFilling(true), 900);
+    const lower = window.setTimeout(() => setRaised(false), 4600);
+    const done = window.setTimeout(() => onFinishedRef.current(), 5500);
     return () => {
       cancelAnimationFrame(raise);
       window.clearTimeout(fill);
@@ -142,12 +139,18 @@ function LoadingSheet({ onFinished }: { onFinished: () => void }) {
   );
 }
 
-export function SurveyFields() {
+export function SurveyFields({ onNext, leaving = false }: { onNext?: () => void; leaving?: boolean } = {}) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [stage, setStage] = useState<"survey" | "loading" | "score" | "board">("survey");
+  const [exit, setExit] = useState(false);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (onNext) {
+      setExit(true);
+      window.setTimeout(onNext, 900);
+      return;
+    }
     setStage("loading");
   }
 
@@ -155,8 +158,8 @@ export function SurveyFields() {
   if (stage === "board") return <Leaderboard />;
 
   return (
-    <main className="survey-screen">
-      <form className={stage === "loading" ? "dossier survey-leave" : "dossier"} onSubmit={onSubmit}>
+    <main className="survey-screen dim-screen">
+      <form className={leaving || exit || stage === "loading" ? "dossier survey-leave" : "dossier"} onSubmit={onSubmit}>
       {choices.map((question) => (
         <SurveyChoices
           key={question.id}
@@ -177,10 +180,16 @@ export function SurveyFields() {
         />
       ))}
       <div className="actions">
-        <button className="action" type="submit">
-          Next
-          <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
-        </button>
+        <div className="action-row">
+          <Link className="back-action" href="/address">
+            <span className="back-arrow" aria-hidden="true" />
+            Back
+          </Link>
+          <button className="action" type="submit">
+            Next
+            <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
+          </button>
+        </div>
       </div>
     </form>
       {stage === "loading" ? <LoadingSheet onFinished={() => setStage("score")} /> : null}
