@@ -1,17 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"; // /api (PLAN.md §10)
 const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787"; // P4's iMessage onboarding page
 
-export function ListingForm() {
+export function ListingForm({
+  onPicked,
+  submitLabel = "Find my hidden rent",
+  backHref,
+}: {
+  onPicked?: (listing: string) => void;
+  submitLabel?: string;
+  backHref?: string;
+}) {
   const [listing, setListing] = useState("");
   const [result, setResult] = useState<string | null>(null);
 
   // ponytail: integration wiring only; the real report card (grade, range bar, questions) is P3's to build.
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (onPicked) {
+      onPicked(listing);
+      return;
+    }
     setResult("Looking it up…");
     const input = /https?:\/\//i.test(listing) ? { url: listing } : { address: listing };
     try {
@@ -53,10 +66,18 @@ export function ListingForm() {
         </div>
       </div>
       <div className="actions">
-        <button className="action" type="submit">
-          Find my hidden rent
-          <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
-        </button>
+        <div className="action-row">
+          {backHref ? (
+            <Link className="back-action" href={backHref}>
+              <span className="back-arrow" aria-hidden="true" />
+              Back
+            </Link>
+          ) : null}
+          <button className="action" type="submit">
+            {submitLabel}
+            <img src="/hero/arrow-up-right.svg" alt="" width={16} height={16} />
+          </button>
+        </div>
         <a className="imessage" href={ONBOARD}>
           Or start by iMessage ↗
         </a>
