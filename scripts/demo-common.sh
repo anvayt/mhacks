@@ -65,15 +65,41 @@ start_owned() {
     (cd "$dir" && exec "$@") > "$DEMO_LOG_DIR/$name.log" 2>&1 &
     track_owned "$!" "$name"
 }
+cleanup_before() { :; }
+cleanup_extra() { :; }
+
+# Explicitly release one group this process started; never read PID files here.
+stop_owned() {
+    local target=$1 group index round
+    for ((index=0; index<${#OWNED_GROUPS[@]}; index++)); do
+        group=${OWNED_GROUPS[$index]}
+        [[ "$group" == "$target" ]] || continue
+        kill -TERM -- "-$group" 2>/dev/null || true
+        for round in 1 2 3 4 5; do
+            kill -0 -- "-$group" 2>/dev/null || break
+            sleep 1
+        done
+        kill -KILL -- "-$group" 2>/dev/null || true
+        wait "${OWNED_PIDS[$index]}" 2>/dev/null || true
+        unset 'OWNED_GROUPS[index]' 'OWNED_PIDS[index]'
+        set +u
+        OWNED_GROUPS=("${OWNED_GROUPS[@]}"); OWNED_PIDS=("${OWNED_PIDS[@]}")
+        set -u
+        return
+    done
+    fail "Refusing to stop an unowned process group"
+}
+
 cleanup() {
     local status=$? group pid round alive
     trap - EXIT INT TERM
+    cleanup_before
     set +eu  # Bash 3.2 treats an empty array expansion as unbound under nounset.
     for group in "${OWNED_GROUPS[@]}"; do
         [[ "$group" != "$SELF_GROUP" && "$group" -gt 1 ]] && kill -TERM -- "-$group" 2>/dev/null
     done
     # A group can outlive npm/make; wait on group existence, not only its leader.
-    for round in 1 2 3 4 5; do
+    for round in 1 2 3 4 5 6 7 8 9 10; do
         alive=0
         for group in "${OWNED_GROUPS[@]}"; do kill -0 -- "-$group" 2>/dev/null && alive=1; done
         [[ "$alive" == 0 ]] && break
@@ -83,6 +109,7 @@ cleanup() {
         [[ "$group" != "$SELF_GROUP" && "$group" -gt 1 ]] && kill -KILL -- "-$group" 2>/dev/null
     done
     for pid in "${OWNED_PIDS[@]}"; do wait "$pid" 2>/dev/null; done
+    cleanup_extra
     printf 'Stopped only processes started by this run. Logs: %s\n' "$DEMO_LOG_DIR"
     exit "$status"
 }
