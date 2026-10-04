@@ -101,6 +101,10 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
                 Share preview
                 <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
               </Link>
+              <Link className="ghost-action" href={`/watch?session=${session}`}>
+                Watch your report
+                <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
+              </Link>
               <a className="ghost-action" href={imessageUrl(session)}>
                 Continue in iMessage
                 <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
