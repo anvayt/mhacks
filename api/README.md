@@ -25,7 +25,9 @@ uv run uvicorn app.main:app --reload --port 8000
   (`cooling_code=0`) is never sent to P1's model (outside its training data); cooling is zeroed instead, in /estimate,
   /answer, /fixes and /forecast alike. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
   `hint`, `not_found`, `not_a_home`, `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is
-  down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS` (default `http://localhost:3000`, for `/web`).
+  down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS`, comma-separated (default `http://localhost:3000`,
+  for `/web`); the web integration dev servers on 3001–3003 must be listed, e.g.
+  `WEB_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003`.
 - `POST /answer` `{"session_id", "question_id", "answer"}` → same shape, re-run with every answer so far (narrower band,
   next questions, `locked: true` once the span is one grade or no question moves the estimate). `answer` is an option
   value, label words ("double pane") or "skip". 422 `bad_answer` (message lists the options), 404 `not_found`.
@@ -105,7 +107,22 @@ uv run uvicorn app.main:app --reload --port 8000
   `bill_id, verified, verification_status, verification_rule, verified_commitment_ids, impact, snapshot,
   model_version`. Errors: 404 `property_not_found`, 409 `bill_already_used`, 422 `property_session_mismatch`. Without
   `property_id` the response is exactly the old one. Snapshots: `initial_estimate` (POST /properties, /auth/phone
-  handoff), `questionnaire` (each /answer on a saved home), `bill_regrade`.
+  handoff), `questionnaire` (each /answer on a saved home), `bill_regrade`. A bill regrade is damped (the implied year
+  is clamped to the model's p10–p90 for the home) and is `provisional: true` (label "early signal from one bill: …
+  so your grade doesn't change") unless P1 calls the bill `meaningful`; provisional snapshots never become the current
+  grade (`/me current_grade`, `/leaderboard/position`). The response's `bill_signal {grade, score, annual_usd,
+  pct_vs_expected_for_weather, label}` carries the bill-based numbers either way.
+- Wave 6, for the web: `heating_fuel` answer `included` ("Heat is included in my rent"): the model keeps the
+  block-group fuel, so grade/score/percentiles/co2_t rate the building; the renter's `bill` (annual, seasonal,
+  monthly) is cooling only, `bill.building_annual` keeps the building's band, `bill.note` says so, and
+  `hidden_rent_usd_mo` compares cooling only (`hidden_rent_method`); /fixes, /forecast and /projection count the
+  renter's $ as cooling only. `/calibrate` also takes `amount_usd` (with start, end; `kwh` optional) when the gas used
+  isn't known: (amount − DTE's $15.40 Rate A monthly customer charge, Oct 2026 rate card) ÷ P1's EIA marginal $/ccf for
+  the bill's month (`model/data/processed/prices_mi.json`), flagged `extracted.estimated_from_amount` with a `note`;
+  and `gas_unit: ccf | therms` for the typed number (default therms). `POST /properties {user_id, session_id}` adopts
+  an answered session (no re-estimate). No auth, by session: `GET /commitments/suggested?session_id=`,
+  `POST /projection {session_id, commitment_ids: [catalog ids]}` (what-if: `id: null`, not stored),
+  `GET /leaderboard/position?session_id=[&catalog_ids=a,b]` (ghost marker from that what-if).
 - Reminders (`app/reminders.py`; never sends anything): agent key only: `GET /reminders/due?now=` → `[{reminder_id,
   user_id, handle, kind: checkin|task|weather, text_hint, property_id, commitment_id?}]` (at most one per user a local
   day, only in the user's `hour_local`, 8 AM–10 PM, iMessage channel, not paused/stopped, paused after 2 unanswered);
