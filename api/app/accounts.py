@@ -4,7 +4,7 @@ PROPERTIES = {}
 
 
 def normalize_handle(raw: str) -> str:
-    return ""
+    return None
 
 
 def get_user(user_id: str) -> dict | None:
