@@ -24,14 +24,14 @@ Ann Arbor's meters only cover properties of 10,000 ft² and up. This task covers
 - Multifamily calibration factors come from real meters (`model/results/resstock_hc_validation.json`).
 
 ## Done when
-- [x] `model/hc/resstock_model.py` trained: gas heating median APE 0.25 → 0.21 with answers; cooling 0.38 → 0.32
+- [x] `model/heating_cooling/resstock_model.py` trained: gas heating median APE 0.25 → 0.21 with answers; cooling 0.38 → 0.32
 - [x] Calibration to meters: heating ×1.14, cooling ×0.63 (multifamily)
-- [x] Leakage question answered (`model/hc/leakage_analysis.py`)
+- [x] Leakage question answered (`model/heating_cooling/leakage_analysis.py`)
 - [ ] ResStock monthly timeseries check of the degree-day seasonal split (NREL per-building timeseries, sample of Washtenaw homes)
 
 ## Handoff
-- `model/hc/resstock_model.py`: per-degree-day XGBoost (gas heat, electric heat, cooling) with optional renter-knowable answers (window panes, floor level, foundation, cooling type, occupants), trained with random answer masking.
+- `model/heating_cooling/resstock_model.py`: per-degree-day XGBoost (gas heat, electric heat, cooling) with optional renter-knowable answers (window panes, floor level, foundation, cooling type, occupants), trained with random answer masking.
 - Heating median APE 0.248 → 0.211 with answers; cooling 0.380 → 0.319 (simulation hold-out).
 - Calibrated to real meters for multifamily: heating ×1.14, cooling ×0.63. On held-out *real* Ann Arbor buildings, calibrated ResStock alone gets 29.6% seasonal error (better than the meter-trained regression's 31.2%), and the blend gets 28.3%.
 - The seasonal split was validated on real meters (`validate.py`) instead of ResStock timeseries, which is more grounded.
-- Leakage analysis: `model/hc/leakage_analysis.py` → `results/leakage_analysis.json`.
+- Leakage analysis: `model/heating_cooling/leakage_analysis.py` → `results/leakage_analysis.json`.
