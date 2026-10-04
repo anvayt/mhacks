@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-10-04T06:01:29.920025+00:00",
+  "scored": 25670,
+  "candidates": 25670,
+  "seconds": 28.51,
+  "benchmark_calls": 200,
+  "benchmark_seconds": 3.26,
+  "complete": true,
+  "stopped_after_benchmark": false,
+  "projected_minutes": 6.96,
+  "failures": [],
+  "sources": {
+    "benchmark": "https://utility.arcgis.com/usrsvcs/servers/1e3bed4240284b40b0c4fea6f8cb4522/rest/services/OSI/BenchmarkingPerformanceMetrics/FeatureServer/0",
+    "block_groups": "https://tigerweb.geo.census.gov/arcgis/rest/services/Census2020/tigerWMS_Census2020/MapServer/8"
+  },
+  "percentile": "midpoint empirical: 100 * (less + 0.5 * equal) / N, within building type",
+  "notes": "Predicted heating + cooling only; P2-01 plus lookup-fixes residential/size guards; census tracts proxy neighborhoods.",
+  "reused": 23928,
+  "scored_this_run": 1742,
+  "initial_baseline_seconds": 535.23,
+  "total_scoring_seconds": 563.74
+}

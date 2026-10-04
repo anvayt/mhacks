@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.city import router as city_router
 from app.compare import router as compare_router
 from app.estimate import estimate, router as estimate_router
 from app.fixes import router as fixes_router
@@ -20,6 +21,7 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("WEB_ORIGINS", "
 app.include_router(fixes_router)
 app.include_router(forecast_router)
 app.include_router(compare_router)
+app.include_router(city_router)
 
 
 class EstimateRequest(BaseModel):
