@@ -25,6 +25,8 @@ from shapely.geometry import Point, mapping, shape
 from app.geo import ADDRESSES_PATH, FOOTPRINTS_PATH
 
 NEAREST_MAX_M = 25.0
+# P3 web/HOUSE_SCHEMA.md §3 / build_map_fixture.py: about 9 m E–W or 12 m N–S here.
+MAILING_SNAP_DEG = 1.1e-4
 CITY_POINT_MAX_M = 250.0
 # Reuse the existing 250 m city-point tolerance only for footprints containing this exact street line.
 # This is an address-constrained fallback, never a wider nearest-building guess.
@@ -68,6 +70,7 @@ class _Index:
     addr_street: np.ndarray
     addr_residential: np.ndarray  # TYPE == "General Mailing" (not University/Public School/Vacant/...)
     addr_utm: np.ndarray
+    addr_wgs: np.ndarray
     addr_tree: shapely.STRtree
     addr_by_street: dict[str, int]
     units_by_street: Counter[str]
@@ -84,17 +87,19 @@ def _index() -> _Index:
     wgs = np.array([shape(f["geometry"]) for f in fp])
     utm = _project(wgs)
 
-    ad = [a for a in json.loads(ADDRESSES_PATH.read_text())["features"] if a["geometry"]]
+    ad = sorted((a for a in json.loads(ADDRESSES_PATH.read_text())["features"] if a["geometry"]),
+                key=lambda a: a["properties"]["OBJECTID"])
     street = np.array([a["properties"]["PROPSTREET"].strip().upper() for a in ad])
     residential = np.array([a["properties"]["TYPE"] == "General Mailing" for a in ad])
-    addr_utm = _project(np.array([shape(a["geometry"]) for a in ad]))
+    addr_wgs = np.array([shape(a["geometry"]) for a in ad])
+    addr_utm = _project(addr_wgs)
 
     # Height -> stories: least-squares fit of ABG_BLD_HG (ft) on STORIES over the footprints that
     # have both (14,9xx rows; ~11.1 ft/story + 1.4 ft). 85% exact, 99% within one story on those rows.
     hs = np.array([(p["ABG_BLD_HG"], p["STORIES"]) for p in props if p["STORIES"] and p["ABG_BLD_HG"]])
     slope, offset = np.polyfit(hs[:, 1], hs[:, 0], 1)
 
-    return _Index(props, wgs, utm, shapely.STRtree(utm), street, residential, addr_utm, shapely.STRtree(addr_utm),
+    return _Index(props, wgs, utm, shapely.STRtree(utm), street, residential, addr_utm, addr_wgs, shapely.STRtree(addr_utm),
                   _first_by_key(street), Counter(street_key(s) for s in street if " UNIT " in s),
                   float(slope), float(offset))
 
@@ -147,6 +152,37 @@ def _addresses_in(ix: _Index, i: int) -> list[str]:
     # A building listed both as "12 MAIN ST" and "12 MAIN ST UNIT 1..n" has n units, not n+1.
     bases = {s.split(" UNIT ")[0] for s in hits if " UNIT " in s}
     return sorted(hits - bases)
+
+
+def mailing_assignment(ix: _Index) -> np.ndarray:
+    """Shared city/scoring join: P3 HOUSE_SCHEMA §3, in WGS84 degrees.
+
+    Each mailing row (every TYPE) belongs to its containing footprint, else the
+    nearest within 1.1e-4 degrees. First STRtree hit resolves overlapping roofs.
+    P2's address-bearing preference remains specific to individual geocoder
+    lookup: applying it to every city point moves labels onto neighboring homes.
+    """
+    tree = shapely.STRtree(ix.wgs)
+    result = np.full(len(ix.addr_street), -1, dtype=int)
+    for j, point in enumerate(ix.addr_wgs):
+        hits = tree.query(point, predicate="within")
+        if not len(hits):
+            hits = tree.query_nearest(point, max_distance=MAILING_SNAP_DEG)
+        if len(hits):
+            result[j] = int(hits[0])
+    return result
+
+
+def mailing_labels(ix: _Index, assignments: np.ndarray) -> dict[int, str]:
+    """P3's most common street line; ties keep first mailing OBJECTID."""
+    counts: dict[int, Counter] = {}
+    for j, i in enumerate(assignments):
+        if i >= 0:
+            street = re.split(r"\s+(?:UNIT|APT|STE|#)\s*", ix.addr_street[j].strip(), maxsplit=1)[0]
+            label = " ".join(word if word[:1].isdigit() else word.capitalize() for word in street.split())
+            if label:
+                counts.setdefault(int(i), Counter())[label] += 1
+    return {i: lines.most_common(1)[0][0] for i, lines in counts.items()}
 
 
 def find_building(lon: float, lat: float, streets: list[str] = ()) -> Building:

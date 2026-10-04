@@ -1,0 +1,47 @@
+{
+  "footprints": 35007,
+  "scored": 25704,
+  "unscored": 9303,
+  "city_residential": 32572,
+  "p3_labeled": 25994,
+  "city_labeled": 25994,
+  "changed_labels_vs_p3": 0,
+  "assigned_mailing_rows": 61450,
+  "unassigned_mailing_rows": 3688,
+  "raw_bytes": 13442744,
+  "gzip_bytes": 2506627,
+  "unrounded_raw_bytes": 18179683,
+  "unrounded_gzip_bytes": 4959960,
+  "first_request_seconds": 1.283,
+  "http_status": 200,
+  "http_content_encoding": "gzip",
+  "mary": {
+    "id": 1317,
+    "h": 23.7,
+    "r": 1,
+    "a": "912 Mary St",
+    "score": 16.573927,
+    "grade": "F",
+    "excess_usd_per_sqft": 0.69275866,
+    "type": "Multi-Family with 2 - 4 Units"
+  },
+  "city_leaderboard_status": 200,
+  "neighborhood_leaderboard_status": 200,
+  "city_costs_count": 25704,
+  "cache_sha256": {
+    "a2_footprints.geojson": "83782ac8ca6f691d4d899158e7cd610475b57004c56c0835437d5bc14b3c09ba",
+    "a2_mailing_addresses.geojson": "ddd46570237b6573ac449633b6f5e46d071de976dde0b21ab8d4c0071fae8e98"
+  },
+  "mailing_assignment": {
+    "rule": "P3 HOUSE_SCHEMA section 3: inside footprint, else nearest within 1.1e-4 WGS84 degrees; first STRtree hit; every mailing TYPE",
+    "label": "Most common street line after stripping UNIT/APT/STE/#; title case; ties in mailing OBJECTID order",
+    "reference": "web/HOUSE_SCHEMA.md section 3 and web/scripts/build_map_fixture.py",
+    "reference_branch": "p3/map-widget",
+    "reference_revision": "34cb119fa3e4e5726a5601044dbc40aad0f69b52",
+    "comparison": "Same cached footprint and mailing-address snapshots; no P3 labels changed. P2 geocoder lookup keeps its separate 25 m address-bearing preference."
+  },
+  "sources": {
+    "footprints": "https://a2maps.a2gov.org/a2arcgis/rest/services/OSI/BuildingFootprints/FeatureServer/0",
+    "mailing_addresses": "https://a2maps.a2gov.org/a2arcgis/rest/services/MailingAddress/FeatureServer/0"
+  }
+}
