@@ -3,20 +3,22 @@
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
 in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
 
+model-data.zip: https://drive.google.com/file/d/1vPeqWjf1fGszt8odAUCstQ1Z1lUcO6ZS/view?usp=sharing
+
 ## Make commands
 
 Everything runs from the `dev` branch, at the repo root.
 
 | Command | What it does |
 |---|---|
-| `make install` | One-time setup: Python/Node deps, city GIS, trained model. Put `model-data.zip` (from the team share) in the repo root first, or it downloads (~1 h) and trains. |
+| `make install` | One-time setup: Python/Node deps, city GIS, trained models. Put `model-data.zip` (from the team share) in the repo root first, or it downloads data and trains (~8 min). |
 | `make demo` | Start model, API, web, onboarding and the chat agent. |
 | `make demo-warm` | Pre-warm demo estimates and maps (second terminal). |
 | `make demo-warm-city` | Pre-warm whole-city caches (~2 min, once). |
 | `make demo-public` | Public HTTPS tunnels for the demo (needs `brew install cloudflared`). |
 | `make demo-check` | Offline check of API + model. |
-| `make data-bundle` | Write `model-data.zip` (data + trained model) to share with the team. |
-| `make -C model build` | Retrain the model on this machine. |
+| `make data-bundle` | Write `model-data.zip` (data + the trained models in `model/artifacts/`) to share with the team. |
+| `make -C model build` | Retrain the models on this machine. |
 
 ## Run the demo
 
@@ -200,7 +202,7 @@ Secrets go only in git-ignored `.env` files; every variable name is in [`.env.ex
 
 Model build outputs (`model/artifacts/`, `model/data/processed/`, the generated files in `model/results/`) are
 git-ignored and travel in `model-data.zip` as one set: the server reads them together, so never mix files from two
-trainings. To retrain on this machine: `make -C model build`.
+trainings. To retrain them on this machine: `make -C model build`.
 
 Start order: model, then api, then agent / web. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
 `http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` and the web form at `NEXT_PUBLIC_API_BASE_URL`

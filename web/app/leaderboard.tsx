@@ -7,6 +7,7 @@ import { ListingForm } from "./listing-form";
 import { apiFetch, ApiError, load, save } from "./lib/api";
 import { BillCheck } from "./board/bill-check";
 import { FastForward } from "./board/fast-forward";
+import { ReminderSettings } from "./reminder-settings";
 import { billRange, errorText, gradeSpan, kg, money, type Calibration, type Commitment, type Estimate, type Position, type Projection, type PublicBoard, type Snapshot, type Suggestion, type VerifiedBoard } from "./board/api";
 import styles from "./board/board.module.css";
 
@@ -230,6 +231,7 @@ export function Leaderboard() {
           {!!accepted.length && context.signed && <div className={styles.actions}><button type="button" className="control choice" onClick={connectCalendar} disabled={!!busy}>Connect calendar (optional)</button>{calendar && <a href={calendar.auth_url} target="_blank" rel="noreferrer">{calendar.mock ? "Open demo calendar connection" : "Continue calendar connection"} ↗</a>}</div>}
           {notice && <p role="status" className={styles.status}>{notice}</p>}
         </section>}
+        {context?.signed && <ReminderSettings />}
         <section className={styles.section}><h2 className="eyebrow">Change address?</h2><div className="choice-row"><button type="button" className="control choice" aria-pressed={monthly === "address"} onClick={() => setMonthly("address")}>Yes</button><button type="button" className="control choice" aria-pressed={monthly === "bill"} onClick={() => setMonthly("bill")} disabled={!context}>No</button></div>
           {monthly === "address" && <><ListingForm onPicked={move} submitLabel={busy === "move" ? "Looking it up…" : "Find my hidden rent"} />{moveError && <p role="alert" className={`${styles.status} ${styles.error}`}>{moveError}</p>}{context?.signed && <p className="board-note">Saving the new address archives your previous home and starts a new baseline.</p>}</>}
           {monthly === "bill" && context && <BillCheck key={context.sessionId} sessionId={context.sessionId} propertyId={context.propertyId} currentGrade={current ? gradeSpan(current.grade, snapshot?.grade_span ?? estimate?.grade_span) : estimate ? gradeSpan(estimate.grade, estimate.grade_span) : null} onChecked={checked} />}
