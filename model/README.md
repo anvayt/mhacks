@@ -94,10 +94,10 @@ e["annual"]    # yearly totals
 Units: gas in **ccf** (1 ccf ≈ 1.04 therms), electricity in **kWh**, money in **USD**. Building totals are scaled to
 the unit by floor area.
 
-**Dollars are estimates, not measurements.** `usd` = estimated energy × the Michigan statewide residential price by
-month (US EIA: gas at the marginal price with fixed charges removed, derived by regression from EIA revenue and
-volume; electricity at the EIA-861M average price). No cost or bill data exists for any building. Only **energy** is
-validated against real meters, and every accuracy figure refers to energy.
+**Dollars are a conversion, not a prediction.** `usd` = the estimated energy × the Michigan statewide residential
+price for that month (US EIA: gas at the marginal price with fixed charges removed, derived by regression from EIA
+revenue and volume; electricity at the EIA-861M average price). Present them as "≈ $X at EIA Michigan prices". No
+bill data exists for any building. The model estimates **energy**, and every accuracy figure refers to energy.
 
 ### Whole-city table: no calls needed
 
