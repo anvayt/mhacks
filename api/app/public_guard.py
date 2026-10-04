@@ -29,7 +29,7 @@ def protected(method, path, query_string=b""):
         "/estimate", "/answer", "/compare", "/calibrate", "/projection", "/properties", "/auth/web/start",
         "/simulate/fast-forward",  # runs the same what-if as /projection
     }) or (method == "GET" and any(path == p or path.startswith(p + "/") for p in (
-        "/map", "/forecast", "/fixes", "/debug/features",
+        "/map", "/forecast", "/fixes", "/debug/features", "/narration",  # narration: paid xAI TTS on a cache miss
     )))
 
 
