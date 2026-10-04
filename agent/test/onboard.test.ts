@@ -20,11 +20,11 @@ before(async () => {
 });
 after(() => server.close());
 
-const join = (phone: string) =>
+const join = (phone: string, extra: Record<string, string> = {}) =>
   fetch(`${base}/join`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ phone, name: "Ada" }),
+    body: new URLSearchParams({ phone, name: "Ada", ...extra }),
     redirect: "manual",
   });
 
@@ -67,4 +67,29 @@ test("GET /card is a printable page with the QR inline", async () => {
   assert.match(body, /hidden rent\?/);
   assert.match(body, /<svg/);
   assert.match(body, /hiddenrent\.example/);
+});
+
+test("website handoff: ?session= rides through the form into the pre-filled text as '(ref <id>)'", async () => {
+  const page = await (await fetch(`${base}/?session=web123`)).text();
+  assert.match(page, /<input type="hidden" name="session" value="web123">/);
+  const res = await join("(734) 555-0124", { session: "web123" });
+  const msg = new URL(res.headers.get("location")!).searchParams.get("msg");
+  assert.match(msg!, /\(ref web123\)$/);
+  assert.doesNotMatch(msg!, /https?:/);
+});
+
+test("a malformed session is ignored (no hidden field, plain opener)", async () => {
+  const page = await (await fetch(`${base}/?session=${encodeURIComponent("<script>")}`)).text();
+  assert.doesNotMatch(page, /name="session"|<script>/);
+  const res = await join("(734) 555-0125", { session: "bad id!" });
+  assert.doesNotMatch(new URL(res.headers.get("location")!).searchParams.get("msg")!, /ref/);
+});
+
+test("/card: the QR scales inside the card (no fixed width) and there are print styles", async () => {
+  const body = await (await fetch(`${base}/card`)).text();
+  const svg = body.match(/<svg[^>]*>/)![0];
+  assert.doesNotMatch(svg, /width=/);
+  assert.match(svg, /viewBox=/);
+  assert.match(body, /\.qr svg \{ display:block; width:100%; height:auto; \}/);
+  assert.match(body, /@media print/);
 });

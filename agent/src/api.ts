@@ -57,6 +57,8 @@ export interface Api {
   readonly mock: boolean;
   estimate(req: EstimateRequest): Promise<ApiResult>;
   answer(req: AnswerRequest): Promise<ApiResult>;
+  /** GET /session/{id} (P2-04 additive): the current estimate of a session started on the website. */
+  session(id: string): Promise<ApiResult>;
 }
 
 export const CONTRACT_ERROR = "Something went wrong on our side reading that answer. Try again in a bit.";
@@ -92,13 +94,13 @@ export const UNREACHABLE =
 
 /** The real /api over HTTP. 422/503 bodies are {detail: {code, message, hint?}}. */
 export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Logger = console.warn): Api {
-  async function post(path: string, body: unknown, timeoutMs: number): Promise<ApiResult> {
+  async function call(method: "GET" | "POST", path: string, body: unknown, timeoutMs: number): Promise<ApiResult> {
     let res: Response;
     try {
       res = await fetchFn(`${baseUrl}${path}`, {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
@@ -107,9 +109,9 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     const data = await res.json().catch(() => null);
     if (res.ok) {
       const { fatal, warnings } = checkEstimate(data);
-      for (const w of warnings) log(`[contract] POST ${path}: ${w} (PLAN.md §10)`);
+      for (const w of warnings) log(`[contract] ${method} ${path}: ${w} (PLAN.md §10)`);
       if (fatal.length) {
-        log(`[contract] POST ${path}: ${fatal.join("; ")} (PLAN.md §10); not replying with numbers`);
+        log(`[contract] ${method} ${path}: ${fatal.join("; ")} (PLAN.md §10); not replying with numbers`);
         return { ok: false, code: "contract_mismatch", message: CONTRACT_ERROR };
       }
       return { ok: true, data: data as Estimate };
@@ -124,7 +126,8 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
   return {
     mock: false,
     // the first look-up of a new area downloads its weather history once
-    estimate: (req) => post("/estimate", req, 200_000),
-    answer: (req) => post("/answer", req, 60_000),
+    estimate: (req) => call("POST", "/estimate", req, 200_000),
+    answer: (req) => call("POST", "/answer", req, 60_000),
+    session: (id) => call("GET", `/session/${encodeURIComponent(id)}`, undefined, 30_000),
   };
 }

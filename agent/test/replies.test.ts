@@ -153,3 +153,24 @@ test("contract warnings (bad question shape) are logged but the reply still goes
   assert.match(text, /\$1,234/);
   assert.match(logs[0], /questions\[0\] needs \{id, text, options\[\]\}/);
 });
+
+test("website handoff: '(ref <id>)' in the first text loads GET /session/{id} and continues with its questions", async () => {
+  const seen: [string, any][] = [];
+  const fetchFn = (async (url: string, init: RequestInit) => {
+    seen.push([init.method!, new URL(url).pathname]);
+    const q = { id: "windows", text: "Single or double pane?", options: ["single-pane", "double-pane"] };
+    return new Response(JSON.stringify(estimate({ session_id: "web123", questions: [q] })));
+  }) as typeof fetch;
+  const text = await new Conversations(httpApi("http://api", fetchFn)).reply("c", "Hi Hidden Rent! What's my apartment's hidden rent? (ref web123)");
+  assert.deepEqual(seen, [["GET", "/session/web123"]]);
+  assert.match(text, /^Picking up your report from the website\./);
+  assert.match(text, /\$1,234/);
+  assert.match(text, /Single or double pane\?/);
+});
+
+test("website handoff: unknown or unserved session → friendly restart, no numbers", async () => {
+  const fetchFn = (async () => new Response(JSON.stringify({ detail: "Not Found" }), { status: 404 })) as unknown as typeof fetch;
+  const text = await new Conversations(httpApi("http://api", fetchFn)).reply("c", "Hi! (ref nope99)");
+  assert.match(text, /couldn't find your report/);
+  assert.doesNotMatch(text, /\$\d/);
+});
