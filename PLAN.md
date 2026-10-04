@@ -31,6 +31,9 @@ This file is the single source of truth for the team and for any AI agent helpin
 - **The technical core we build:** a quantile bill model trained on 18,756 Department of Energy simulated Michigan homes (NREL ResStock), plus a **question picker**, checked against **real Ann Arbor meter data**. Already prototyped: R² 0.55 → 0.76 once the renter answers 6 questions, with a 35% narrower range.
 - **Rated #1 of 12 ideas** by three independent AI judges (niche score 2/10). Details: `results/pivot-round2/00-synthesis.md`.
 
+
+Important: jPer season is the most intuitive for the user, and it is what they excpect for utilities estimiations
+
 ---
 
 ## 2. Event facts
@@ -48,21 +51,6 @@ This file is the single source of truth for the team and for any AI agent helpin
 
 ---
 
-## 3. Background: what we rejected (don't re-propose these)
-
-- **Clean Hours,** an agent that schedules your dryer for clean-grid hours: too niche (one appliance).
-- **Fern on Call,** heat or smoke check-ins for older people living alone: too niche (small group, rare event).
-- **Climate Report Card,** a satellite climate report for any address: considered, not chosen.
-- **What won MHacks before (our checklist):**
-  - a technical core the team built itself (V²/R, FocusFlow);
-  - a named user, a hard statistic and a local hook (FarmX, F.L.U.D.D);
-  - an agent that closes the loop and acts;
-  - a judge who takes part in the demo (FocusFlow, MotionSurfer);
-  - one measured number.
-
-  Full analysis is in `results/pivot-round2/01-mhacks-winner-anatomy.md` and `02-peer-sustainability-winners.md`.
-
----
 
 ## 4. The product
 
@@ -73,7 +61,9 @@ This file is the single source of truth for the team and for any AI agent helpin
 - Ann Arbor discloses home energy scores only at **sale** (HERD), never at lease. Minneapolis requires disclosure at rent time, for some buildings.
 - Buildings are ~68% of Ann Arbor's emissions (A2ZERO).
 
-### User flow
+# User flow 
+
+0. Text an agent as the interface, it texts back to you (Photon)
 1. **Input:** paste a listing URL (the address is in Zillow/Redfin URLs; **parse the URL, never scrape the page**) or type an address, on the web app or **by iMessage**.
 2. **Lookup:** address → geocode → city building footprint → features. Floor area = footprint × storeys, plus height and structure type mapped to a ResStock building type. Year built comes from the listing, else the census block-group median. Fuel defaults to gas (70.7% of Ann Arbor homes).
 3. **Estimate:** P10/P50/P90 for annual and monthly bill and CO₂, the **Hidden Rent Score + grade**, and **percentiles** versus same-size Ann Arbor rentals and all Ann Arbor rentals.
