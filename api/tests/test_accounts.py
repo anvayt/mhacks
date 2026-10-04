@@ -250,3 +250,13 @@ def test_patch_me():
     me = patch({"reminder_prefs": {"cadence": "weekly", "hour_local": 9}}).json()
     assert me["reminder_prefs"] == {"channel": "imessage", "cadence": "weekly", "hour_local": 9, "paused": False}
     assert me["alias"] == "Mary St Saver"  # untouched fields stay
+
+
+def test_me_calendar_connected_from_gcal(monkeypatch):  # merge wave 5b: mock Calendar (no GOOGLE_* creds)
+    for k in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"):
+        monkeypatch.delenv(k, raising=False)
+    uid = user()
+    assert client.get(f"/me/{uid}", headers=AGENT).json()["calendar_connected"] is False
+    url = client.post("/calendar/connect", json={"user_id": uid}, headers=AGENT).json()["auth_url"]
+    assert client.get("/calendar/callback?" + url.split("?", 1)[1], follow_redirects=False).status_code == 303
+    assert client.get(f"/me/{uid}", headers=AGENT).json()["calendar_connected"] is True

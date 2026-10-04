@@ -15,12 +15,14 @@ from app.compare import router as compare_router
 from app.estimate import estimate, router as estimate_router
 from app.fixes import router as fixes_router
 from app.forecast import router as forecast_router
+from app.gcal import router as gcal_router
 from app.geo.features import get_features
 from app.map_widget import router as map_router
 
 app = FastAPI(title="Hidden Rent API")
 app.include_router(estimate_router)  # POST /answer, GET /session/{id} (P2-04)
 app.include_router(map_router)
+app.include_router(gcal_router)
 # /web calls /estimate from the browser (Next.js dev server on :3000)
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("WEB_ORIGINS", "http://localhost:3000").split(","),
                    allow_methods=["*"], allow_headers=["*"])
