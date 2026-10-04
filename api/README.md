@@ -156,7 +156,7 @@ uv run uvicorn app.main:app --reload --port 8000
   `GET /leaderboard/position/{property_id}` (agent key or bearer) → `{current: {score, grade, percentile_city, rank, of},
   projected: {rank, score, percentile_city, label} | null (the latest /projection's own score/percentile_city),
   neighbors, percentile_basis, label, current_source, model_version}`; 404 `not_found`, 503 `position_unavailable`.
-  Demo entries only with `DEMO_SEED=1` (`uv run python scripts/seed_demo_board.py`), labelled `demo: true`.
+  Demo entries only with `DEMO_SEED=1` (`uv run python scripts/seed_demo_board.py`), labelled `demo: true`: 10 competitors based on real Ann Arbor homes (public Zillow listing URLs → city footprint → our model's city scores; `data/demo_competitors.json`, rebuilt by `scripts/build_demo_competitors.py`) with synthetic behavior; boards show only the "Demo …" alias.
 - Calendar (`app/gcal.py`, NC-08; `GOOGLE_CLIENT_ID`/`SECRET`, `GOOGLE_REDIRECT_URI`, `CALENDAR_STATE_SECRET`,
   `WEB_ORIGIN`; no Google creds = labelled mock mode): `POST /calendar/connect {user_id}` → `{auth_url, mock, message?}`;
   `GET /calendar/callback` → 303 to `WEB_ORIGIN?calendar=connected`; `POST /calendar/reminders {user_id, commitment_id,
