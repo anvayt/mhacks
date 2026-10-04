@@ -179,8 +179,8 @@ def test_score_math_on_known_rows():
     assert len(score._p1_buildings()) == 589  # fallback: 591 buildings minus 2 with $0 heating
     assert not np.isclose(score._p1_buildings(), 114 / 854).any()  # Sequoia Place: $0 heat + $114 cooling
     peers = score.peer_costs(MF)
-    assert len(peers) == 1048  # every scored 5+ unit building in the city batch (api/data/city_scores.csv)
-    assert len(score.peer_costs(None)) == 25670 and len(score.peer_costs("Mobile Home")) == 589  # < 30 -> fallback
+    assert len(peers) == 1060  # every scored 5+ unit building in the city batch (api/data/city_scores.csv)
+    assert len(score.peer_costs(None)) == 25704 and len(score.peer_costs("Mobile Home")) == 589  # < 30 -> fallback
     med = float(np.median(peers))
     s = score.score_for(med * 854, 854, MF)
     assert 45 <= s["score"] <= 55 and s["grade"] == "C" and s["hidden_rent_usd_mo"] == 0

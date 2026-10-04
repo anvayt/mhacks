@@ -271,6 +271,7 @@ def local_city_index(monkeypatch, tmp_path):
     points = np.array([Point(x + 35, y), Point(x + 75, y)])
     ix = footprints._Index([{"OBJECTID": 1}, {"OBJECTID": 2}], polygons, polygons, shapely.STRtree(polygons),
                            np.array(["2 MAIN ST", "1 MAIN ST UNIT 1"]), np.array([True, True]), points,
+                           points,  # addr_wgs (city-layer); unused by these lookups
                            shapely.STRtree(points), {"1 MAIN ST": 1}, Counter({"1 MAIN ST": 1}), 11.1, 1.4)
     monkeypatch.setattr(footprints, "_index", lambda: ix)
     cache = tmp_path / "city.geojson"
