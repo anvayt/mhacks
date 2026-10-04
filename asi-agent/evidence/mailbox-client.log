@@ -1,0 +1,8 @@
+INFO:     [Hidden Rent acceptance client]: Starting agent with address: agent1qvekg6gah4wft5kq4twkkau2t8kr37fn3s7x4n84r574jngepauhx8sy76q
+INFO:     [Hidden Rent acceptance client]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8131&address=agent1qvekg6gah4wft5kq4twkkau2t8kr37fn3s7x4n84r574jngepauhx8sy76q
+INFO:     [Hidden Rent acceptance client]: Starting server on http://127.0.0.1:8131 (Press CTRL+C to quit)
+USER: 1514 Morton Ave, Ann Arbor, MI
+INFO:     [uagents.registration]: Registration on Almanac API successful
+AGENT: Our cost model is starting up. Try again in a minute.
+
+FAIL chat transcript: /private/tmp/mhacks-asi/asi-agent/evidence/mailbox-chat.json

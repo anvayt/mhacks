@@ -181,17 +181,17 @@ onboarding abuse cap remain required before the final public phone rehearsal.
 
 ## Run the whole thing
 
-Needs Python 3.12, Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm). `make install` installs all
-Python and Node dependencies in one step; [uv](https://docs.astral.sh/uv/) is optional (used for `api/` if present).
+Needs Python 3.12, Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm). `make install` does all setup in one step
+(Python/Node deps, city GIS data, model build), skipping anything already done; [uv](https://docs.astral.sh/uv/) is optional (used for `api/` if present).
 Secrets go only in git-ignored `.env` files; every variable name is in [`.env.example`](.env.example).
 
 | Piece | Port | Set up once | Start |
 |---|---|---|---|
-| `/model` heating + cooling (P1) | 8001 | `make -C model setup && make -C model build` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`; PRISM allows each grid twice a day per IP, so copy `model/data/raw/prism/` from a teammate instead of re-downloading) | `make -C model dashboard` |
-| `/api` FastAPI (P2) | 8000 | `cd api && uv sync && uv run python scripts/fetch_footprints.py` (~30 s, city GIS into `/data/`) | `cd api && uv run uvicorn app.main:app --port 8000` |
-| `/agent` iMessage agent (P4) | | `cd agent && npm ci && cp .env.example .env` (Photon creds for real iMessage) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
+| `/model` heating + cooling (P1) | 8001 | `make install` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`; PRISM allows each grid twice a day per IP, so copy `model/data/raw/prism/` from a teammate instead of re-downloading) | `make -C model dashboard` |
+| `/api` FastAPI (P2) | 8000 | `make install` (also downloads city GIS into `/data/` if missing) | `cd api && uv run uvicorn app.main:app --port 8000` |
+| `/agent` iMessage agent (P4) | | `make install` (Photon creds for real iMessage go in `agent/.env`) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
 | onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
-| `/web` Next.js (P3) | 3000 | `cd web && npm ci` | `cd web && npm run dev` |
+| `/web` Next.js (P3) | 3000 | `make install` | `cd web && npm run dev` |
 
 `make -C model build` rewrites committed files under `model/data/processed/` and `model/results/`
 with this machine's retrain. Don't commit them (P1 owns them), but keep them while you serve from this machine: the
@@ -212,7 +212,7 @@ curl -s localhost:8000/estimate -H 'content-type: application/json' \
 Tests (each from the repo root):
 
 ```bash
-make -C model test                       # needs make -C model build first; leakage tests also need make -C model leakage (test-only, not part of the demo)
+make -C model test                       # needs make install (builds the model) first
 (cd api && uv run pytest -q)             # /estimate end-to-end tests skip unless the model server is up
 (cd agent && npm test && npm run typecheck)
 (cd web && npm run build)                # type-checks /web; it has no tests yet
@@ -240,3 +240,14 @@ Start with `results/pivot-round2/00-synthesis.md` (why Hidden Rent). `results/SU
 | `ideation/` | An earlier set of alternative ideas |
 
 Every file opens with the prompt its agent was given, and every factual claim cites its source.
+
+## ASI:One agent
+
+Hidden Rent also has an isolated Fetch.ai chat-protocol uAgent in [`asi-agent/`](asi-agent/README.md). It uses an Agentverse mailbox and ASI:One only for intent parsing; every bill, grade and savings figure comes from the existing API. It does not launch or manage the demo stack.
+
+```bash
+API_BASE_URL=http://localhost:8000 make asi-agent
+make asi-agent-test
+```
+
+Load existing keys through `ASI_ENV_FILE` (default `/Users/anvaytodkar/Code/mhacks/.env`): `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY`, `AGENT_API_KEY`. Set `WEB_BASE_URL` and `ONBOARD_URL` when public URLs are available; until then report links are labelled local previews. See [verification status](asi-agent/VERIFICATION.md), the agent address and exact ASI:One test steps before claiming sponsor integration.

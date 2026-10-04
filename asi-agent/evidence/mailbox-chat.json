@@ -1,0 +1,16 @@
+{
+  "transport": "Agentverse mailbox outbound; local client reply endpoint",
+  "target": "agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum",
+  "started_at": "2026-10-04T12:58:52.124238+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "text": "1514 Morton Ave, Ann Arbor, MI"
+    },
+    {
+      "role": "agent",
+      "text": "Our cost model is starting up. Try again in a minute."
+    }
+  ],
+  "pass": false
+}
