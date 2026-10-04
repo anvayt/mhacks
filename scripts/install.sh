@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install every dependency the demo needs (no data downloads, no model build).
+# Install every Python/Node dependency. `make install` runs this, then fetches GIS data and builds the model.
 #   model/  -> $ROOT/.venv     (pip, model/requirements.txt; same as `make -C model setup`)
 #   api/    -> api/.venv       (uv sync if uv exists, else venv + pip pinned from api/uv.lock)
 #   web/, agent/ -> node_modules (npm ci)
@@ -52,10 +52,4 @@ done
 
 [[ -f "$ROOT/agent/.env" ]] || { cp "$ROOT/agent/.env.example" "$ROOT/agent/.env" 2>/dev/null && echo 'Created agent/.env from example.'; } || true
 
-cat <<EOF
-
-Dependencies installed. One-time data setup (needs network), if not done yet:
-  (cd api && .venv/bin/python scripts/fetch_footprints.py)   # city GIS, ~30 s
-  make -C model build                                        # long; see README
-Then: make demo
-EOF
+printf '\nDependencies installed.\n'
