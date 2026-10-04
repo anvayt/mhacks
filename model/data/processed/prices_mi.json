@@ -30,8 +30,8 @@
     },
     "marginal_flat": 0.9061,
     "fit": {
-      "slope_marginal": 9.060799743179679,
-      "fixed_per_month": 54639.113640414755,
+      "slope_marginal": 9.060799743179675,
+      "fixed_per_month": 54639.11364041471,
       "r2": 0.9896105837428684,
       "window": [
         "2024-08",
