@@ -186,6 +186,15 @@ def test_texted_code_tries_and_expiry():
     assert client.post("/auth/web/verify", json={"login_id": "nope", "code": "123456"}).status_code == 404
 
 
+def test_parallel_guesses_stop_at_five_tries():
+    start = client.post("/auth/web/start", json={"phone": PHONE}).json()
+    bad = "000000" if start["dev_sent_code"] != "000000" else "111111"
+    with ThreadPoolExecutor(8) as ex:
+        codes = list(ex.map(lambda _: client.post("/auth/web/verify", json={"login_id": start["login_id"],
+                                                                            "code": bad}).status_code, range(16)))
+    assert sorted(codes) == [401] * 5 + [429] * 11
+
+
 def test_old_databases_get_the_new_columns(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "old.sqlite")
     with sqlite3.connect(tmp_path / "old.sqlite") as con:

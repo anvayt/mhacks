@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { adoptSession, errorText, loginStatus, startLogin, verifyLogin, type WebLogin } from "./flow-api";
 import { ApiError, load, save } from "./lib/api";
 import { REMINDER_CHOICES, REMINDER_RULES, saveReminderChoice, type Cadence } from "./reminder-settings";
@@ -45,9 +45,12 @@ export function PhoneSignIn() {
   const [cadence, setCadence] = useState<Cadence>("off"); // chosen on the phone step; nothing preselected
   const [typed, setTyped] = useState("");
   const [sent, setSent] = useState(false);
+  const finishing = useRef(false);
 
   // Just verified: this session becomes the new account's home. A failed save never blocks the grade.
   async function finish() {
+    if (finishing.current) return; // the typed code and the fallback poll can both see the same sign-in
+    finishing.current = true;
     setMessage("Signed in. Saving this home to your account…");
     try {
       await adoptSession();
@@ -61,6 +64,7 @@ export function PhoneSignIn() {
         await saveReminderChoice(uid, cadence);
       } catch (err) {
         setMessage(`Signed in, but your reminder choice wasn't saved: ${errorText(err)} Change it on your board.`);
+        finishing.current = false;
         setLogin(null);
         return;
       }
