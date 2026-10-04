@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { OPENER, PhotonError, createSharedUser, listSharedUsers, normalizePhone, redirectUrl } from "../src/photon.ts";
+import {
+  OPENER,
+  PhotonError,
+  createSharedUser,
+  listSharedUsers,
+  normalizePhone,
+  redirectUrl,
+  removeSharedUserByPhone,
+} from "../src/photon.ts";
 import { NOT_LIVE, WELCOME, inboundText, replyFor } from "../src/replies.ts";
 
 test("normalizePhone handles common US inputs and E.164", () => {
@@ -72,4 +80,34 @@ test("inboundText answers text and pasted links, ignores reactions and typing", 
   assert.equal(replyFor(inboundText({ type: "richlink", url })!), NOT_LIVE);
   assert.equal(inboundText({ type: "reaction" }), null);
   assert.equal(inboundText({ type: "typing" }), null);
+});
+
+// Fake Photon: GET lists two users, DELETE records which ids were removed.
+function fakePhoton(deleted: string[]) {
+  const users = [
+    { id: "u1", phoneNumber: "+17345550123", assignedPhoneNumber: "+15550001111", firstName: "Ada" },
+    { id: "u2", phoneNumber: "+17345559999", assignedPhoneNumber: "+15550001111", firstName: null },
+  ];
+  return (async (url: string, init: RequestInit) => {
+    if (init.method === "DELETE") {
+      const id = url.match(/\/users\/([^/]+)\/$/)![1];
+      deleted.push(id);
+      return new Response(JSON.stringify({ succeed: true, data: { userId: id } }));
+    }
+    return new Response(JSON.stringify({ succeed: true, data: { users, total: users.length } }));
+  }) as typeof fetch;
+}
+
+test("removeSharedUserByPhone deletes only the matching user", async () => {
+  const deleted: string[] = [];
+  const removed = await removeSharedUserByPhone({ projectId: "p", projectSecret: "s" }, "+17345550123", fakePhoton(deleted));
+  assert.deepEqual(deleted, ["u1"]);
+  assert.equal(removed[0].phoneNumber, "+17345550123");
+});
+
+test("removeSharedUserByPhone returns [] and deletes nothing for an unknown phone", async () => {
+  const deleted: string[] = [];
+  const removed = await removeSharedUserByPhone({ projectId: "p", projectSecret: "s" }, "+12025550100", fakePhoton(deleted));
+  assert.deepEqual(removed, []);
+  assert.deepEqual(deleted, []);
 });
