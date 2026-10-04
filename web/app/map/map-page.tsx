@@ -31,7 +31,7 @@ export default function MapPage() {
       <HiddenRentMap data={data} step={step} focus={focus} onFocusChange={setFocus} />
       <p className={styles.caption}>City of Ann Arbor footprints + ResStock predictions · retrieved {retrieved}. Grades compare heating + cooling cost per square foot within each building type. Unscored buildings are gray. Similar footprints are a geometric sample, not an efficiency ranking.</p>
       <div className={styles.history}><span>{step === 0 ? "Public record" : `Answer ${step} of ${data.steps.length - 1}`}</span><label htmlFor="map-step">Estimate history</label><input id="map-step" type="range" min="0" max={data.steps.length - 1} value={step} onChange={(e) => setStep(Number(e.target.value))} disabled={data.steps.length === 1} /><span>{data.steps[step].answer_label ?? "Before your answers"}</span></div>
-      <MapStory data={data} step={step} onStepChange={setStep} onFocus={setFocus} />
+      <MapStory className={styles.storyFrame} data={data} step={step} onStepChange={setStep} onFocus={setFocus} />
     </>}
   </main>;
 }
