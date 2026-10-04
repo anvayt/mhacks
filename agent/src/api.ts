@@ -105,6 +105,13 @@ export interface Reminder { reminder_id: string; user_id: string; handle: string
 export interface ReplyingTo { reminder_id: string; kind: Reminder["kind"]; local_date: string; commitment_id?: string }
 export interface ReminderState { user_id?: string; stopped: boolean; paused: boolean; unanswered?: number; reminder_prefs?: Me["reminder_prefs"]; replying_to?: ReplyingTo | null }
 /** POST /habits/{user_id}/checkin and GET /habits/{user_id} (+ checkins): the daily habit streak. */
+/** POST /simulate/fast-forward: a simulation (never usage) of savings adding up if the commitments are kept. */
+export interface FastForward {
+  label: "simulated_projected_if_kept"; label_text: string;
+  totals: { days: number; end_date: string; usd_saved: number; kg_co2_saved: number };
+  commitments: { catalog_id: string; title: string; modeled: boolean }[]; not_modeled: string[];
+  real_habit_streak: number; simulated_habit_streak: number;
+}
 export interface HabitStreak { current: number; best: number; checked_in_today: boolean; last_checkin_date: string | null; badges?: string[] }
 export interface CalendarConnection { auth_url: string; mock: boolean; message?: string }
 export interface CalendarReminder { reminder_id: string; event_id: string; html_link: string | null; mock: boolean }
@@ -160,6 +167,7 @@ export interface Api {
   reminderDemo(userId: string, kind?: Reminder["kind"]): Promise<ApiResult<Reminder>>;
   habitCheckin(userId: string, req: { date?: string; commitment_id?: string; source: "imessage" }): Promise<ApiResult<HabitStreak>>;
   habits(userId: string): Promise<ApiResult<HabitStreak>>;
+  fastForward(req: { property_id: string; days: number }): Promise<ApiResult<FastForward>>;
   calendarConnect(userId: string): Promise<ApiResult<CalendarConnection>>;
   calendarReminder(req: { user_id: string; commitment_id: string; start?: string; cadence: "once" | "daily" | "weekly" }): Promise<ApiResult<CalendarReminder>>;
 
@@ -220,6 +228,16 @@ export function checkHabit(h: unknown): { fatal: string[]; warnings: string[] } 
   if (!isObj(h)) return { fatal: ["body is not an object"], warnings: [] };
   const fatal = ["current", "best"].filter((k) => !isNum(h[k]) || h[k] < 0).map((k) => `${k} missing`);
   if (typeof h.checked_in_today !== "boolean") fatal.push("checked_in_today missing");
+  return { fatal, warnings: [] };
+}
+
+/** A fast-forward reply only words a body that says it's a simulation and carries the totals and real streak. */
+export function checkFastForward(f: unknown): { fatal: string[]; warnings: string[] } {
+  if (!isObj(f)) return { fatal: ["body is not an object"], warnings: [] };
+  const fatal = f.label === "simulated_projected_if_kept" ? [] : ["label is not simulated_projected_if_kept"];
+  if (!isObj(f.totals) || !isNum(f.totals.usd_saved) || !isNum(f.totals.kg_co2_saved) || !isNum(f.totals.days)) fatal.push("totals missing");
+  if (!isNum(f.real_habit_streak)) fatal.push("real_habit_streak missing");
+  if (!Array.isArray(f.commitments)) fatal.push("commitments is not an array");
   return { fatal, warnings: [] };
 }
 
@@ -298,6 +316,8 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     reminderDemo: (user_id, kind) => accountCall("POST", "/reminders/demo-send", { user_id, ...(kind ? { kind } : {}) }),
     habitCheckin: (id, req) => call<HabitStreak>("POST", `/habits/${encodeURIComponent(id)}/checkin`, req, 30_000, checkHabit),
     habits: (id) => call<HabitStreak>("GET", `/habits/${encodeURIComponent(id)}`, undefined, 30_000, checkHabit),
+    // one composed model run, like /projection
+    fastForward: (req) => call<FastForward>("POST", "/simulate/fast-forward", req, 120_000, checkFastForward),
     calendarConnect: (user_id) => accountCall("POST", "/calendar/connect", { user_id }),
     calendarReminder: (req) => accountCall("POST", "/calendar/reminders", req),
   };
