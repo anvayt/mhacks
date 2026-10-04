@@ -6,6 +6,7 @@
 #   make -C model setup       create .venv and install requirements
 #   make -C model build       rebuild every dataset, model and validation result (cached downloads)
 #   make -C model test        run the tests
+#   make -C model leakage     train the air-leakage (blower-door) model and score every Ann Arbor house
 
 ROOT    := $(abspath $(CURDIR)/..)
 VENV    := $(ROOT)/.venv
@@ -15,10 +16,10 @@ PORT    ?= 8001
 # /hc/estimate, /hc/weather, /hc/bill_check, /hc/buildings, /hc/validation, /dashboard
 HC_SERVER := model.heating_cooling.server:app
 
-.PHONY: dashboard serve stop setup build test help
+.PHONY: dashboard serve stop setup build test help leakage
 
 help:
-	@sed -n '1,9p' Makefile
+	@sed -n '1,10p' Makefile
 
 dashboard: serve
 
@@ -38,3 +39,6 @@ build: $(PY)
 
 test: $(PY)
 	cd $(ROOT) && $(PY) -m pytest model/tests -q
+
+leakage: $(PY)
+	cd $(ROOT) && $(PY) -m model.leakage.train && $(PY) -m model.leakage.predict --all
