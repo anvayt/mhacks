@@ -23,6 +23,15 @@ import {
 } from "./replies.ts";
 
 export const LOGIN = /^login\s+(\d{6})$/i;
+/** The 6-digit web login code in a text, tolerant of how people actually type or paste it:
+ *  "login 508663", "LOGIN 508663", "Login 508663.", "login: 508 663", "log in 508-663". null if it isn't a login. */
+export function loginCode(text: string): string | null {
+  const m = text.trim().match(/^log\s*-?\s*in\b[\s:#.\-]*([\d][\d\s.\-]*[\d])[\s.!]*$/i);
+  if (!m) return null;
+  const digits = m[1].replace(/\D/g, "");
+  return digits.length === 6 ? digits : null;
+}
+const maskHandle = (h: string) => (h.includes("@") ? `${h[0]}***@${h.split("@")[1]}` : `***${h.slice(-4)}`);
 // Daily habit check-ins (api/app/habits.py). "done <n>" (commitment n completed) is a different intent.
 export const HABIT_REPLY = /^(done|did it|did it today|✅️?|yes)[.!]*$/iu; // only when answering a task reminder
 export const HABIT_TODAY = /^done today[.!]*$/i; // any time
@@ -81,9 +90,21 @@ export class Conversations {
       // Losing an acknowledgement must not block a requested stop or a normal reply.
       if (!inbound.ok) console.warn(`[reminders] inbound acknowledgement failed (${inbound.code})`);
       s.replyingTo = (inbound.ok && inbound.data.replying_to) || undefined;
-      if (LOGIN.test(text)) {
-        const r = await this.api.confirmLogin({ code: text.match(LOGIN)![1], phone: accountHandle(sender.handle) });
-        return this.label([r.ok ? "You're signed in on the web ✅" : r.message]);
+      const code = loginCode(text);
+      if (code) {
+        const handle = accountHandle(sender.handle);
+        const r = await this.api.confirmLogin({ code, phone: handle });
+        // Debug trace without secrets: masked handle, result, never the code.
+        console.log(`[login] from ${maskHandle(handle)}: ${r.ok ? "confirmed" : `failed (${r.code})`}`);
+        if (r.ok) return this.label(["You're signed in on the web ✅"]);
+        if (handle.includes("@") && r.code === "bad_code") {
+          // The code is tied to the phone number typed on the website; iMessage sent this from the Apple ID email.
+          return this.label([
+            `This text came from your Apple ID email (${maskHandle(handle)}), not your phone number, so it can't match the code. ` +
+              "On your iPhone: Settings → Apps → Messages → Send & Receive → under \"Start new conversations from\", pick your phone number. Then send the code again.",
+          ]);
+        }
+        return this.label([r.message]);
       }
       const me = await this.api.me(s.userId);
       if (!me.ok) return this.label([me.message]);

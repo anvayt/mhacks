@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { loadEnvFiles } from "../src/env.ts";
 import { Accounts, accountHandle } from "../src/accounts.ts";
 import { httpApi, type Api, type ApiResult, type Reminder } from "../src/api.ts";
-import { Conversations, LOGIN } from "../src/conversation.ts";
+import { Conversations, LOGIN, loginCode } from "../src/conversation.ts";
 import { mockApi } from "../src/mockApi.ts";
 import { billResultText, projectionText, suggestionsText } from "../src/phase2Replies.ts";
 import { parseTypedBill, estimateText } from "../src/replies.ts";
@@ -213,4 +213,14 @@ test("manual direct delivery obeys global receipts and retries a matching delive
   store.set("old-id", "delivered"); await poller.deliver(reminder); assert.equal(sends, 0);
   await poller.deliver({ ...reminder, reminder_id: "old-id" }); assert.equal(acknowledgements, 1); assert.equal(sends, 0);
   await poller.deliver(reminder); assert.equal(sends, 1);
+});
+
+test("loginCode tolerates how people type or paste the code, and rejects non-logins", () => {
+  for (const [text, code] of [["login 508663", "508663"], ["LOGIN 508663", "508663"], ["  login   508663  ", "508663"], ["Login 508663.", "508663"],
+    ["login: 508663", "508663"], ["login 508 663", "508663"], ["log in 508-663", "508663"], ["Login 508663!", "508663"]] as const) {
+    assert.equal(loginCode(text), code, text);
+  }
+  for (const text of ["login 12345", "login 1234567", "please login 123456", "login 123456 now", "508663", "login", "loginx 123456"]) {
+    assert.equal(loginCode(text), null, text);
+  }
 });
