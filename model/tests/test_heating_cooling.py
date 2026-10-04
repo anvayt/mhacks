@@ -49,3 +49,11 @@ def test_bill_check_detects_high_bill():
     exp = ok["expected_gas_ccf"]
     hi = bill_check(2023, 1, exp * 1.6, 850, lat=AA[0], lon=AA[1])
     assert hi["pct_vs_expected_for_weather"] > 0.5 and hi["meaningful"]
+
+
+def test_unnamed_house_is_json_safe():
+    """/api calls the HTTP server, which can't encode NaN (e.g. a house footprint with no Bldg_Name)."""
+    import json
+    e = estimate_hc(lat=42.26241, lon=-83.72838, unit_sqft=1500, block_group="261614004003")  # 1514 Morton Ave
+    assert e["building"]["name"] is None and e["method"] == "resstock"
+    json.dumps(e, allow_nan=False)
