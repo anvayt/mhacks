@@ -9,7 +9,9 @@
     "remove-user": "tsx scripts/remove-user.ts",
     "doctor": "tsx scripts/doctor.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "checkin": "tsx scripts/checkin.ts",
+    "remind-now": "tsx scripts/checkin.ts --demo"
   },
   "dependencies": {
     "qrcode": "1.5.4",
