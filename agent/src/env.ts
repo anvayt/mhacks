@@ -23,6 +23,8 @@ export const env = {
   projectSecret: process.env.PHOTON_PROJECT_SECRET ?? "",
   publicUrl: process.env.PUBLIC_URL || `http://localhost:${process.env.ONBOARD_PORT || 8787}`,
   onboardPort: Number(process.env.ONBOARD_PORT || 8787),
+  /** Agent process listens on 127.0.0.1 only; the onboarding page asks it to text the intro (src/intro.ts). */
+  introPort: Number(process.env.INTRO_PORT || 8788),
   agentApiKey: process.env.AGENT_API_KEY ?? "",
   terminalPhone: process.env.AGENT_TERMINAL_PHONE || "+12025550164",
   reminderReceipts: process.env.REMINDER_RECEIPTS || fileURLToPath(new URL("../../data/agent-reminder-receipts.json", import.meta.url)),

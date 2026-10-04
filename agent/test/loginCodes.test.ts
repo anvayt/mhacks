@@ -13,12 +13,12 @@ function fakeApi(queue: LoginText[]) {
 }
 
 test("texts each queued sign-in code once, then acks it", async () => {
-  const { api, acked } = fakeApi([{ login_id: "a", handle: "+17345550100", text: "Your Hidden Rent code is 123456." }]);
+  const { api, acked } = fakeApi([{ login_id: "a", handle: "+17345550100", text: "Hidden Rent here 👋 This is your Hidden Rent number, save it. Your sign-in code is 123456." }]);
   const sent: [string, string][] = [];
   const sender = new LoginCodeSender(api, async (h, t) => { sent.push([h, t]); }, () => {});
   await sender.poll();
   await sender.poll();
-  assert.deepEqual(sent, [["+17345550100", "Your Hidden Rent code is 123456."]]);
+  assert.deepEqual(sent, [["+17345550100", "Hidden Rent here 👋 This is your Hidden Rent number, save it. Your sign-in code is 123456."]]);
   assert.deepEqual(acked, ["a"]);
 });
 

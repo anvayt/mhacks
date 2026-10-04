@@ -156,6 +156,8 @@ def test_texted_code_outbox_then_verify_on_the_site():  # Duo-style: we text the
     box = client.get("/auth/web/outbox", headers=AGENT).json()
     assert box == [{"login_id": start["login_id"], "handle": PHONE, "text": accounts._sent_text(sent)}]
     assert sent in box[0]["text"]
+    assert box[0]["text"].startswith("Hidden Rent here 👋 This is your Hidden Rent number, save it.")
+    assert f"code is {sent}." in box[0]["text"] and "http" not in box[0]["text"]  # AutoFill needs "code" + digits
     assert client.post(f"/auth/web/outbox/{start['login_id']}/sent", headers=AGENT).json()["sent"]
     assert client.get("/auth/web/outbox", headers=AGENT).json() == []  # sent once
     assert client.get(f"/auth/web/{start['login_id']}").json() == {"status": "pending", "sent": True}

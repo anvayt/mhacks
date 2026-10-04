@@ -399,7 +399,9 @@ def web_start(req: WebStart, request: Request) -> dict:
 
 
 def _sent_text(code: str) -> str:
-    return (f"Your Hidden Rent code is {code}. Type it on the sign-in page; it works for 10 minutes. "
+    # Intro first: each user gets their own Hidden Rent number from Photon's pool. "code" + 6 digits keeps iOS AutoFill.
+    return (f"Hidden Rent here 👋 This is your Hidden Rent number, save it. Your sign-in code is {code}. "
+            "Type it on the sign-in page; it works for 10 minutes. "
             "Didn't ask for it? Ignore this text.")
 
 

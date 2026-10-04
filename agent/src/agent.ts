@@ -2,9 +2,11 @@
 import { createInterface } from "node:readline";
 import { env } from "./env.ts";
 import { httpApi } from "./api.ts";
-import { Conversations } from "./conversation.ts";
+import { Conversations, loginCode } from "./conversation.ts";
 import { mockApi } from "./mockApi.ts";
 import { inbound } from "./replies.ts";
+import { openerFor } from "./handoff.ts";
+import { Intros } from "./intro.ts";
 import { LoginCodeSender } from "./loginCodes.ts";
 import { ReceiptStore, ReminderPoller } from "./reminders.ts";
 import { phoneTransport } from "./transport.ts";
@@ -29,15 +31,20 @@ if (env.agentTerminal) {
   }
   lines.close();
 } else {
-  const { app, send } = await phoneTransport();
+  const { app, send, sendCard } = await phoneTransport();
   const stopReminders = new ReminderPoller(api, send, new ReceiptStore(env.reminderReceipts)).start();
   const stopCodes = new LoginCodeSender(api, send).start(); // web sign-in codes, texted within seconds
-  const stop = () => { stopReminders(); stopCodes(); };
+  const intros = new Intros(send, api, sendCard);
+  const introServer = intros.serve(env.introPort); // onboarding page → "Hi, I'm Hidden Rent" text first
+  const stop = () => { stopReminders(); stopCodes(); introServer.close(); };
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => { stop(); void app.stop(); });
   for await (const [space, message] of app.messages) {
     if (message.direction === "outbound") continue;
-    const input = inbound(message.content);
-    if (!input || !message.sender?.id) continue;
+    const received = inbound(message.content);
+    if (!received || !message.sender?.id) continue;
+    // "Continue in iMessage": the first reply after the intro resumes that website report, like the "(ref id)" opener.
+    const resume = received.kind === "text" && !loginCode(received.text) ? intros.take(message.sender.id) : null;
+    const input = resume ? { kind: "text" as const, text: openerFor(resume) } : received;
     // Spectrum sender.id is the Apple phone/email handle, not a Photon user UUID.
     try { await space.responding(async () => { for (const reply of await conversations.respond(space.id, input, { handle: message.sender!.id })) await space.send(reply); }); }
     catch { console.error("An inbound reply failed; the agent remains running."); }

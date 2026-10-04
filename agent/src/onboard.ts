@@ -1,5 +1,6 @@
 // Judge onboarding page. Run: npm run onboard
-// QR (/qr.svg) → this page → enter phone → Photon allowlists it → Messages opens with the opener pre-filled.
+// QR (/qr.svg) → this page → enter phone → Photon allowlists it → Hidden Rent texts them first (src/intro.ts),
+// so their own Hidden Rent number (one per user in the shared pool) is waiting in Messages. "Open Messages" is the fallback.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -9,6 +10,23 @@ import { openerFor, validSession } from "./handoff.ts";
 import { createSharedUser, normalizePhone, redirectUrl, type SharedUser } from "./photon.ts";
 
 export type Register = (phone: string, name?: string) => Promise<SharedUser>;
+/** Ask the agent to text the intro. True when it did (or did within the last 10 minutes). Never throws. */
+export type Intro = (phone: string, session: string | null, line: string) => Promise<boolean>;
+
+/** The agent process holds the only Spectrum connection; it listens on 127.0.0.1 only. */
+export const postIntro = (port: number): Intro => async (phone, session, line) => {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/intro`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, session, line }), // line: their assigned number, for the contact card
+      signal: AbortSignal.timeout(8000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
 
 /** Mock for USE_MOCKS=1: no Photon call; the redirect becomes a plain sms: link with the opener. */
 export const mockRegister: Register = async (phone) => ({
@@ -29,7 +47,7 @@ const page = (body: string) => `<!doctype html>
   h1 { font-size:28px; margin:0 0 8px; } p { color:var(--muted); margin:0 0 20px; }
   label { display:block; font-weight:600; margin:14px 0 6px; }
   input { width:100%; box-sizing:border-box; font-size:18px; padding:12px; border-radius:10px; border:1px solid #8886; background:transparent; color:inherit; }
-  button { margin-top:20px; width:100%; font-size:18px; font-weight:600; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#fff; }
+  button, .button { display:block; box-sizing:border-box; margin-top:20px; width:100%; font-size:18px; font-weight:600; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#fff; text-align:center; text-decoration:none; }
   small { display:block; margin-top:16px; color:var(--muted); overflow-wrap:anywhere; }
   .center { text-align:center; }
   /* QR always fits its box: the SVG scales to the card's width (no fixed pixel size). */
@@ -53,7 +71,7 @@ const form = (session: string | null) => page(`<h1>What's your hidden rent?</h1>
   <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(734) 555-0123" required>
   <label for="name">First name (optional)</label>
   <input id="name" name="name" autocomplete="given-name">
-  <button type="submit">Open iMessage</button>
+  <button type="submit">Text me</button>
 </form>
 <small>We only use your number to let it text our agent during MHacks 2026.</small>`);
 
@@ -64,6 +82,16 @@ const card = (qrSvg: string, publicUrl: string) =>
 <div class="qr">${qrSvg}</div>
 <small class="center">${esc(publicUrl.replace(/^https?:\/\//, ""))}</small>
 <small class="center noprint">Print this page (⌘P). The QR scales to the card.</small>`);
+
+const mask = (phone: string) => `•••-•••-${phone.slice(-4)}`;
+
+// No auto-redirect: on a laptop Messages can't send, so the text we send first is the way in.
+const joined = (texted: boolean, assigned: string, location: string) =>
+  page(`<h1>${texted ? "Check your Messages" : "Almost there"}</h1>
+<p>${texted ? "Hidden Rent just texted you from your own Hidden Rent number." : "Tap Open Messages on your iPhone to text Hidden Rent."}</p>
+${assigned ? `<p>Your Hidden Rent number ends in <strong>${esc(mask(assigned))}</strong>. Save it as a contact.</p>` : ""}
+<a class="button" href="${esc(location)}">Open Messages</a>
+<small>On a laptop? Open the text on your phone instead.</small>`);
 
 const errorPage = (msg: string) =>
   page(`<h1>Hmm.</h1><p>${msg}</p><a href="/">Try again</a>`);
@@ -77,7 +105,7 @@ async function readForm(req: IncomingMessage): Promise<URLSearchParams> {
   return new URLSearchParams(raw);
 }
 
-export function createHandler(register: Register, mock: boolean, publicUrl: string) {
+export function createHandler(register: Register, mock: boolean, publicUrl: string, intro: Intro = async () => false) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://x");
     const html = (status: number, body: string) =>
@@ -98,13 +126,14 @@ export function createHandler(register: Register, mock: boolean, publicUrl: stri
     if (req.method === "POST" && url.pathname === "/join") {
       const fields = await readForm(req);
       const phone = normalizePhone(fields.get("phone") ?? "");
-      const opener = openerFor(validSession(fields.get("session")));
+      const session = validSession(fields.get("session"));
+      const opener = openerFor(session);
       if (!phone) return html(400, errorPage("That doesn't look like a phone number. Use the one your iMessage is on."));
       try {
         const user = await register(phone, fields.get("name")?.trim() || undefined);
         console.log(`allowlisted phone ending ${phone.slice(-4)}${mock ? " (mock)" : ""}`);
         const location = mock ? `sms:&body=${encodeURIComponent(opener)}` : redirectUrl(user.id, opener);
-        return res.writeHead(302, { Location: location }).end();
+        return html(200, joined(await intro(phone, session, user.assignedPhoneNumber), user.assignedPhoneNumber, location));
       } catch (err) {
         console.error("register failed:", err);
         return html(502, errorPage("We couldn't add your number (our free plan holds 10 phones). Ask us at the table and we'll text you from the demo phone."));
@@ -120,7 +149,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const register: Register = env.useMocks
     ? mockRegister
     : (phone, name) => createSharedUser(env, phone, name);
-  createServer(createHandler(register, env.useMocks, env.publicUrl)).listen(env.onboardPort, () => {
+  const intro: Intro = env.useMocks ? async () => false : postIntro(env.introPort);
+  createServer(createHandler(register, env.useMocks, env.publicUrl, intro)).listen(env.onboardPort, () => {
     console.log(`Onboarding page on http://localhost:${env.onboardPort} (${env.useMocks ? "MOCK Photon" : "real Photon"})`);
     console.log(`QR for ${env.publicUrl}: http://localhost:${env.onboardPort}/qr.svg (printable card: /card)`);
     // Phones on the same Wi-Fi can use the LAN address if the venue network allows it; otherwise use a tunnel.
