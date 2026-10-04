@@ -81,6 +81,24 @@ uv run uvicorn app.main:app --reload --port 8000
   `login_required` / `login_expired`, 403 `forbidden`, 404 `not_found` / `bad_code`, 409 `no_property`, 410
   `code_expired`, 422 `bad_phone` / `alias_required` / `bad_alias` / `bad_hour` / `bad_prefs` / `bad_timezone`, 429
   `too_many_codes` / `signups_full`, 503 `photon_unavailable`.
+- Commitments (`app/commitments.py`, same `APP_DB`; NEW_CHANGES.md NC-03/04). Agent key or the user's bearer token
+  (`accounts.authorize`). `CATALOG` ids: `air_sealing`, `attic_insulation`, `wall_insulation`, `window_upgrade`,
+  `thermostat_setback` (with a 64°F WHO floor `note`), `landlord_request`, `heat_pump`; GRH points, costs, rebates and
+  sources are /fixes' own. `GET /commitments/suggested/{property_id}` → `{property_id, commitments: [{catalog_id,
+  title, who_acts, grh_item, grh_points, cost_usd, rebate_usd, cost_note, sources, note?, projected: {usd_saved_yr,
+  co2_kg_saved_yr, score_delta, new_grade, label} | null, pending_model, co2_per_net_usd, method}]}` ranked by CO₂ per
+  net $ (P1 prices only windows and, for electric heat, the heat pump; everything else is `pending_model: true` with
+  null numbers). `POST /commitments {user_id, property_id, catalog_id, target_date?}` → Commitment `{id, user_id,
+  property_id, catalog_id, status: accepted, evidence: projected, target_date?, accepted_at, reminder_channel (the
+  user's reminder_prefs.channel when there's a target date, else none), title}` (idempotent while accepted);
+  `PATCH /commitments/{id} {status: completed|dismissed}` (completed → evidence `reported`; never backwards);
+  `GET /commitments?user_id=|property_id=`. `POST /projection {property_id, commitment_ids: [commitment or catalog
+  ids]}` → `{id, property_id, current: {score, grade, percentile_city, bill_annual, co2_kg_yr}, projected: {…, label:
+  projected_if_completed}, delta, modeled, not_modeled, method, model_version, created_at}`: all modeled changes in one
+  P1 run; never touches the session. Errors: 401/403 (accounts), 404 `property_not_found` / `not_found` /
+  `commitment_not_found`, 409 `bad_transition`, 422 `unknown_action` / `unknown_commitment` / `missing_input`, 503
+  `model_unavailable`. History (`GET /properties/{id}/history`) lists them. `app/bills.py` is a stub until the bills
+  slice merges (snapshots, bills, impact are empty).
 
 ## CO₂ and fix sources (checked Oct 4, 2026)
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.accounts import router as accounts_router
 from app.calibrate import router as calibrate_router
 from app.city import router as city_router
+from app.commitments import router as commitments_router
 from app.compare import router as compare_router
 from app.estimate import estimate, router as estimate_router
 from app.fixes import router as fixes_router
@@ -28,6 +29,7 @@ app.include_router(compare_router)
 app.include_router(city_router)
 app.include_router(calibrate_router)
 app.include_router(accounts_router)
+app.include_router(commitments_router)
 
 
 class EstimateRequest(BaseModel):
