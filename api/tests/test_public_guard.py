@@ -130,6 +130,8 @@ def test_cf_header_only_with_explicit_loopback_trust(monkeypatch):
     guard = PublicGuard(None, limit=30)
     headers = {b'cf-connecting-ip': b'203.0.113.1', b'x-forwarded-for': b'203.0.113.2'}
     assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '127.0.0.1'
+    monkeypatch.setenv('PUBLIC_TUNNEL', 'localhostrun')  # its visitors could spoof Cloudflare's header
+    assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '127.0.0.1'
     monkeypatch.setenv('PUBLIC_TUNNEL', '1')
     assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '203.0.113.1'
     assert guard.visitor({'client': ('192.0.2.1', 10)}, headers) == '192.0.2.1'
