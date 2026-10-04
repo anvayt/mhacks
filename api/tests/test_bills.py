@@ -74,11 +74,16 @@ def test_linked_bill_regrades_but_does_not_loosen_real_noise_or_change_session(s
     assert body["bill_id"] and body["verified"] is False and body["impact"] is None
     assert body["noise_floor"] == 118.3 and body["pct_vs_expected_for_weather"] == -50
     snapshot = body["snapshot"]
-    assert snapshot["source"] == "bill_regrade" and snapshot["label"] == "from your bill, adjusted for weather"
-    assert snapshot["bill_annual"] == {"p10": 350, "p50": 500, "p90": 700}
-    expected = bills.score_for(500, 850, "Multi-Family with 5+ Units")
+    # P1: inside its 118% noise floor (meaningful false) → provisional, never the current grade
+    assert snapshot["source"] == "bill_regrade" and snapshot["provisional"] is True
+    assert snapshot["label"] == bills.PROVISIONAL
+    # −50% would imply $500/yr; damped to the model's own p10 for this home ($700), so factor 0.7
+    assert snapshot["bill_annual"] == {"p10": 490, "p50": 700, "p90": 980}
+    expected = bills.score_for(700, 850, "Multi-Family with 5+ Units")
     assert (snapshot["score"], snapshot["grade"]) == (expected["score"], expected["grade"])
-    assert snapshot["co2_kg_yr"]["p50"] == round(co2.co2_kg(300, 300), 2)  # gas only; electricity unchanged
+    assert body["bill_signal"] == {"grade": expected["grade"], "score": expected["score"], "annual_usd": 700,
+                                   "pct_vs_expected_for_weather": -50, "label": bills.PROVISIONAL}
+    assert snapshot["co2_kg_yr"]["p50"] == round(co2.co2_kg(600 * 0.7, 300), 2)  # gas only; electricity unchanged
     assert sessions.get(SID) == state["session"] and body["estimate"]["bill"]["annual"]["p50"] == 1000
     assert state["authorized"] == ["u1"]
     assert len(bills.list_bills(PID)) == 1 and len(bills.list_snapshots(PID)) == 2
@@ -199,6 +204,23 @@ def test_anonymous_call_keeps_old_estimate_and_writes_no_phase_two_records(state
     assert body["estimate"]["bill"]["annual"]["p50"] == 1000
     assert not {"bill_id", "snapshot", "verified", "impact", "model_version"} & set(body)  # P4's shape, unchanged
     assert not state["authorized"] and not bills.list_bills(PID) and not bills.list_snapshots(PID)
+
+
+def test_only_a_meaningful_bill_becomes_the_current_grade(state):  # wave 6
+    pos = lambda: client.get(f"/leaderboard/position/{PID}", headers={"X-Agent-Key": "test-agent-key"}).json()
+    assert submit().json()["snapshot"]["provisional"] is True  # 118% noise floor
+    assert pos()["current_source"] == "initial_estimate"  # the estimate grade stays current
+    state["noise"] = .1  # now beyond P1's noise: meaningful
+    body = submit(start="2026-02-01", end="2026-02-28").json()
+    assert body["snapshot"]["provisional"] is False and body["snapshot"]["label"] == bills.LABEL
+    p = pos()
+    assert p["current_source"] == "bill_regrade" and p["current"]["score"] == body["bill_signal"]["score"]
+    assert [s.get("provisional") for s in bills.list_snapshots(PID)] == [None, True, False]  # history keeps both
+
+
+def test_regrade_is_clamped_to_the_models_band(state):
+    for pct, p50 in ((-90, 700), (300, 1400), (10, 1100)):
+        assert bills._regrade(state["session"], pct)["bill_annual"]["p50"] == p50
 
 
 def test_projection_cannot_write_snapshot(state):
