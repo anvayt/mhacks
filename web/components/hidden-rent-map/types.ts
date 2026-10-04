@@ -2,7 +2,8 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 export type Season = "winter" | "spring" | "summer" | "fall";
 
-export type Chapter = "building" | "block" | "answers";
+/** What the map camera frames: all of Ann Arbor, the census block group, or the building. */
+export type Focus = "city" | "block" | "building";
 
 export interface StepEstimate {
   /** Model's typical-year heating + cooling cost for the unit, $/yr. */
@@ -37,6 +38,8 @@ export interface MapWidgetData {
   address: string;
   /** [lon, lat] */
   center: [number, number];
+  /** [west, south, east, north] of every Ann Arbor footprint. */
+  city_bounds: [number, number, number, number];
   building: {
     footprint: Polygon | MultiPolygon;
     height_ft: number | null;

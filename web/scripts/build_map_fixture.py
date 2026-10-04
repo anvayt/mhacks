@@ -66,10 +66,13 @@ def building_and_neighbors(lat, lon):
     pt = Point(lon, lat)
     pt_m = to_m(pt)
     mine, neighbors = None, []
+    city = [np.inf, np.inf, -np.inf, -np.inf]
     for f in feats:
         if not f.get("geometry"):
             continue
         g = shape(f["geometry"])
+        x0, y0, x1, y1 = g.bounds
+        city = [min(city[0], x0), min(city[1], y0), max(city[2], x1), max(city[3], y1)]
         if g.contains(pt):
             mine = (f, g)
         elif to_m(g.centroid).distance(pt_m) <= NEIGHBOR_RADIUS_M:
@@ -81,7 +84,7 @@ def building_and_neighbors(lat, lon):
         {"type": "Feature", "geometry": mapping(g),
          "properties": {"height_ft": round(f["properties"]["ABG_BLD_HG"] or 0, 1)}}
         for f, g in neighbors if f["properties"].get("ABG_BLD_HG")]}
-    return mine, nb
+    return mine, nb, [round(float(v), 5) for v in city]
 
 
 def block_group(geoid):
@@ -149,7 +152,7 @@ def main():
     loc, b = base["location"], base["building"]
     lat, lon, unit_sqft = loc["lat"], loc["lon"], base["unit_sqft"]
 
-    (fp, geom), neighbors = building_and_neighbors(lat, lon)
+    (fp, geom), neighbors, city_bounds = building_and_neighbors(lat, lon)
     props = fp["properties"]
     from_lidar = props.get("STORIES") is None
     bg_geom = block_group(loc["block_group"])
@@ -175,6 +178,7 @@ def main():
                  "stands in for the /api map-widget payload until P2 serves it.",
         "address": loc["matched_address"],
         "center": [lon, lat],
+        "city_bounds": city_bounds,
         "building": {
             "footprint": mapping(geom),
             "height_ft": round(props["ABG_BLD_HG"], 1) if props.get("ABG_BLD_HG") else None,

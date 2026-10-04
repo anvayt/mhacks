@@ -1,21 +1,23 @@
-import { HiddenRentMap, demoMapData, type Chapter } from "@/components/hidden-rent-map";
+import type { Focus } from "@/components/hidden-rent-map";
+import { MapPreview } from "./preview";
 
 export const metadata = { title: "Map widget preview · Hidden Rent" };
 
-const CHAPTERS: Chapter[] = ["building", "block", "answers"];
+const FOCI: Focus[] = ["city", "block", "building"];
 
 export default async function MapPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ chapter?: string; step?: string }>;
+  searchParams: Promise<{ focus?: string; step?: string }>;
 }) {
   const q = await searchParams;
-  const chapter = CHAPTERS.find((c) => c === q.chapter) ?? "building";
+  const focus = FOCI.find((f) => f === q.focus) ?? "city";
   const step = Number(q.step ?? 0) || 0;
   return (
     <main style={{ minHeight: "100vh", padding: 24, background: "#f4f2eb" }}>
-      <div style={{ maxWidth: 1240, margin: "0 auto", height: "min(820px, calc(100vh - 48px))", display: "grid" }}>
-        <HiddenRentMap key={`${chapter}-${step}`} data={demoMapData} defaultChapter={chapter} defaultStep={step} />
+      <style>{`.map-preview-widget { height: min(680px, calc(100vh - 48px)); }`}</style>
+      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+        <MapPreview key={`${focus}-${step}`} initialFocus={focus} initialStep={step} />
       </div>
     </main>
   );
