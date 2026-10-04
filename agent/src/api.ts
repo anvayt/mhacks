@@ -224,13 +224,13 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     body: unknown,
     timeoutMs: number,
     check: Check = checkEstimate,
-    authenticated = false,
   ): Promise<ApiResult<T>> {
     let res: Response;
     try {
       res = await fetchFn(`${baseUrl}${path}`, {
         method,
-        headers: { "Content-Type": "application/json", ...(authenticated && agentKey ? { "X-Agent-Key": agentKey } : {}) },
+        // All texters share this server's IP, including on public API routes.
+        headers: { "Content-Type": "application/json", ...(agentKey ? { "X-Agent-Key": agentKey } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -255,7 +255,7 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     return { ok: false, code: String(res.status), message: UNREACHABLE };
   }
   const generic: Check = (body) => ({ fatal: isObj(body) || Array.isArray(body) ? [] : ["body missing"], warnings: [] });
-  const accountCall = <T>(method: "GET" | "POST" | "PATCH", path: string, body?: unknown) => call<T>(method, path, body, 200_000, generic, true);
+  const accountCall = <T>(method: "GET" | "POST" | "PATCH", path: string, body?: unknown) => call<T>(method, path, body, 200_000, generic);
   return {
     mock: false,
     // the first look-up of a new area downloads its weather history once
@@ -263,7 +263,7 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     answer: (req) => call("POST", "/answer", req, 60_000),
     session: (id) => call("GET", `/session/${encodeURIComponent(id)}`, undefined, 30_000),
     // a vision model reads the bill photo, so give it time
-    calibrate: (req) => call<Calibration>("POST", "/calibrate", req, 120_000, checkCalibration, Boolean(req.property_id)),
+    calibrate: (req) => call<Calibration>("POST", "/calibrate", req, 120_000, checkCalibration),
     fixes: (id) => call<Fixes>("GET", `/fixes/${encodeURIComponent(id)}`, undefined, 60_000, checkFixes),
     authPhone: (req) => accountCall("POST", "/auth/phone", req),
     confirmLogin: (req) => accountCall("POST", "/auth/web/confirm", req),
