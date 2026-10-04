@@ -16,3 +16,11 @@ const ADDRESS = /\d+\s+\S+.*\b(st|street|ave|avenue|rd|road|dr|drive|blvd|ln|lan
 export function replyFor(text: string): string {
   return LISTING_URL.test(text) || ADDRESS.test(text) ? NOT_LIVE : WELCOME;
 }
+
+/** The text to answer, or null to stay quiet (reactions, typing, read receipts...).
+ *  iMessage can deliver a pasted link as a "richlink" instead of "text", so both count. */
+export function inboundText(content: { type: string; text?: unknown; url?: unknown }): string | null {
+  if (content.type === "text" && typeof content.text === "string") return content.text;
+  if (content.type === "richlink" && typeof content.url === "string") return content.url;
+  return null;
+}

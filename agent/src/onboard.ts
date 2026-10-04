@@ -1,6 +1,7 @@
 // Judge onboarding page. Run: npm run onboard
 // QR (/qr.svg) → this page → enter phone → Photon allowlists it → Messages opens with the opener pre-filled.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { networkInterfaces } from "node:os";
 import { pathToFileURL } from "node:url";
 import QRCode from "qrcode";
 import { env } from "./env.ts";
@@ -9,7 +10,11 @@ import { OPENER, createSharedUser, normalizePhone, redirectUrl, type SharedUser 
 export type Register = (phone: string, name?: string) => Promise<SharedUser>;
 
 /** Mock for USE_MOCKS=1: no Photon call; the redirect becomes a plain sms: link with the opener. */
-export const mockRegister: Register = async (phone) => ({ id: "mock-user", phoneNumber: phone });
+export const mockRegister: Register = async (phone) => ({
+  id: "mock-user",
+  phoneNumber: phone,
+  assignedPhoneNumber: "+15550000000",
+});
 
 const page = (body: string) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -38,6 +43,13 @@ const FORM = page(`<h1>What's your hidden rent?</h1>
 </form>
 <small>We only use your number to let it text our agent during MHacks 2026.</small>`);
 
+// Printable table card (PLAN.md §11 demo idea 8). Print from the browser.
+const card = (qrSvg: string, publicUrl: string) =>
+  page(`<h1 style="text-align:center">What's your apartment's hidden rent?</h1>
+<p style="text-align:center">Scan, text us a listing, get the energy bill it doesn't show.</p>
+<div style="max-width:320px;margin:0 auto;background:#fff;border-radius:12px">${qrSvg}</div>
+<small style="text-align:center">${publicUrl.replace(/^https?:\/\//, "")}</small>`);
+
 const errorPage = (msg: string) =>
   page(`<h1>Hmm.</h1><p>${msg}</p><a href="/">Try again</a>`);
 
@@ -58,8 +70,9 @@ export function createHandler(register: Register, mock: boolean, publicUrl: stri
 
     if (req.method === "GET" && url.pathname === "/") return html(200, FORM);
 
-    if (req.method === "GET" && url.pathname === "/qr.svg") {
+    if (req.method === "GET" && (url.pathname === "/qr.svg" || url.pathname === "/card")) {
       const svg = await QRCode.toString(publicUrl, { type: "svg", margin: 2, width: 512 });
+      if (url.pathname === "/card") return html(200, card(svg, publicUrl));
       return res.writeHead(200, { "Content-Type": "image/svg+xml" }).end(svg);
     }
 
@@ -89,6 +102,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     : (phone, name) => createSharedUser(env, phone, name);
   createServer(createHandler(register, env.useMocks, env.publicUrl)).listen(env.onboardPort, () => {
     console.log(`Onboarding page on http://localhost:${env.onboardPort} (${env.useMocks ? "MOCK Photon" : "real Photon"})`);
-    console.log(`QR code for ${env.publicUrl}: http://localhost:${env.onboardPort}/qr.svg`);
+    console.log(`QR for ${env.publicUrl}: http://localhost:${env.onboardPort}/qr.svg (printable card: /card)`);
+    // Phones on the same Wi-Fi can use the LAN address if the venue network allows it; otherwise use a tunnel.
+    const lan = Object.values(networkInterfaces()).flat().find((i) => i && i.family === "IPv4" && !i.internal);
+    if (lan) console.log(`Same-Wi-Fi fallback: http://${lan.address}:${env.onboardPort} (set PUBLIC_URL to it or to a tunnel URL)`);
   });
 }
