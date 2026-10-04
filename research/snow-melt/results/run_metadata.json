@@ -1,0 +1,50 @@
+{
+  "status": "completed",
+  "reproduction_started_at_utc": "2026-10-04T12:01:54Z",
+  "completed_at_utc": "2026-10-04T12:02:30.900378+00:00",
+  "completed_at_detroit": "2026-10-04T08:02:30.900378-04:00",
+  "repository_head_at_run": "5bc5ee3eb5fdbe896b5d6c6c0e8021fe86154ff1",
+  "python": "3.12.13",
+  "packages": {
+    "pystac-client": "0.9.0",
+    "rasterio": "1.5.2",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "shapely": "2.1.2",
+    "pyproj": "3.8.0",
+    "matplotlib": "3.11.2",
+    "pyarrow": "25.0.1"
+  },
+  "tests_passed": 6,
+  "verdict": "NO-GO",
+  "clear_post_event_scene_found": true,
+  "primary_metered_pairs": 0,
+  "hashes": {
+    "uv.lock": "f18a2f8fae9ade33e4049ca3537c81c06204619a80a339ac2878e3505b893055",
+    "results/input_manifest.json": "8656f699529a116d20f372e89095af01fcf7826890693ea4af5c3da46511c4ae",
+    "cache/USC00200230.dly": "281e84ef37fb0b411a1f403c26e9b23b51c08a3f88131aa627fa2d6278b41524",
+    "cache/winter_items.json": "4651415c0523646596371ca4080896f48f8d3f1f0b24310ef25bf8e1d2677343"
+  },
+  "result_sha256": {
+    "results/building_metrics.csv": "4f360c1a1056c62cf129f78eb6da95df0e35490c8d023d5bfae807b6b6cd1991",
+    "results/eligible_roof_pixels.csv": "b94acc475147e797ed9f252394956b9a81d5f1990e30644b155d728a5e5050e9",
+    "results/event_metrics.csv": "df53c254822c913b9d3779332fe4b16cd8dd031a716e30decc22fd564c73ffc6",
+    "results/events.csv": "3836113c213ca8e920ad1991cf4661dfddf8714c1053eb25369069750da4d857",
+    "results/geometry_diagnostics.json": "7219965c790b306916d62c423ce6038a23c41cc2c4bda16db424f2a3c1416511",
+    "results/geometry_sensitivity.csv": "656ace07005d0d43fc1b646d6d5ea3f9413a864983a6d8d87d4ab2133f677129",
+    "results/geometry_summary.json": "8fd1acae0d9cdb10e6f2d5ba38217ec5256ead8b887e72792ec88ade33ba77f5",
+    "results/grid.json": "d8ff0773441d7486a85ed8179dc45cd00bbba043965d16e9457e43a86ba5bb27",
+    "results/input_manifest.json": "8656f699529a116d20f372e89095af01fcf7826890693ea4af5c3da46511c4ae",
+    "results/meter_join.csv": "8b7d4cab012659e7709e71b8873cafd28e34d642b092d45164ae87edb8eef9bf",
+    "results/meter_summary.json": "748d0308d47bd921c87890e838869b36e0e1658aefc28a83c7b4f0fd8298d74a",
+    "results/meter_targets.csv": "4236516eafca71c6fe274f417374c00668b944b4e36e6bca8be1a4674f6a04e0",
+    "results/noaa_daily_long.csv": "964225c7b27fa48eb3315d29ddfabfa5bf899ab06b46e21ac20ed12ff801a248",
+    "results/radiometry_audit.json": "f03333a8759ab24695e0cc38fdb2c3f92f81459b8d67dbdba2d2b02ac1120c70",
+    "results/roof_inventory.csv": "7e0e435c90bcce0bdeffd3c403d6fedede34ea6a55446993bc176a1b728874a0",
+    "results/scene_manifest.json": "6ec63925ddd8f3c59c6c4526d15bb83db6600ca4f6fe8af823239d81100b3f66",
+    "results/scene_quality.csv": "890efed09f6928689d1abc59b8eb32c58def4f1cba1a2ad8c2c274847564a11f",
+    "results/snow_observations.csv": "b0b41dc84f14b09736960001aced9ad0ac6418165f36e42221158cf58bc10850",
+    "results/validation.json": "615f393936e86ac5d3a0ec08c0a4e7b144d3fb23b783cc19a87b4870c56c2e04"
+  },
+  "scope": "Only research/snow-melt outputs; no API endpoint, grade changes, localhost requests, or server management."
+}

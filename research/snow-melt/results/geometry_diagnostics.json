@@ -1,0 +1,23 @@
+{
+  "source": "roof_inventory.csv joined to buildings_hc.csv method=metered; eligible_roof_pixels.csv",
+  "all_method_metered_properties": 110,
+  "mapped_roofs_at_metered_properties": 1436,
+  "mapped_metered_properties": 110,
+  "metered_roofs_area_ge_1500": 62,
+  "metered_large_roofs_with_nonempty_20m_inset": 1,
+  "nonempty_metered_insets": [
+    {
+      "footprint_id": 34938,
+      "meter_building_id": "A2BLD-00001",
+      "roof_area_m2": 3324.7734684925877,
+      "inner_area_m2": 112.43889099358854
+    }
+  ],
+  "eligible_roof_city_structure_types": {
+    "Public": 32,
+    "Commercial": 15,
+    "Office": 5
+  },
+  "eligible_roofs_with_any_benchmark_polygon": 20,
+  "eligible_roofs_at_method_metered_properties": 0
+}
