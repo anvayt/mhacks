@@ -9,6 +9,10 @@ export interface CityBuildingProps {
   r: 0 | 1;
   /** Most common mailing address inside the footprint, if any. */
   a?: string;
+  score?: number;
+  grade?: string;
+  excess_usd_per_sqft?: number;
+  type?: string;
 }
 
 export interface SimilarBuilding {
@@ -41,9 +45,9 @@ export interface LookalikeCloud {
   count: number;
   /** Sorted sample of those homes' heating + cooling $/yr, priced at this address. */
   usd_yr: number[];
-  p10: number;
-  p50: number;
-  p90: number;
+  p10: number | null;
+  p50: number | null;
+  p90: number | null;
 }
 
 export interface SurveyStep {

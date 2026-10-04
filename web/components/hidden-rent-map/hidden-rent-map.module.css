@@ -488,3 +488,6 @@
     transition: none !important;
   }
 }
+
+.emptyCloud { margin: 16px 0; padding: 16px; border: 1px dashed var(--hrm-muted); font-size: 14px; line-height: 1.5; }
+@media (max-width: 600px) { .legend { left: 10px; right: auto; flex-wrap: wrap; max-width: calc(100% - 20px); font-size: 10px; gap: 6px; } .sources { bottom: 58px; } .focusButton { padding: 7px 9px; font-size: 10px; } }
