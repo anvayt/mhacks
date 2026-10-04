@@ -662,24 +662,45 @@ fieldset.field {
 
 .loading-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px 64px 32px;
-  background: var(--white);
-  color: var(--ink);
-  transform: translateY(100%);
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: transparent;
+  color: var(--white);
+  pointer-events: none;
   opacity: 0;
-  transition: transform 0.6s ease, opacity 0.6s ease;
+  transition: opacity 0.7s ease;
 }
 
 .loading-sheet.raised {
-  transform: translateY(0);
   opacity: 1;
+}
+
+.leaf-spin {
+  position: relative;
+  width: 156px;
+  height: 156px;
+  animation: leaf-spin 3.6s linear infinite;
+}
+
+.leaf {
+  position: absolute;
+  left: calc(50% - 11px);
+  top: 14px;
+  width: 22px;
+  height: 40px;
+  color: var(--white);
+  transform-origin: 11px 64px;
+}
+
+.leaf svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .loading-label {
@@ -690,31 +711,18 @@ fieldset.field {
   letter-spacing: 0.04em;
   line-height: 1.5;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--white);
 }
 
-.loading-track {
-  height: 8px;
-  background: var(--paper);
-  overflow: hidden;
-}
-
-.loading-fill {
-  width: 0;
-  height: 100%;
-  background: var(--ink);
-}
-
-.loading-fill.run {
-  animation: loading-fill 2.2s linear forwards;
-}
-
-@keyframes loading-fill {
-  from {
-    width: 0;
-  }
+@keyframes leaf-spin {
   to {
-    width: 100%;
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-spin {
+    animation: none;
   }
 }
 
@@ -884,6 +892,140 @@ fieldset.field {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.pitch {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 40px 56px 112px;
+  overflow: hidden;
+  background: #173bfa;
+  color: var(--white);
+}
+
+.pitch-shift {
+  --blue-end: 100%;
+  --red-start: 100%;
+  background: linear-gradient(
+    90deg,
+    #173bfa 0%,
+    #173bfa var(--blue-end),
+    #f23833 var(--red-start),
+    #f23833 100%
+  );
+}
+
+.pitch-shift.armed {
+  transition: --blue-end 1.7s ease-in-out, --red-start 1.7s ease-in-out;
+}
+
+.pitch-shift.settling {
+  transition-duration: 1.1s;
+}
+
+.pitch-line {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  max-width: 14ch;
+  font-family: var(--font-display);
+  font-size: clamp(52px, 7vw, 104px);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.pitch-line.show {
+  opacity: 1;
+}
+
+.pitch-line.hide {
+  opacity: 0;
+}
+
+.pitch-line.ride {
+  transform: translateX(100vw);
+  transition: transform 1.7s ease-in-out, opacity 1.7s ease-in-out;
+}
+
+.pitch-line.ride.show {
+  transform: none;
+  opacity: 1;
+}
+
+.pitch-line.ride.hide {
+  transform: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pitch-line,
+  .pitch-line.ride,
+  .pitch-line.ride.show,
+  .pitch-line.ride.hide {
+    transform: none;
+    transition: none;
+  }
+
+  .pitch-line.show,
+  .pitch-line.ride.show {
+    opacity: 1;
+  }
+}
+
+.pitch-next {
+  position: absolute;
+  right: 56px;
+  bottom: 32px;
+  z-index: 2;
+  text-decoration: none;
+  transition: opacity 0.8s ease;
+}
+
+.pitch-next.hide,
+.pitch-next:disabled {
+  cursor: default;
+}
+
+.pitch-next.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pitch-invite {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 48px 56px 120px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(36px, 4.2vw, 64px);
+  line-height: 1.25;
+  text-align: center;
+  color: var(--white);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.1s ease;
+}
+
+.pitch-invite.show {
+  opacity: 1;
+}
+
+.pitch-invite.hide {
+  opacity: 0;
 }
 
 .start-screen {

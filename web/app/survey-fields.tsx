@@ -55,18 +55,15 @@ function SurveyChoices({
 /** P3's loading sheet. With `ready`, it stays up until ready is true (a first lookup can take a minute). */
 export function LoadingSheet({ onFinished, ready = true }: { onFinished: () => void; ready?: boolean }) {
   const [raised, setRaised] = useState(false);
-  const [filling, setFilling] = useState(false);
   const [minDone, setMinDone] = useState(false);
   const onFinishedRef = useRef(onFinished);
   onFinishedRef.current = onFinished;
 
   useEffect(() => {
     const raise = requestAnimationFrame(() => setRaised(true));
-    const fill = window.setTimeout(() => setFilling(true), 900);
     const min = window.setTimeout(() => setMinDone(true), 4600);
     return () => {
       cancelAnimationFrame(raise);
-      window.clearTimeout(fill);
       window.clearTimeout(min);
     };
   }, []);
@@ -80,10 +77,22 @@ export function LoadingSheet({ onFinished, ready = true }: { onFinished: () => v
 
   return (
     <div className={raised ? "loading-sheet raised" : "loading-sheet"} role="status" aria-live="polite">
-      <p className="loading-label">{minDone && !ready ? "Looking up city records · first lookups take up to a minute" : "Loading"}</p>
-      <div className="loading-track">
-        <div className={filling ? "loading-fill run" : "loading-fill"} />
+      <div className="leaf-spin" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, index) => (
+          <span
+            key={index}
+            className="leaf"
+            style={{ transform: `rotate(${index * 60}deg)`, opacity: 0.4 + index * 0.1 }}
+          >
+            <svg viewBox="0 0 24 48" width="22" height="40" aria-hidden="true">
+              <path fill="currentColor" d="M14 1c8 11 10 23 4 35-2 6-5 10-6 12-4-8-8-18-6-30C8 8 11 3 14 1z" />
+            </svg>
+          </span>
+        ))}
       </div>
+      <p className="loading-label">
+        {minDone && !ready ? "Looking up city records · first lookups take up to a minute" : "Loading"}
+      </p>
     </div>
   );
 }

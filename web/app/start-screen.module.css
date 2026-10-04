@@ -56,6 +56,7 @@
 @keyframes sweep { to { background-size: 100% 38%; } }
 .actions { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; animation: rise .7s ease 1.9s both; }
 .start { display: inline-flex; align-items: center; gap: 12px; padding: 18px 26px; background: var(--blue); color: var(--white); font-family: var(--font-sans); font-size: 17px; font-weight: 600; text-decoration: none; box-shadow: 6px 6px 0 #f23833; transition: transform .2s ease, box-shadow .2s ease; }
+.carry { position: absolute; left: 56px; bottom: 32px; z-index: 3; }
 .start:hover, .start:focus-visible { transform: translate(-2px, -2px); box-shadow: 9px 9px 0 #f23833; }
 .start img { filter: brightness(0) invert(1); }
 .secondaryWrap { display: flex; flex-direction: column; gap: 4px; }
