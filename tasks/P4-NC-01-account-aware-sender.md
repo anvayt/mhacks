@@ -7,7 +7,7 @@ branch: p4/account-aware-sender
 type: build
 checkpoint: NEW_CHANGES Phase 2 (after the existing P4 flow is verified on a real phone)
 depends_on: []
-blocks: ['P4-NC-02', 'P4-NC-03', 'P4-NC-04']
+blocks: [P4-NC-02, P4-NC-03, P4-NC-04]
 merges: []
 services_touched:
   - /agent
