@@ -1,0 +1,110 @@
+Checked 54 packages in 71ms
+Geometry: {'footprints': 35007, 'scored_city_rows': 25704, 'bbox_wgs84': [-83.79921577570228, 42.21731180293874, -83.66121946691725, 42.32354630572873], 'roof_area_ge_1500': 622, 'nonempty_20m_inset': 194, 'scored_home_area_ge_1500': 143, 'invalid_source_footprints_repaired': 1, 'invalid_unique_benchmark_polygons_repaired': 2, 'unique_property_polygons': 418, 'footprint_property_match_rule': '>50% area inside exactly one benchmark polygon'}
+Meters: {'buildings_hc_rows': 591, 'method_metered': 110, 'meter_monthly_rows': 4788, 'meter_years': [2021, 2022, 2023], 'eligible_meter_properties': 86, 'target': 'heat_ccf / gfa_ft2 / hdd_ref (HDD60)', 'monthly_duplicate_keys': 0}
+STAC items 165 unique tile acquisitions 54
+S2C_17TKG_20251212_0_L2A green 10000 1.0
+S2C_17TKG_20251212_0_L2A swir16 10000 1.0
+S2B_17TKG_20260126_0_L2A green 10000 1.0
+S2B_17TKG_20260126_0_L2A swir16 10000 1.0
+S2B_17TKG_20260215_0_L2A green 10000 1.0
+S2B_17TKG_20260215_0_L2A swir16 10000 1.0
+NOAA events 19 winter SNWD days 121
+STAC items 165 unique tile acquisitions 54
+Native-resolution eligible roofs: 52
+S2A_17TKG_20251211_0_L2A no clear roofs
+S2C_17TKG_20251212_0_L2A usable roofs 6 sec 0.0
+S2B_17TKG_20251214_0_L2A no clear roofs
+S2A_17TKG_20251214_1_L2A no clear roofs
+S2B_17TKG_20251217_0_L2A usable roofs 51 sec 0.0
+S2C_17TKG_20251219_0_L2A no clear roofs
+S2B_17TKG_20260103_0_L2A no clear roofs
+S2A_17TKG_20260103_1_L2A no clear roofs
+S2B_17TKG_20260106_0_L2A no clear roofs
+S2C_17TKG_20260108_0_L2A usable roofs 0 sec 0.0
+S2C_17TKG_20260111_0_L2A no clear roofs
+S2B_17TKG_20260113_0_L2A no clear roofs
+S2B_17TKG_20260116_0_L2A no clear roofs
+S2C_17TKG_20260118_0_L2A no clear roofs
+S2B_17TKG_20260123_0_L2A usable roofs 0 sec 0.0
+S2B_17TKG_20260126_0_L2A usable roofs 30 sec 0.0
+S2C_17TKG_20260128_0_L2A usable roofs 26 sec 0.0
+S2C_17TKG_20260131_0_L2A usable roofs 1 sec 0.0
+S2B_17TKG_20260202_0_L2A no clear roofs
+S2B_17TKG_20260205_0_L2A no clear roofs
+S2C_17TKG_20260207_0_L2A usable roofs 18 sec 0.0
+S2C_17TKG_20260210_0_L2A usable roofs 27 sec 0.0
+S2B_17TKG_20260212_0_L2A no clear roofs
+S2B_17TKG_20260215_0_L2A usable roofs 46 sec 0.0
+S2B_17TKG_20260225_0_L2A no clear roofs
+S2C_17TKG_20260227_0_L2A usable roofs 48 sec 0.0
+S2C_17TKG_20260302_0_L2A usable roofs 49 sec 0.0
+S2B_17TKG_20260304_0_L2A no clear roofs
+Imagery complete, observations: 302
+{
+  "primary_metered": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "metered_any_roof_coverage": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "raw_winter_gas_sensitivity": {
+    "n": 0,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "predicted_cost_secondary": {
+    "n": 1,
+    "spearman_rho": null,
+    "p_two_sided_permutation": null,
+    "bootstrap_95_ci": null,
+    "valid_bootstraps": 0,
+    "permutations": 0,
+    "bootstrap_draws": 0,
+    "seed": 20261004,
+    "reason": "fewer than three eligible independent observations; correlation and uncertainty not estimable"
+  },
+  "verdict": "NO-GO",
+  "reason": "The required independent metered correlation cannot be estimated: no meter-backed properties pass native-pixel roof eligibility.",
+  "counts": {
+    "native_pixel_eligible_roofs": 52,
+    "scored_roofs_geometry_eligible": 4,
+    "post_event_acquisitions_checked": 28,
+    "acquisitions_with_usable_roofs": 10,
+    "clear_scene_dates": 10,
+    "paired_roof_scene_observations": 302,
+    "roofs_with_any_observation": 52,
+    "eligible_roof_event_curves": 30,
+    "roofs_with_metric": 27,
+    "predicted_cost_pairs": 1,
+    "primary_metered_pairs": 0,
+    "source_access_errors": 0
+  }
+}
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.381s
+
+OK
+Research completion recorded: 2026-10-04T12:02:30.900378+00:00

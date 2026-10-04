@@ -1,0 +1,13 @@
+{
+  "buildings_hc_rows": 591,
+  "method_metered": 110,
+  "meter_monthly_rows": 4788,
+  "meter_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "eligible_meter_properties": 86,
+  "target": "heat_ccf / gfa_ft2 / hdd_ref (HDD60)",
+  "monthly_duplicate_keys": 0
+}
