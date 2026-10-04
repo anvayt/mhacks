@@ -1,5 +1,5 @@
 // What the agent texts back. PLAN.md §0 rule 4: every figure here is copied from an /api response, never computed.
-import type { Band, Estimate, Option, Question } from "./api.ts";
+import type { Band, Calibration, Estimate, Fixes, Option, Question } from "./api.ts";
 
 export const WELCOME =
   "Hi, I'm Hidden Rent 🏠 I show the energy bill a rental listing doesn't.\n\n" +
@@ -105,6 +105,60 @@ export function matchOption(q: Question, text: string): Option | null {
   if (exact >= 0) return q.options[exact];
   const hits = labels.flatMap((l, i) => (t.length >= 3 && (l.includes(t) || t.includes(l)) ? [i] : []));
   return hits.length === 1 ? q.options[hits[0]] : null;
+}
+
+export const NEED_LISTING_FOR_BILL =
+  "Send your listing link or address first so I know which home this bill is for, then text the bill photo again.";
+
+/** After a bill photo: how this bill compares with what the weather predicts, plus streak and badges (all from /calibrate). */
+export function calibrationText(c: Calibration): string {
+  const p = Math.round(c.pct_vs_expected_for_weather);
+  const lines = [
+    p === 0
+      ? "📄 Your bill is right at normal for this weather."
+      : `📄 Your bill is ${Math.abs(p)}% ${p < 0 ? "below" : "above"} normal for this weather${p < 0 ? " 🎉" : "."}`,
+  ];
+  if (c.streak_months > 0) lines.push(`🔥 ${c.streak_months}-month streak below normal`);
+  if (c.badges?.length) lines.push(`🏅 ${c.badges.map((x) => x.replace(/-/g, " ")).join(", ")}`);
+  return lines.join("\n");
+}
+
+// Ann Arbor Green Rental Housing: units need 70 checklist points through Jul 5, 2028 (PLAN.md §4, a2gov.org).
+const GRH_REQUIRED = 70;
+
+/** Top fixes from /fixes, short enough for a text. The landlord email goes out as its own message. */
+export function fixesText(f: Fixes): string {
+  if (!f.fixes.length) return "No fixes to suggest for this place right now.";
+  const lines = ["🔧 Top fixes:"];
+  f.fixes.slice(0, 3).forEach((x, i) => {
+    const net = x.rebate_usd > 0 ? ` (${usd(x.rebate_usd)} rebate)` : "";
+    lines.push(`${i + 1}) ${x.item}: saves ${usd(x.usd_saved_yr)}/yr, costs ${usd(x.cost_usd)}${net} → grade ${x.new_grade}, +${x.grh_points} GRH pts`);
+  });
+  if (f.grh_points_now != null && f.grh_points_after != null) {
+    lines.push(`Green Rental Housing points: ${f.grh_points_now} → ${f.grh_points_after} (Ann Arbor requires ${GRH_REQUIRED})`);
+  }
+  if (f.landlord_email) lines.push("I drafted an email to your landlord ↓");
+  return lines.join("\n");
+}
+
+export type Inbound =
+  | { kind: "text"; text: string }
+  | { kind: "photo"; mimeType: string; name?: string; read: () => Promise<Buffer> };
+
+/** Classify an inbound Spectrum message: text (or a pasted link), a photo, or null to stay quiet. */
+export function inbound(content: { type: string; text?: unknown; url?: unknown; mimeType?: unknown; name?: unknown; read?: unknown }): Inbound | null {
+  const text = inboundText(content);
+  if (text !== null) return { kind: "text", text };
+  if (content.type === "attachment" && typeof content.mimeType === "string" && content.mimeType.startsWith("image/") && typeof content.read === "function") {
+    const read = content.read as () => Promise<Buffer | Uint8Array>;
+    return {
+      kind: "photo",
+      mimeType: content.mimeType,
+      name: typeof content.name === "string" ? content.name : undefined,
+      read: async () => Buffer.from(await read()),
+    };
+  }
+  return null;
 }
 
 /** The text to answer, or null to stay quiet (reactions, typing, read receipts...).

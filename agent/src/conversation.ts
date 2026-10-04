@@ -2,8 +2,13 @@
 // narrower range, until the API says the grade is locked. One state per chat (Spectrum space), in memory.
 import type { Api, ApiResult, Estimate, EstimateRequest, Question } from "./api.ts";
 import { refInText } from "./handoff.ts";
+import { billImageBase64 } from "./photo.ts";
 import {
   ADDRESS,
+  NEED_LISTING_FOR_BILL,
+  calibrationText,
+  fixesText,
+  type Inbound,
   LINK,
   UNIT_SIZE_QUESTION,
   WELCOME,
@@ -33,10 +38,16 @@ export class Conversations {
 
   constructor(private api: Api) {}
 
-  /** The reply to one inbound text in chat `chatId`. */
+  /** The messages to send back for one inbound message in chat `chatId` (usually one; a bill photo can give three). */
+  async respond(chatId: string, input: Inbound): Promise<string[]> {
+    const s = this.state(chatId);
+    const out = input.kind === "photo" ? await this.bill(s, input) : [await this.handle(s, input.text.trim())];
+    return this.api.mock ? out.map((m, i) => (i === 0 ? `${DEMO_LABEL}\n${m}` : m)) : out;
+  }
+
+  /** Text-only convenience (tests): all reply messages joined. */
   async reply(chatId: string, text: string): Promise<string> {
-    const out = await this.handle(this.state(chatId), text.trim());
-    return this.api.mock ? `${DEMO_LABEL}\n${out}` : out;
+    return (await this.respond(chatId, { kind: "text", text })).join("\n\n");
   }
 
   private state(chatId: string): ChatState {
@@ -53,6 +64,7 @@ export class Conversations {
     if (ADDRESS.test(text)) return this.estimate(s, { address: text });
 
     const p = s.pending;
+    if (!p && s.sessionId && /^(fix|fixes|landlord|email)\b/i.test(text)) return (await this.fixes(s)).join("\n\n");
     if (p?.kind === "address") return this.estimate(s, { address: text });
     if (p?.kind === "unit_sqft") return this.unitSize(s, text);
     if (p?.kind === "question") return this.answer(s, p.question, text);
@@ -71,6 +83,28 @@ export class Conversations {
       return `${body}\n\n${UNIT_SIZE_QUESTION}`;
     }
     return this.withNextQuestion(s, body);
+  }
+
+  /** After move-in: bill photo → POST /calibrate → weather comparison + streak → GET /fixes → fixes + landlord email. */
+  private async bill(s: ChatState, photo: Extract<Inbound, { kind: "photo" }>): Promise<string[]> {
+    if (!s.sessionId) return [NEED_LISTING_FOR_BILL];
+    let bill_image_base64: string;
+    try {
+      bill_image_base64 = await billImageBase64(await photo.read(), photo.mimeType, photo.name);
+    } catch {
+      return ["I couldn't download that photo. Try sending it again."];
+    }
+    const c = await this.api.calibrate({ session_id: s.sessionId, bill_image_base64 });
+    if (!c.ok) return [c.code === "not_served" ? "Thanks! Bill checks aren't live yet; that part is still being built." : c.message];
+    if (c.data.estimate) s.last = c.data.estimate;
+    return [calibrationText(c.data), ...(await this.fixes(s))];
+  }
+
+  private async fixes(s: ChatState): Promise<string[]> {
+    if (!s.sessionId) return [NEED_LISTING_FOR_BILL];
+    const f = await this.api.fixes(s.sessionId);
+    if (!f.ok) return f.code === "not_served" ? [] : [f.message];
+    return f.data.landlord_email ? [fixesText(f.data), f.data.landlord_email] : [fixesText(f.data)];
   }
 
   /** First text from the website handoff: "… (ref <session id>)". Continue that API session. */

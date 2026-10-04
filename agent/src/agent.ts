@@ -7,7 +7,7 @@ import { env } from "./env.ts";
 import { httpApi } from "./api.ts";
 import { Conversations } from "./conversation.ts";
 import { mockApi } from "./mockApi.ts";
-import { inboundText } from "./replies.ts";
+import { inbound } from "./replies.ts";
 
 async function start() {
   if (env.agentTerminal) return Spectrum({ providers: [terminal.config()] });
@@ -34,11 +34,13 @@ console.log(
 
 for await (const [space, message] of app.messages) {
   if (message.direction === "outbound") continue;
-  const text = inboundText(message.content);
-  if (text === null) continue;
-  console.log(`[${message.platform}] ${message.sender?.id ?? "unknown"}: ${text}`);
+  const input = inbound(message.content);
+  if (input === null) continue;
+  console.log(`[${message.platform}] ${message.sender?.id ?? "unknown"}: ${input.kind === "text" ? input.text : `[photo ${input.mimeType}]`}`);
   try {
-    await space.responding(async () => space.send(await conversations.reply(space.id, text)));
+    await space.responding(async () => {
+      for (const m of await conversations.respond(space.id, input)) await space.send(m);
+    });
   } catch (err) {
     // One bad send (e.g. "Target not allowed for this project") must not kill the loop.
     console.error(`reply to ${message.sender?.id ?? "unknown"} failed:`, err);

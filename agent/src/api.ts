@@ -50,7 +50,37 @@ export interface AnswerRequest {
   answer: string;
 }
 
-export type ApiResult = { ok: true; data: Estimate } | { ok: false; code: string; message: string; hint?: string };
+/** POST /calibrate (PLAN.md §10). Assumed: pct is in percent (-12 = 12% below normal); asked P2 to confirm. */
+export interface Calibration {
+  pct_vs_expected_for_weather: number;
+  streak_months: number;
+  badges: string[];
+  estimate: Estimate;
+}
+
+export type CalibrateRequest =
+  | { session_id: string; bill_image_base64: string }
+  | { session_id: string; therms: number; kwh: number; start: string; end: string };
+
+export interface Fix {
+  item: string;
+  grh_points: number;
+  co2_kg_saved: number;
+  usd_saved_yr: number;
+  cost_usd: number;
+  rebate_usd: number;
+  new_grade: string;
+}
+
+/** GET /fixes/{session_id} (PLAN.md §10). */
+export interface Fixes {
+  fixes: Fix[];
+  grh_points_now: number;
+  grh_points_after: number;
+  landlord_email: string;
+}
+
+export type ApiResult<T = Estimate> = { ok: true; data: T } | { ok: false; code: string; message: string; hint?: string };
 
 export interface Api {
   /** True for the in-process mock: replies get labelled as demo data. */
@@ -59,6 +89,8 @@ export interface Api {
   answer(req: AnswerRequest): Promise<ApiResult>;
   /** GET /session/{id} (P2-04 additive): the current estimate of a session started on the website. */
   session(id: string): Promise<ApiResult>;
+  calibrate(req: CalibrateRequest): Promise<ApiResult<Calibration>>;
+  fixes(sessionId: string): Promise<ApiResult<Fixes>>;
 }
 
 export const CONTRACT_ERROR = "Something went wrong on our side reading that answer. Try again in a bit.";
@@ -86,6 +118,33 @@ export function checkEstimate(e: unknown): { fatal: string[]; warnings: string[]
   return { fatal, warnings };
 }
 
+export function checkCalibration(c: unknown): { fatal: string[]; warnings: string[] } {
+  if (!isObj(c)) return { fatal: ["body is not an object"], warnings: [] };
+  const fatal = isNum(c.pct_vs_expected_for_weather) ? [] : ["pct_vs_expected_for_weather missing"];
+  const warnings: string[] = [];
+  if (!isNum(c.streak_months)) warnings.push("streak_months missing");
+  if (!Array.isArray(c.badges)) warnings.push("badges is not an array");
+  if (c.estimate != null) warnings.push(...checkEstimate(c.estimate).fatal.map((w) => `estimate: ${w}`));
+  return { fatal, warnings };
+}
+
+export function checkFixes(f: unknown): { fatal: string[]; warnings: string[] } {
+  if (!isObj(f)) return { fatal: ["body is not an object"], warnings: [] };
+  const fatal: string[] = [];
+  const warnings: string[] = [];
+  if (!Array.isArray(f.fixes)) fatal.push("fixes is not an array");
+  else {
+    f.fixes.forEach((x: any, i: number) => {
+      if (!isObj(x) || typeof x.item !== "string") warnings.push(`fixes[${i}].item missing`);
+    });
+  }
+  if (typeof f.landlord_email !== "string") warnings.push("landlord_email missing");
+  if (!isNum(f.grh_points_now) || !isNum(f.grh_points_after)) warnings.push("grh_points_now/after missing");
+  return { fatal, warnings };
+}
+
+type Check = (body: unknown) => { fatal: string[]; warnings: string[] };
+
 export type Logger = (msg: string) => void;
 
 export const UNREACHABLE =
@@ -94,7 +153,13 @@ export const UNREACHABLE =
 
 /** The real /api over HTTP. 422/503 bodies are {detail: {code, message, hint?}}. */
 export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Logger = console.warn): Api {
-  async function call(method: "GET" | "POST", path: string, body: unknown, timeoutMs: number): Promise<ApiResult> {
+  async function call<T = Estimate>(
+    method: "GET" | "POST",
+    path: string,
+    body: unknown,
+    timeoutMs: number,
+    check: Check = checkEstimate,
+  ): Promise<ApiResult<T>> {
     let res: Response;
     try {
       res = await fetchFn(`${baseUrl}${path}`, {
@@ -108,13 +173,13 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     }
     const data = await res.json().catch(() => null);
     if (res.ok) {
-      const { fatal, warnings } = checkEstimate(data);
+      const { fatal, warnings } = check(data);
       for (const w of warnings) log(`[contract] ${method} ${path}: ${w} (PLAN.md §10)`);
       if (fatal.length) {
         log(`[contract] ${method} ${path}: ${fatal.join("; ")} (PLAN.md §10); not replying with numbers`);
         return { ok: false, code: "contract_mismatch", message: CONTRACT_ERROR };
       }
-      return { ok: true, data: data as Estimate };
+      return { ok: true, data: data as T };
     }
     const d = data?.detail;
     if (d && typeof d === "object" && typeof d.message === "string") {
@@ -129,5 +194,8 @@ export function httpApi(baseUrl: string, fetchFn: typeof fetch = fetch, log: Log
     estimate: (req) => call("POST", "/estimate", req, 200_000),
     answer: (req) => call("POST", "/answer", req, 60_000),
     session: (id) => call("GET", `/session/${encodeURIComponent(id)}`, undefined, 30_000),
+    // a vision model reads the bill photo, so give it time
+    calibrate: (req) => call<Calibration>("POST", "/calibrate", req, 120_000, checkCalibration),
+    fixes: (id) => call<Fixes>("GET", `/fixes/${encodeURIComponent(id)}`, undefined, 60_000, checkFixes),
   };
 }
