@@ -1,5 +1,8 @@
 # Hidden Rent for ASI:One
 
+![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
+![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
+
 A Fetch.ai uAgent using the standard Agent Chat Protocol, an Agentverse mailbox, and ASI:One's OpenAI-compatible intent API. All energy, bill, grade, carbon and improvement figures come from the existing Hidden Rent API. No model, website, iMessage agent or API source/dependency changes are needed.
 
 ## Run
