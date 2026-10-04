@@ -153,11 +153,11 @@ def heldout_rows(fuel: str) -> pd.DataFrame:
             for season, gs in pm.groupby("season"):
                 if len(gs) < 3:
                     continue
+                # energy only: there is no cost data for these buildings, so nothing is reported in dollars
                 r = {"fuel": fuel, "building_id": bid, "name": gb.name.iloc[0], "year": int(yr), "season": season,
-                     "gfa_ft2": float(gfa), "actual": float(gs[col].sum()), "actual_usd": float((gs[col] * gs.price).sum())}
+                     "gfa_ft2": float(gfa), "actual": float(gs[col].sum())}
                 for p_ in PATHS:
                     r[p_] = float(gs[p_].sum()) if gs[p_].notna().all() else np.nan
-                    r[f"{p_}_usd"] = float((gs[p_] * gs.price).sum()) if gs[p_].notna().all() else np.nan
                 rows.append(r)
     return pd.DataFrame(rows)
 
