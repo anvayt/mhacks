@@ -449,12 +449,13 @@ def web_verify(req: WebVerify) -> dict:
         raise _fail(409, "already_used", "That code was already used. Start again for a new one.")
     if row["expires_at"] <= _now():
         raise _fail(410, "code_expired", "That code expired. Tap \"Send a new code\".")
-    if row["attempts"] >= MAX_ATTEMPTS:
+    with closing(_con()) as con, con:  # spend a try before comparing, in one UPDATE, so parallel guesses can't pass 5
+        spent = con.execute("UPDATE web_logins SET attempts = attempts + 1 WHERE id = ? AND attempts < ?",
+                            (row["id"], MAX_ATTEMPTS)).rowcount
+    if not spent:
         raise _fail(429, "too_many_tries", "Too many wrong codes. Tap \"Send a new code\".")
     typed = re.sub(r"\D", "", req.code)
     if not (row["sent_code"] and hmac.compare_digest(typed.encode(), row["sent_code"].encode())):
-        with closing(_con()) as con, con:
-            con.execute("UPDATE web_logins SET attempts = attempts + 1 WHERE id = ?", (row["id"],))
         left = MAX_ATTEMPTS - row["attempts"] - 1
         raise _fail(401, "bad_code", f"That code doesn't match. {left} {'try' if left == 1 else 'tries'} left."
                     if left else "That code doesn't match. Tap \"Send a new code\".")
