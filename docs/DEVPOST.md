@@ -4,7 +4,7 @@
 
 **P4 editing draft — October 4, 2026.** Submission target: 11:30 AM; feature freeze: 8:00 AM (`PLAN.md` §8/§12). This is a sourced draft, not a submitted Devpost page. Replace the human TODOs at the end before publishing.
 
-Evidence snapshot: backend/model `534f67afd15f0b427472c0fce281c92ee0b0cd7a` (`dev`); coordination docs `6d8638fcf330248a18512f83cd7b50411da8db88` (`main`). Web integrations are on `p3/int-flow`, `p3/int-board` and `p3/int-map-compare`; Phase 2 agent integration is on `p4/phase2-real`. Rehearse the final merged revision before describing the whole journey as live. Historical demo captures are explicitly identified below.
+Final integration: `dev` at `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64`, verified October 4, 2026. API: 616 passed, 2 skipped; agent: 70 passed and typecheck; production web build passed; Phase 2: 16/16; full browser smoke: 433 passed, 0 warnings, 0 failures; 0 HTTP 429s; 37 guarded browser requests, peak 25/minute. The real-model terminal conversation and check limits are recorded in [WAVE7_VERIFICATION.md](WAVE7_VERIFICATION.md). Historical model/data measurements below remain sourced at `534f67afd15f0b427472c0fce281c92ee0b0cd7a`, with demo captures at their stated revisions; they are not newly executed benchmarks. The final playable video, real-phone Phase 2 and genuine bill-photo evidence remain separate human checks.
 
 ## Inspiration
 
@@ -24,7 +24,7 @@ After move-in, a renter can type gas usage, provide a bill amount marked as an e
 
 The product combines a decision before signing with a return visit after move-in. A range becomes a question the renter can actually ask; a modeled improvement becomes a commitment; a bill becomes evidence that can challenge the estimate.
 
-The game mechanics have defined meanings. The score ranks predicted annual heating/cooling cost per square foot within building type. A locked grade means the remaining answer-driven grade span is one grade; it does **not** eliminate model error. The public efficiency leaderboard is distinct from the verified-reduction board. We can show useful predictions today without claiming that a pledge has already saved carbon. [`api/app/score.py`][score], [`api/app/city.py`][city], [`api/app/boards.py`][boards].
+The game mechanics have defined meanings. The score ranks predicted annual heating/cooling cost per square foot within building type. The API marks a grade locked when its reachable span has one grade or no remaining eligible question can narrow the interview further. Skipped or ineffective questions can leave a wider span, and the model-error dollar range remains visible. The public efficiency leaderboard is distinct from the verified-reduction board. We can show useful predictions today without claiming that a pledge has already saved carbon. [`api/app/score.py`][score], [`api/app/city.py`][city], [`api/app/boards.py`][boards].
 
 ## Technical Complexity
 
@@ -137,7 +137,7 @@ Main entry: **Sustainability**. “Judged by an LLM” is the planned fun track,
 - **Repository:** [github.com/anvayt/mhacks](https://github.com/anvayt/mhacks).
 - **TODO P4:** add team names/roles, the final public judge URL, final video URL and screenshots; enter and submit by the team's 11:30 AM target. Reprint the QR card after any tunnel restart.
 - **TODO P1:** confirm running artifacts/results match; approve the 7.4% / 28.7% wording and record the final model/version. Do not silently substitute historical 28.3%.
-- **TODO P2/P3/P4:** rehearse on the final merged commit and recapture comparison/grade values if they differ; confirm the new web/agent branches are merged. P1 has restored the model; the public-demo handoff records successful real-model warm checks for all five estimates and maps, one forecast and the city layer. Final merged UI rehearsal is still required. [`README.md` public-demo verification][public-check].
+- **Completed P2/P3/P4:** the final merged web/API and terminal-agent rehearsal passed at `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64`; the live comparison gap remained $1,914/year. [Final checks and exact transcript](WAVE7_VERIFICATION.md). Real phone delivery, genuine bill OCR and the final video remain separate checks below.
 - **TODO P4/phone owner:** complete the real Phase 2 phone flow and a consenting real bill-photo check; otherwise demonstrate typed hypothetical numbers and say so.
 - **TODO P3/P4:** supply the actual Figma file if used; confirm sponsor eligibility, Photon slots, optional Calendar credentials and any domain claim.
 - **TODO video owner:** after the lead confirms the web merge, record and verify the final local backup; replace any “offline” promise with the actual recorded artifact that can be played without Wi-Fi. Dry-run screenshots do not replace that final recording.
