@@ -246,7 +246,8 @@ def test_zero_modeled_is_no_change(calls):
     p = project(pid, [accept(pid, "air_sealing")["id"], "thermostat_setback"])
     assert calls == [] and p["not_modeled"] == ["air_sealing", "thermostat_setback"] and p["modeled"] == []
     assert {k: v for k, v in p["projected"].items() if k != "label"} == p["current"]
-    assert p["delta"] == {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0, "label": "projected_if_completed"}
+    assert p["delta"] == {"score": 0, "usd_saved_yr": 0, "co2_kg_saved_yr": 0, "building_heating_usd_saved_yr": 0,
+                          "building_cooling_usd_saved_yr": 0, "label": "projected_if_completed"}
     assert project(pid, [])["projected"]["score"] == p["current"]["score"]
 
 

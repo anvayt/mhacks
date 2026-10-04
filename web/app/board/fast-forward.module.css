@@ -1,0 +1,11 @@
+/* Fast-forward: P3's classes (eyebrow, choice-row, control choice, ranking-number, board-note) do the look;
+   these rules only size things to sit inside the board's Commitments section and fit 375 px. */
+.ff { display:flex; flex-direction:column; gap:10px; }
+.row :global(.choice) { min-height:48px; padding:10px 8px; }
+.row :global(.choice):disabled { opacity:.65; cursor:not-allowed; } /* as board.module.css .choice:disabled */
+.result { display:flex; flex-direction:column; gap:6px; }
+.counters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+.counters p { margin:0; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.counters .number { font-size:clamp(36px, 10vw, 64px); line-height:1.07; overflow-wrap:anywhere; }
+.streak { margin:0; font-size:15px; }
+.srOnly { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
