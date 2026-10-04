@@ -16,11 +16,11 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from app import badges, sessions
-from app.estimate import MODEL_BASE_URL, _fail
+from app import accounts, badges, bills, sessions
+from app.estimate import MODEL_BASE_URL, MODEL_SLOTS, _fail
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -74,6 +74,7 @@ GAS_MAX_CCF_PER_1000FT2_DAY = 0.550 * 41.0 + 0.81
 
 class CalibrateRequest(BaseModel):
     session_id: str
+    property_id: str | None = None
     bill_image_base64: str | None = None
     therms: float | None = None
     kwh: float | None = None
@@ -113,14 +114,14 @@ def _ask_xai(body: dict, key: str) -> dict:
         log.warning("xAI unreachable: %r", e)
         raise _fail(503, "vision_unavailable", VISION_DOWN)
     if r.status_code >= 500 or r.status_code in (401, 403, 404, 429):  # xAI down, bad key/model name, rate limit
-        log.warning("xAI %s: %s", r.status_code, r.text[:500])
+        log.warning("xAI request failed: HTTP %s", r.status_code)
         raise _fail(503, "vision_unavailable", VISION_DOWN)
     try:
         r.raise_for_status()  # remaining 4xx: xAI rejected the image itself
         bill = json.loads(r.json()["choices"][0]["message"]["content"])
         return {k: bill.get(k) for k in BILL_SCHEMA["required"]}
     except (httpx.HTTPError, ValueError, LookupError, TypeError, AttributeError):  # rejected, or not a JSON object
-        log.warning("xAI unreadable %s: %s", r.status_code, r.text[:500])
+        log.warning("xAI unreadable response: HTTP %s", r.status_code)
         raise _fail(422, "unreadable_bill", UNREADABLE)
 
 
@@ -162,12 +163,25 @@ def record(session_id: str, year: int, month: int, pct: float) -> int:
 
 
 @router.post("/calibrate")
-def calibrate(req: CalibrateRequest) -> dict:
+def calibrate(req: CalibrateRequest, request: Request) -> dict:
     """PLAN.md §10 /calibrate. pct_vs_expected_for_weather is in PERCENT (-12 = 12% below normal for that month's
     weather). Errors: 404 not_found, 422 missing_input/unreadable_bill/bad_bill, 503 vision_unavailable/model_unavailable."""
     sess = sessions.get(req.session_id)
     if sess is None:
         raise _fail(404, "not_found", NOT_FOUND)
+    prop, sha = None, None
+    if req.property_id:
+        prop = accounts.get_property(req.property_id)
+        if prop is None:
+            raise _fail(404, "property_not_found", "We couldn't find that saved home. Add the address again.")
+        accounts.authorize(request, prop["user_id"])
+        if prop.get("session_id") != req.session_id:
+            raise _fail(422, "property_session_mismatch", "That report belongs to a different home. Open this home's report again.")
+        sha = bills.image_hash(req.bill_image_base64)
+        old = bills.duplicate(prop["id"], req.start.isoformat() if req.start else None,
+                              req.end.isoformat() if req.end else None, sha)
+        if old:
+            return old
     photo = bool(req.bill_image_base64)
     if photo:
         bill = read_bill(req.bill_image_base64)
@@ -193,9 +207,14 @@ def calibrate(req: CalibrateRequest) -> dict:
     except ValueError as e:
         raise _fail(422, "unreadable_bill" if photo else "bad_bill", str(e), extracted=bill)
 
+    if prop:
+        old = bills.duplicate(prop["id"], start.isoformat(), end.isoformat(), sha)
+        if old:
+            return old
     params = {"year": year, "month": month, "gas_ccf": gas_ccf, "lat": mp["lat"], "lon": mp["lon"], "unit_sqft": sqft}
     try:
-        r = httpx.get(f"{MODEL_BASE_URL}/hc/bill_check", params=params, timeout=180)
+        with MODEL_SLOTS:
+            r = httpx.get(f"{MODEL_BASE_URL}/hc/bill_check", params=params, timeout=180)
     except httpx.HTTPError as e:
         log.warning("model unreachable: %r", e)
         raise _fail(503, "model_unavailable", MODEL_DOWN)
@@ -206,7 +225,7 @@ def calibrate(req: CalibrateRequest) -> dict:
 
     pct = round(chk["pct_vs_expected_for_weather"] * 100, 1)  # P1 returns a fraction; the API speaks percent
     noise = chk.get("noise_floor")
-    return {
+    response = {
         "pct_vs_expected_for_weather": pct,
         "streak_months": record(req.session_id, year, month, pct),
         "badges": badges.badges(sess, calibration={"pct_vs_expected_for_weather": pct},
@@ -220,4 +239,11 @@ def calibrate(req: CalibrateRequest) -> dict:
         "meaningful": chk.get("meaningful"),
         "extracted": bill,
         "note": NOTE,
+        "bill_id": None, "verified": False, "impact": None, "snapshot": None,
+        "model_version": sess.get("model_version") or bills.MODEL_VERSION,
     }
+    if prop:
+        # A move during a slow model check freezes impact on the now-archived home.
+        prop = accounts.get_property(prop["id"]) or {**prop, "active": False}
+        return bills.save_bill(prop, sess, bill, start, end, ccf, sha, chk, response)
+    return response
