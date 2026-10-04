@@ -22,7 +22,7 @@ def fake_estimate(url=None, address=None, unit_sqft=None):
     body = {"session_id": secrets.token_hex(5),
             "building": {"address": (address or url).upper(), "sqft": unit_sqft or 850, "sqft_estimated": not unit_sqft,
                          "type": "Multi-Family with 5+ Units", "footprint_geojson": {}},
-            "bill": {"annual": {"p10": 500, "p50": 612, "p90": 700}}, "grade": "C",
+            "bill": {"annual": {"p10": 500, "p50": 612, "p90": 700}}, "score": 50, "grade": "C",  # bills.record_snapshot needs score
             "heating_cooling": {"method": "resstock", "building": {"heating_fuel": "gas"}},
             "answers": {}, "model_params": {"lat": 42.27}}
     sessions.save(body)
@@ -216,7 +216,8 @@ def test_moving_archives_the_old_home_and_one_active():
         con.execute("UPDATE properties SET active = 1")
 
     hist = client.get(f"/properties/{a['property_id']}/history", headers=AGENT).json()
-    assert hist == {"property_id": a["property_id"], "snapshots": [], "bills": [], "impact": [], "commitments": []}
+    assert [x["source"] for x in hist.pop("snapshots")] == ["initial_estimate"]  # real app/bills.py (wave 5c)
+    assert hist == {"property_id": a["property_id"], "bills": [], "impact": [], "commitments": []}
     stranger = {"Authorization": "Bearer nope"}
     assert client.get(f"/properties/{a['property_id']}/history", headers=stranger).status_code == 401
     assert client.post("/properties", json={"user_id": "u_missing", "address": "x"}, headers=AGENT).status_code == 404

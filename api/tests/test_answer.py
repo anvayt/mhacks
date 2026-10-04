@@ -197,3 +197,17 @@ def test_score_math_on_known_rows():
                                  (20, "D"), (19, "F"), (0, "F")])
 def test_grade_bands(s, g):
     assert score.grade_of(s) == g
+
+
+def test_answer_snapshots_a_saved_home(monkeypatch, tmp_path):  # wave 5c: a home's history shows the grade path
+    from contextlib import closing
+
+    from app import accounts, bills, db
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "app.sqlite")
+    e = _estimate()
+    _answer(e["session_id"], "window_panes", "2")  # not a saved home yet: no snapshot
+    uid, _ = accounts._upsert_user("+17345550199")
+    with closing(accounts._con()) as con, con:
+        pid = accounts._insert_property(con, uid, e, None, None)
+    e2 = _answer(e["session_id"], "heating_fuel", "gas")
+    assert [(x["source"], x["grade"]) for x in bills.list_snapshots(pid)] == [("questionnaire", e2["grade"])]
