@@ -48,10 +48,16 @@ uv run uvicorn app.main:app --reload --port 8000
 - `POST /compare` `{"listings": [{url|address, unit_sqft?}, {…}]}` (`app/compare.py`) → `{a, b, winner, diff_usd_yr,
   confident}` (`a`/`b` are full /estimate bodies; winner gets `battle-winner`; `confident` = the p10–p90 ranges don't
   overlap). 422 `missing_input` (not exactly two), `estimate_failed` + `listing: "a"|"b"` + the estimate's error.
-- `GET /city` (`app/city.py`) → GeoJSON FeatureCollection of every scored footprint (`properties: {score, grade,
-  excess_usd_per_sqft, type}`), gzip when accepted. `GET /leaderboard?scope=city|neighborhood` → `{best: [10 public
+- `GET /city` (`app/city.py`) → GeoJSON FeatureCollection of every city footprint (35,007; `properties: {id`
+  (= OBJECTID, same as `/map` `building.id`), `h` (height ft), `r` (1 = Residential), `a` (street label, P3 HOUSE_SCHEMA
+  §3, `mailing_assignment` in `app/geo/footprints.py`), and for the 25,704 scored homes `score, grade,
+  excess_usd_per_sqft, type}`), gzip when accepted (~2.5 MB). `GET /leaderboard?scope=city|neighborhood` → `{best: [10 public
   benchmark buildings], worst_blocks: [10 block groups / tracts with ≥ 5 buildings]}`. Built by
   `uv run python scripts/score_city.py` (P1's model on every footprint) into `data/city_scores.csv`. 503 `city_unavailable`.
+- `GET /map/{session_id}` (`app/map_widget.py`) → P3's `MapWidgetData` (`web/components/hidden-rent-map/types.ts` on
+  `p3/map-widget`): building (footprint, LiDAR height, stories, sizes, each with a source), 10 similar buildings,
+  block group (TIGERweb outline, cached in `../data/map_block_groups/`), `steps` (public record, then one P1 estimate
+  per answer, same params as `/answer`), `sources`. Look-alikes are empty pending P1. 404 `not_found`, 503 `model_unavailable`.
 - `POST /calibrate` (`app/calibrate.py`) `{session_id, bill_image_base64}` (xAI Grok vision, `XAI_API_KEY`,
   `XAI_VISION_MODEL`; two reads that must agree) or `{session_id, therms, kwh, start, end}` → `{pct_vs_expected_for_weather
   (percent), streak_months, badges, estimate}` + additive `year, month, actual_gas_ccf, expected_gas_ccf, noise_floor,
