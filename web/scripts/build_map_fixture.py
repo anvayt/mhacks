@@ -11,13 +11,16 @@ outline is fetched once from Census TIGERweb (public, no key):
 from __future__ import annotations
 
 import json
+import re
 import sys
+from collections import Counter
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from shapely import STRtree
 from shapely.geometry import Point, mapping, shape
 from shapely.ops import transform
 
@@ -27,10 +30,15 @@ from model.heating_cooling.resstock_model import MULTIFAMILY
 from model.paths import PROCESSED
 
 ADDRESS = "912 Mary St, Ann Arbor, MI"
-NEIGHBOR_RADIUS_M = 160
+SIMPLIFY_DEG = 4e-6  # ~0.4 m; keeps the citywide layer small without visibly changing footprints
+ADDR_SNAP_DEG = 1.1e-4  # ~12 m
 CLOUD_SAMPLE = 400
 OUT = Path(__file__).resolve().parents[1] / "mocks" / "map" / "912-mary-st.json"
 RAW = PROCESSED.parent / "raw" / "arcgis"
+WEB = Path(__file__).resolve().parents[1]
+CITY_OUT = WEB / "public" / "data" / "a2-buildings.geojson"
+ADDR_CACHE = WEB / "scripts" / ".cache" / "a2_mailing_addresses.json"
+ADDRESSES_URL = "https://a2maps.a2gov.org/a2arcgis/rest/services/MailingAddress/FeatureServer/0"
 TIGERWEB_BG = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/10/query"
 
 FOOTPRINTS_SRC = ("City of Ann Arbor building footprints (ABG_BLD_HG: above-ground height from aerial LiDAR; STORIES)",
@@ -61,30 +69,93 @@ def load_geojson(name):
     return json.loads((RAW / name).read_text())["features"]
 
 
-def building_and_neighbors(lat, lon):
-    feats = load_geojson("a2_footprints.geojson")
+def mailing_addresses():
+    """City of Ann Arbor mailing-address points (65k), paged from the public FeatureServer and cached locally."""
+    if ADDR_CACHE.exists():
+        return json.loads(ADDR_CACHE.read_text())
+    out, offset = [], 0
+    while True:
+        q = urllib.parse.urlencode({"where": "1=1", "outFields": "PROPSTREET,TYPE", "outSR": 4326, "f": "geojson",
+                                    "orderByFields": "OBJECTID", "resultOffset": offset, "resultRecordCount": 1000})
+        req = urllib.request.Request(f"{ADDRESSES_URL}/query?{q}", headers={"User-Agent": "Mozilla/5.0 hidden-rent"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            feats = json.load(r)["features"]
+        out += [{"street": f["properties"]["PROPSTREET"], "type": f["properties"]["TYPE"],
+                 "xy": f["geometry"]["coordinates"]} for f in feats if f.get("geometry")]
+        if len(feats) < 1000:
+            break
+        offset += 1000
+    ADDR_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    ADDR_CACHE.write_text(json.dumps(out))
+    return out
+
+
+def street_line(s: str) -> str:
+    """'912 MARY ST UNIT 2' -> '912 Mary St'."""
+    base = re.split(r"\s+(?:UNIT|APT|STE|#)\s*", s.strip(), maxsplit=1)[0]
+    return " ".join(w if w[:1].isdigit() else w.capitalize() for w in base.split())
+
+
+def city_buildings(lat, lon):
+    """Every Ann Arbor footprint with its LiDAR height and the mailing addresses that fall inside it."""
+    feats = [f for f in load_geojson("a2_footprints.geojson") if f.get("geometry")]
+    geoms = [shape(f["geometry"]) for f in feats]
+    tree = STRtree(geoms)
+    lines: list[Counter] = [Counter() for _ in feats]
+    for a in mailing_addresses():
+        p = Point(a["xy"])
+        hit = tree.query(p, predicate="within")
+        if not len(hit):  # some address points sit a few metres off the roof (P2-01 saw 5–11 m)
+            hit = tree.query_nearest(p, max_distance=ADDR_SNAP_DEG)
+        if len(hit):
+            lines[hit[0]][street_line(a["street"])] += 1
+
     pt = Point(lon, lat)
-    pt_m = to_m(pt)
-    mine, neighbors = None, []
-    city = [np.inf, np.inf, -np.inf, -np.inf]
-    for f in feats:
-        if not f.get("geometry"):
-            continue
-        g = shape(f["geometry"])
-        x0, y0, x1, y1 = g.bounds
-        city = [min(city[0], x0), min(city[1], y0), max(city[2], x1), max(city[3], y1)]
-        if g.contains(pt):
-            mine = (f, g)
-        elif to_m(g.centroid).distance(pt_m) <= NEIGHBOR_RADIUS_M:
-            neighbors.append((f, g))
-    if mine is None:  # geocoded point can sit just off the roof: nearest footprint
-        mine = min(neighbors, key=lambda fg: to_m(fg[1]).distance(pt_m))
-        neighbors.remove(mine)
-    nb = {"type": "FeatureCollection", "features": [
-        {"type": "Feature", "geometry": mapping(g),
-         "properties": {"height_ft": round(f["properties"]["ABG_BLD_HG"] or 0, 1)}}
-        for f, g in neighbors if f["properties"].get("ABG_BLD_HG")]}
-    return mine, nb, [round(float(v), 5) for v in city]
+    inside = tree.query(pt, predicate="within")
+    mine = int(inside[0]) if len(inside) else int(tree.nearest(pt))
+
+    x0, y0, x1, y1 = (np.array([g.bounds for g in geoms]).min(0)[:2].tolist()
+                      + np.array([g.bounds for g in geoms]).max(0)[2:].tolist())
+    rows, layer = [], []
+    for i, (f, g) in enumerate(zip(feats, geoms)):
+        p = f["properties"]
+        addr = lines[i].most_common(1)[0][0] if lines[i] else None
+        row = {"id": int(p["OBJECTID"]), "address": addr, "units": int(sum(lines[i].values())),
+               "height_ft": round(p["ABG_BLD_HG"], 1) if p.get("ABG_BLD_HG") else None,
+               "stories": p.get("STORIES"), "residential": p.get("Struc_Type") == "Residential",
+               "footprint_sqft": round(to_m(g).area * 10.7639), "center": [round(c, 6) for c in g.centroid.coords[0]]}
+        rows.append(row)
+        props = {"id": row["id"], "h": row["height_ft"] or 0, "r": int(row["residential"])}
+        if addr:
+            props["a"] = addr
+        layer.append({"type": "Feature", "geometry": round_geom(g.simplify(SIMPLIFY_DEG, preserve_topology=True)),
+                      "properties": props})
+    CITY_OUT.parent.mkdir(parents=True, exist_ok=True)
+    CITY_OUT.write_text(json.dumps({"type": "FeatureCollection", "features": layer}, separators=(",", ":")))
+    print(f"wrote {CITY_OUT} ({CITY_OUT.stat().st_size // 1_000_000} MB, {len(layer)} buildings, "
+          f"{sum(1 for r in rows if r['address'])} with an address)", file=sys.stderr)
+    return rows, rows[mine], geoms[mine], [round(v, 5) for v in (x0, y0, x1, y1)]
+
+
+def round_geom(g):
+    m = mapping(g)
+    def r(c):
+        return [r(x) for x in c] if isinstance(c[0], (list, tuple)) else [round(c[0], 6), round(c[1], 6)]
+    return {"type": m["type"], "coordinates": r(m["coordinates"])}
+
+
+def test_similar(rows, me, n=10, seed=0):
+    """Stand-in for a future ranking: residential buildings with an address, the same number of floors and a
+    footprint within ±25% of the selected one. A seeded random sample, so it's reproducible; not a ranking."""
+    pool = [r for r in rows if r["residential"] and r["address"] and r["id"] != me["id"]
+            and r["stories"] == me["stories"] and r["height_ft"]
+            and abs(r["footprint_sqft"] / me["footprint_sqft"] - 1) <= 0.25]
+    rng = np.random.default_rng(seed)
+    pick = [pool[i] for i in sorted(rng.choice(len(pool), size=min(n, len(pool)), replace=False))]
+    rule = (f"test sample: {n} of {len(pool):,} residential buildings with {me['stories']:g} floors and a footprint "
+            f"within ±25% of this one ({me['footprint_sqft']:,} sq ft); random, not ranked")
+    keep = ("id", "address", "center", "height_ft", "stories", "footprint_sqft")
+    return {"rule": rule, "items": [{k: r[k] for k in keep} for r in pick]}
 
 
 def block_group(geoid):
@@ -152,9 +223,8 @@ def main():
     loc, b = base["location"], base["building"]
     lat, lon, unit_sqft = loc["lat"], loc["lon"], base["unit_sqft"]
 
-    (fp, geom), neighbors, city_bounds = building_and_neighbors(lat, lon)
-    props = fp["properties"]
-    from_lidar = props.get("STORIES") is None
+    rows, me, geom, city_bounds = city_buildings(lat, lon)
+    from_lidar = me["stories"] is None
     bg_geom = block_group(loc["block_group"])
 
     pool, rule = lookalike_pool(b, unit_sqft)
@@ -179,14 +249,16 @@ def main():
         "address": loc["matched_address"],
         "center": [lon, lat],
         "city_bounds": city_bounds,
+        "buildings_url": "/data/a2-buildings.geojson",
         "building": {
+            "id": me["id"],
             "footprint": mapping(geom),
-            "height_ft": round(props["ABG_BLD_HG"], 1) if props.get("ABG_BLD_HG") else None,
+            "height_ft": me["height_ft"],
             "height_source": FOOTPRINTS_SRC[0],
             "stories": b["stories"],
             "stories_source": ("LiDAR height ÷ typical floor height (no recorded STORIES)" if from_lidar
                                else "city footprint record (STORIES)"),
-            "footprint_sqft": round(to_m(geom).area * 10.7639),
+            "footprint_sqft": me["footprint_sqft"],
             "floor_area_sqft": round(b["gfa_ft2"]),
             "floor_area_source": b["gfa_source"],
             "unit_sqft": round(unit_sqft),
@@ -194,7 +266,7 @@ def main():
             "building_type": b["building_type"],
             "building_type_source": b["building_type_source"],
         },
-        "neighbors": neighbors,
+        "similar": test_similar(rows, me),
         "block_group": {
             "geoid": loc["block_group"],
             "geometry": bg_geom,
@@ -209,6 +281,8 @@ def main():
         "accuracy_basis": base["accuracy"]["basis"],
         "sources": [
             {"label": FOOTPRINTS_SRC[0], "url": FOOTPRINTS_SRC[1]},
+            {"label": "City of Ann Arbor mailing addresses (matched to the footprint they fall inside)",
+             "url": ADDRESSES_URL},
             {"label": BG_SRC[0], "url": BG_SRC[1]},
             {"label": RESSTOCK_SRC[0], "url": RESSTOCK_SRC[1]},
             {"label": base["weather_source"], "url": "https://prism.oregonstate.edu/"},
