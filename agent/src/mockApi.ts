@@ -1,6 +1,6 @@
 // In-process stand-in for /estimate + /answer until P2-04 serves sessions, questions and grades (USE_MOCK_API=1).
 // Shaped like PLAN.md §10. Its numbers are made up for wiring only; the agent labels every mock reply "demo data".
-import type { Api, ApiResult, Band, Estimate, EstimateRequest, Question } from "./api.ts";
+import type { Api, ApiResult, Band, Calibration, Estimate, EstimateRequest, Fixes, Question } from "./api.ts";
 
 const QUESTIONS: Question[] = [
   { id: "windows", text: "Are the windows single-pane or double-pane?", options: ["single-pane", "double-pane", "not sure"] },
@@ -47,7 +47,7 @@ function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered
 }
 
 export function mockApi(): Api {
-  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string> }>();
+  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string>; bills?: number }>();
   let next = 1;
   return {
     mock: true,
@@ -66,6 +66,41 @@ export function mockApi(): Api {
       let s = sessions.get(id);
       if (!s) sessions.set(id, (s = { sqft: 850, sqftEstimated: false, address: "Demo listing from the website, Ann Arbor, MI", answered: new Set() }));
       return { ok: true, data: build(id, s.sqft, s.sqftEstimated, s.answered, s.address) };
+    },
+    async calibrate(req): Promise<ApiResult<Calibration>> {
+      const s = sessions.get(req.session_id);
+      if (!s) return { ok: false, code: "not_found", message: "That session expired. Send the listing again." };
+      s.bills = (s.bills ?? 0) + 1;
+      const pct = s.bills === 1 ? -12 : -8; // below normal → streak grows
+      return {
+        ok: true,
+        data: {
+          pct_vs_expected_for_weather: pct,
+          streak_months: s.bills,
+          badges: ["weather-beater"],
+          estimate: build(req.session_id, s.sqft, s.sqftEstimated, s.answered, s.address),
+        },
+      };
+    },
+    async fixes(sessionId: string): Promise<ApiResult<Fixes>> {
+      const s = sessions.get(sessionId);
+      if (!s) return { ok: false, code: "not_found", message: "That session expired. Send the listing again." };
+      return {
+        ok: true,
+        data: {
+          fixes: [
+            { item: "Air sealing", grh_points: 12, co2_kg_saved: 410, usd_saved_yr: 160, cost_usd: 600, rebate_usd: 300, new_grade: "B" },
+            { item: "Attic insulation to R-50", grh_points: 10, co2_kg_saved: 380, usd_saved_yr: 150, cost_usd: 1800, rebate_usd: 600, new_grade: "A" },
+            { item: "Smart thermostat", grh_points: 4, co2_kg_saved: 120, usd_saved_yr: 50, cost_usd: 150, rebate_usd: 50, new_grade: "B" },
+          ],
+          grh_points_now: 48,
+          grh_points_after: 74,
+          landlord_email:
+            `Subject: Energy fixes for ${s.address}\n\nHi,\n\nI'm a tenant at ${s.address}. Air sealing and attic insulation ` +
+            "would cut heating costs and earn points toward Ann Arbor's Green Rental Housing requirement. DTE rebates cover " +
+            "part of the cost. Could we talk about scheduling them?\n\nThanks,",
+        },
+      };
     },
     async answer({ session_id, question_id }): Promise<ApiResult> {
       const s = sessions.get(session_id);
