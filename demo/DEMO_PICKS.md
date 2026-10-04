@@ -6,7 +6,7 @@ API capture revision: `fd8c31c0b40148b1940d9dddd36c4fdfd6bf3691` (`origin/dev` a
 
 ## Proposed final five
 
-Do **not** change `demo/addresses.txt` yet. Proposed addresses, in rehearsal order:
+`demo/addresses.txt` holds these five (merge wave 4), in rehearsal order:
 
 | Address | Purpose | Verified public-record result |
 |---|---|---|
