@@ -113,7 +113,7 @@ All three pairs return **`confident: true`** because the API's annual p10–p90 
 | Nearby alternate | 619 E University Ave → 1022 S Forest Ave | 1,435 / 1,328 | 8.06% | 569.8 m | $194 / $2,179 | **$1,985/year** |
 | Citywide alternate | 615 S Main St → 1022 S Forest Ave | 1,412 / 1,328 | 6.33% | 1,311.6 m | $143 / $2,179 | **$2,036/year** |
 
-Prefer ArborBlu for the primary demonstration: the meter path includes $238/year heating and $27 cooling. The Yard is also positive-heat ($140 heating), while Z Place has only $16 heating and is a secondary alternative. Do not imply the Yard pair shares a neighborhood. The Forest estimate infers electric heat from block-group data; it is not an observed equipment record. Its unlocked A–F span remains visible even though the currently returned cost intervals are disjoint.
+Prefer ArborBlu for the primary demonstration: the meter path reports $238/year heating and $26 cooling; independently rounded components differ by $1 from its $265 total. The Yard is also positive-heat ($140 heating), while Z Place has only $16 heating and is a secondary alternative. Do not imply the Yard pair shares a neighborhood. The Forest estimate infers electric heat from block-group data; it is not an observed equipment record. Its unlocked A–F span remains visible even though the currently returned cost intervals are disjoint.
 
 Suggested primary reveal: **“For these public-record size estimates, predicted heating and cooling differ by $1,914 a year. The returned ranges do not overlap.”** No claim about equal rent, vacancy or full utility bills is supported.
 
