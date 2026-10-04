@@ -23,7 +23,7 @@ load_env() {
 }
 load_env "$ROOT/.env"
 load_env "$ROOT/agent/.env"
-MODEL_DIR=${MODEL_DIR:-$ROOT/../mhacks-integration}
+MODEL_DIR=${MODEL_DIR:-$ROOT}
 API_BASE_URL=${API_BASE_URL:-http://localhost:8000}
 MODEL_BASE_URL=${MODEL_BASE_URL:-http://localhost:8001}
 DEMO_LOG_DIR=${DEMO_LOG_DIR:-$ROOT/data/demo/$(date +%Y%m%d-%H%M%S)-$$}

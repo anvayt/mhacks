@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/demo-common.sh"
 need curl; need npm; need make; need script
-[[ -x "$API_PY" ]] || fail 'Run (cd api && uv sync) first.'
-[[ -d "$ROOT/web/node_modules" && -d "$ROOT/agent/node_modules" ]] || fail 'Run npm ci in web and agent first.'
+[[ -x "$API_PY" ]] || fail 'Run make install first.'
+[[ -d "$ROOT/web/node_modules" && -d "$ROOT/agent/node_modules" ]] || fail 'Run make install first.'
 process_tracking
 printf 'Demo logs: %s\n' "$DEMO_LOG_DIR"
 
@@ -10,7 +10,7 @@ if healthy 'http://localhost:8001/hc/answers'; then
     printf 'Reusing healthy model on :8001 (not owned by this run).\n'
 else
     port_used 8001 && fail 'Port 8001 is occupied but the model health check failed; leaving it untouched.'
-    [[ -x "$MODEL_DIR/.venv/bin/python" && -f "$MODEL_DIR/model/artifacts/resstock_hc.pkl" ]] || fail 'MODEL_DIR must point to an already-built model checkout; this command never builds it.'
+    [[ -x "$MODEL_DIR/.venv/bin/python" && -f "$MODEL_DIR/model/artifacts/resstock_hc.pkl" ]] || fail 'Model not built; run make install first (or point MODEL_DIR at a built checkout).'
     start_owned model "$MODEL_DIR" make -C model dashboard
     wait_healthy model 'http://localhost:8001/hc/answers' "$LAST_PID" 120
 fi
