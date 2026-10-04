@@ -1,10 +1,12 @@
 """Phone accounts, web login by text, properties and the demo check-in (NEW_CHANGES.md NC-01, NC-02, NC-07, D5, D8, D9).
 
-The phone number (iMessage handle) is the account (I1). Photon only delivers texts from allowlisted handles, so an
-inbound text from a handle proves the phone: inbound-first, no passwords, no outbound texts from us.
-Web login: POST /auth/web/start allowlists the phone with Photon and returns a link that opens Messages with
-"login <code>" pre-filled; when that text arrives the agent calls POST /auth/web/confirm; the web polls
-GET /auth/web/{login_id} and gets a bearer token once (only its SHA-256 is stored).
+The phone number (iMessage handle) is the account (I1). No passwords.
+Web login (Duo-style): POST /auth/web/start allowlists the phone with Photon and queues a 6-digit code; the agent
+polls GET /auth/web/outbox, texts it to the phone and acks; the renter types it on the site, POST /auth/web/verify,
+and gets a bearer token once (only its SHA-256 is stored). Fallback when the text doesn't arrive: a second code the
+renter texts to us as "login <code>" (an inbound text from a handle proves the phone, since Photon only delivers
+texts from allowlisted handles); the agent calls POST /auth/web/confirm and the web, polling GET /auth/web/{login_id},
+gets the token.
 Agent-only endpoints need X-Agent-Key == AGENT_API_KEY (open, with a warning, while it's unset: dev mode)."""
 
 import hashlib
@@ -79,7 +81,10 @@ CREATE TABLE IF NOT EXISTS web_logins (
     created_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,
     user_id TEXT,                       -- set when the agent confirms the code
-    token_issued INTEGER NOT NULL DEFAULT 0
+    token_issued INTEGER NOT NULL DEFAULT 0,
+    sent_code TEXT,                     -- texted TO the phone (never returned to the web); typed back on the site
+    sent_at TEXT,                       -- when the agent delivered sent_code
+    attempts INTEGER NOT NULL DEFAULT 0 -- wrong sent_code guesses
 );
 CREATE TABLE IF NOT EXISTS web_tokens (
     token_sha256 TEXT PRIMARY KEY,
@@ -93,6 +98,10 @@ USER_SQL = "SELECT u.*, p.id AS current_property_id FROM users u LEFT JOIN prope
 def _con() -> sqlite3.Connection:
     con = db.connect()
     con.executescript(SCHEMA)
+    have = {r[1] for r in con.execute("PRAGMA table_info(web_logins)")}  # databases created before the texted code
+    for col, decl in (("sent_code", "TEXT"), ("sent_at", "TEXT"), ("attempts", "INTEGER NOT NULL DEFAULT 0")):
+        if col not in have:
+            con.execute(f"ALTER TABLE web_logins ADD COLUMN {col} {decl}")
     return con
 
 
@@ -371,19 +380,92 @@ def web_start(req: WebStart, request: Request) -> dict:
         raise _fail(429, "signups_full", "Hidden Rent is taking a few new numbers an hour tonight. Try again later.")
 
     photon = _allowlist(phone)
-    code = f"{secrets.randbelow(10**6):06d}"
+    code = f"{secrets.randbelow(10**6):06d}"  # fallback: the renter texts "login <code>" to us
+    sent_code = f"{secrets.randbelow(10**6):06d}"  # texted to the renter; never in this response (except dev mode)
     text = f"login {code}"
     login_id = secrets.token_urlsafe(16)
     expires = (datetime.now(UTC) + CODE_TTL).isoformat(timespec="seconds")
     with closing(_con()) as con, con:
         con.execute("INSERT INTO web_logins (id, phone_number, code, ip, new_number, photon_user_id, created_at, "
-                    "expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (login_id, phone, code, ip, int(new), photon and photon["id"], _now(), expires))
+                    "expires_at, sent_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (login_id, phone, code, ip, int(new), photon and photon["id"], _now(), expires, sent_code))
     return {"login_id": login_id, "code": code, "text_body": text,
             "redirect_url": (f"{PHOTON_API}/users/{quote(photon['id'], safe='')}/redirect?msg={quote(text, safe='')}"
                              if photon else f"sms:&body={quote(text, safe='')}"),
             "assigned_number_masked": mask(photon["assignedPhoneNumber"]) if photon else None,
+            "phone_masked": mask(phone), "delivery": "imessage" if photon else "dev",
+            **({} if photon else {"dev_sent_code": sent_code}),  # no Photon creds: nothing can text it
             "expires_at": expires}
+
+
+def _sent_text(code: str) -> str:
+    return (f"Your Hidden Rent code is {code}. Type it on the sign-in page; it works for 10 minutes. "
+            "Didn't ask for it? Ignore this text.")
+
+
+@router.get("/auth/web/outbox", dependencies=[Depends(agent_only)])
+def web_outbox() -> list[dict]:
+    """Codes the agent should text now (registered before /auth/web/{login_id} so "outbox" isn't read as an id)."""
+    with closing(_con()) as con:
+        rows = con.execute("SELECT id, phone_number, sent_code FROM web_logins WHERE sent_code IS NOT NULL AND "
+                           "sent_at IS NULL AND user_id IS NULL AND expires_at > ? ORDER BY created_at LIMIT 20",
+                           (_now(),)).fetchall()
+    return [{"login_id": r["id"], "handle": r["phone_number"], "text": _sent_text(r["sent_code"])} for r in rows]
+
+
+@router.post("/auth/web/outbox/{login_id}/sent", dependencies=[Depends(agent_only)])
+def web_outbox_sent(login_id: str) -> dict:
+    with closing(_con()) as con, con:
+        con.execute("UPDATE web_logins SET sent_at = COALESCE(sent_at, ?) WHERE id = ?", (_now(), login_id))
+    return {"login_id": login_id, "sent": True}
+
+
+def _issue_token(con: sqlite3.Connection, login_id: str, user_id: str) -> str | None:
+    """The bearer token, once per login (a second caller gets None)."""
+    if not con.execute("UPDATE web_logins SET token_issued = 1 WHERE id = ? AND token_issued = 0", (login_id,)).rowcount:
+        return None
+    token = secrets.token_urlsafe(32)
+    con.execute("INSERT INTO web_tokens (token_sha256, user_id, expires_at) VALUES (?, ?, ?)",
+                (_sha256(token), user_id, (datetime.now(UTC) + TOKEN_TTL).isoformat(timespec="seconds")))
+    return token
+
+
+MAX_ATTEMPTS = 5
+
+
+class WebVerify(BaseModel):
+    login_id: str
+    code: str
+
+
+@router.post("/auth/web/verify")
+def web_verify(req: WebVerify) -> dict:
+    """The renter typed the code we texted them. Right code -> user (created if new) + the bearer token."""
+    with closing(_con()) as con:
+        row = con.execute("SELECT * FROM web_logins WHERE id = ?", (req.login_id,)).fetchone()
+    if row is None:
+        raise _fail(404, "not_found", "That sign-in expired. Start again with your phone number.")
+    if row["user_id"]:
+        raise _fail(409, "already_used", "That code was already used. Start again for a new one.")
+    if row["expires_at"] <= _now():
+        raise _fail(410, "code_expired", "That code expired. Tap \"Send a new code\".")
+    with closing(_con()) as con, con:  # spend a try before comparing, in one UPDATE, so parallel guesses can't pass 5
+        spent = con.execute("UPDATE web_logins SET attempts = attempts + 1 WHERE id = ? AND attempts < ?",
+                            (row["id"], MAX_ATTEMPTS)).rowcount
+    if not spent:
+        raise _fail(429, "too_many_tries", "Too many wrong codes. Tap \"Send a new code\".")
+    typed = re.sub(r"\D", "", req.code)
+    if not (row["sent_code"] and hmac.compare_digest(typed.encode(), row["sent_code"].encode())):
+        left = MAX_ATTEMPTS - row["attempts"] - 1
+        raise _fail(401, "bad_code", f"That code doesn't match. {left} {'try' if left == 1 else 'tries'} left."
+                    if left else "That code doesn't match. Tap \"Send a new code\".")
+    uid, created = _upsert_user(row["phone_number"], row["photon_user_id"])
+    with closing(_con()) as con, con:
+        if not con.execute("UPDATE web_logins SET user_id = ? WHERE id = ? AND user_id IS NULL",
+                           (uid, row["id"])).rowcount:
+            raise _fail(409, "already_used", "That code was already used. Start again for a new one.")
+        token = _issue_token(con, row["id"], uid)
+    return {"status": "verified", "user_id": uid, "created": created, **({"token": token} if token else {})}
 
 
 class WebConfirm(BaseModel):
@@ -419,13 +501,10 @@ def web_status(login_id: str) -> dict:
         if row is None:
             raise _fail(404, "not_found", "That sign-in expired. Start again with your phone number.")
         if not row["user_id"]:
-            return {"status": "expired" if row["expires_at"] <= _now() else "pending"}
-        token = None
-        if con.execute("UPDATE web_logins SET token_issued = 1 WHERE id = ? AND token_issued = 0", (login_id,)).rowcount:
-            token = secrets.token_urlsafe(32)
-            con.execute("INSERT INTO web_tokens (token_sha256, user_id, expires_at) VALUES (?, ?, ?)",
-                        (_sha256(token), row["user_id"], (datetime.now(UTC) + TOKEN_TTL).isoformat(timespec="seconds")))
-    return {"status": "verified", "user_id": row["user_id"], **({"token": token} if token else {})}
+            return {"status": "expired" if row["expires_at"] <= _now() else "pending", "sent": bool(row["sent_at"])}
+        token = _issue_token(con, login_id, row["user_id"])
+    return {"status": "verified", "user_id": row["user_id"], "sent": bool(row["sent_at"]),
+            **({"token": token} if token else {})}
 
 
 # --- /me (D8 rehydration) ----------------------------------------------------------------------------------------

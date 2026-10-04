@@ -12,6 +12,7 @@ import {
   imessageUrl,
   sessionIsHome,
   usd,
+  usageHue,
   usdRange,
   type Estimate,
 } from "./flow-api";
@@ -82,7 +83,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
   const session = encodeURIComponent(e?.session_id ?? "");
 
   return (
-    <main className={`hero ranking reveal ${styles.screen}`}>
+    <main className={`hero ranking reveal board-screen ${styles.screen}`} style={usageHue(e?.percentile_city)}>
       <div className="hero-decor" aria-hidden="true">
         <img className="halo" src="/hero/halo.svg" alt="" />
         <img className="orbit" src="/hero/orbit.svg" alt="" />
@@ -99,6 +100,10 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
               </Link>
               <Link className="ghost-action" href={`/share?session=${session}`}>
                 Share preview
+                <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
+              </Link>
+              <Link className="ghost-action" href={`/watch?session=${session}`}>
+                Watch your report
                 <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
               </Link>
               <a className="ghost-action" href={imessageUrl(session)}>

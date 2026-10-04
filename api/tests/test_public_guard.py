@@ -36,7 +36,7 @@ def test_per_ip_and_window(guarded):
     assert client.post('/estimate', json={}).status_code == 200
 
 
-@pytest.mark.parametrize('path', ['/estimate', '/answer', '/compare', '/calibrate', '/projection', '/properties', '/auth/web/start',
+@pytest.mark.parametrize('path', ['/estimate', '/answer', '/compare', '/calibrate', '/projection', '/properties', '/auth/web/start', '/auth/web/verify',
                                   '/simulate/fast-forward'])
 def test_post_routes_limited(guarded, path):
     client, _ = guarded

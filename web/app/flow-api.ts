@@ -1,4 +1,5 @@
 // W1 flow calls (address → survey → phone sign-in → grade). Every number the screens show comes from these responses.
+import type { CSSProperties } from "react";
 import { ApiError, apiFetch, load, save } from "./lib/api";
 
 export type Band = { p10: number | null; p50: number | null; p90: number | null };
@@ -98,19 +99,33 @@ export function gradeStatus(e: Estimate): string {
   return e.locked ? "locked: no answer narrows it" : "answer more to lock it";
 }
 
-// Phone login (POST /auth/web/start → text "login <code>" → poll GET /auth/web/{login_id}).
+// Phone login, Duo-style: POST /auth/web/start → the agent texts a 6-digit code → POST /auth/web/verify.
+// Fallback when no text arrives: the renter texts "login <code>" to us; GET /auth/web/{login_id} then turns verified.
 export type WebLogin = {
   login_id: string;
-  code: string;
+  code: string; // the fallback code the renter texts to us (not the one we text them)
   text_body: string;
   redirect_url: string;
   assigned_number_masked: string | null;
+  phone_masked: string;
+  delivery: "imessage" | "dev";
+  dev_sent_code?: string; // only when the API has no texting service configured
   expires_at: string;
 };
-export type WebLoginStatus = { status: "pending" | "verified" | "expired"; user_id?: string; token?: string };
+export type WebLoginStatus = { status: "pending" | "verified" | "expired"; sent?: boolean; user_id?: string; token?: string };
 
 export const startLogin = (phone: string) => apiFetch<WebLogin>("/auth/web/start", { body: { phone } });
 export const loginStatus = (id: string) => apiFetch<WebLoginStatus>(`/auth/web/${encodeURIComponent(id)}`);
+export const verifyLogin = (login_id: string, code: string) =>
+  apiFetch<WebLoginStatus>("/auth/web/verify", { body: { login_id, code } });
+
+/** The page background's blue→red split for a percentile_city (share of Ann Arbor homes this one beats):
+ *  efficient homes read mostly blue, leaky ones mostly red. Drives .board-screen's --blue-end/--red-start. */
+export function usageHue(percentile: number | null | undefined): CSSProperties {
+  const leaky = 1 - Math.min(1, Math.max(0, percentile ?? 0.5));
+  const blueEnd = Math.round((75 - leaky * 60) * 100) / 100;
+  return { "--blue-end": `${blueEnd}%`, "--red-start": `${Math.min(100, blueEnd + 25)}%` };
+}
 
 /** Make the current session the signed-in user's home (wave 6: POST /properties {user_id, session_id}).
  *  This archives their previous home, so it runs only right after a fresh sign-in or on "Save this as my home". */
