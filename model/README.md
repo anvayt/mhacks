@@ -10,7 +10,7 @@ How the models work and how well they do: [`research/heating_cooling.md`](resear
 
 ## 1. Set up once (downloads everything, then works from local files)
 
-Run from the repo root:
+Run from the repo root (macOS needs `brew install libomp` first for xgboost/lightgbm):
 
 ```bash
 make -C model setup     # .venv + requirements (Python 3.12)
@@ -58,7 +58,7 @@ e["annual"]    # yearly totals
 
 | Endpoint | Returns |
 |---|---|
-| `GET /hc/estimate?address=…` or `?lat=…&lon=…` (+ `unit_sqft`, `mode`, `heating_fuel`, `building_type`, `window_panes`, `floor_level`, `foundation_code`, `cooling_code`, `occupants`) | the `estimate_hc` result below |
+| `GET /hc/estimate?address=…` or `?lat=…&lon=…` (+ `unit_sqft`, `mode`, `heating_fuel`, `building_type`, `block_group`, `window_panes`, `floor_level`, `foundation_code`, `cooling_code`, `occupants`) | the `estimate_hc` result below |
 | `GET /hc/weather?lat=&lon=&mode=` | monthly + seasonal temperature, HDD, CDD at the PRISM cell |
 | `GET /hc/bill_check?year=&month=&gas_ccf=&unit_sqft=&address=` (or `lat`, `lon`) | a real gas bill vs what that month's weather predicts |
 | `GET /hc/buildings` | the 591 pre-scored Ann Arbor apartment buildings (same as `buildings_hc.csv`) |
@@ -135,7 +135,7 @@ PRISM, footprints, benchmarking, ResStock, EIA, ACS and the trained models are a
 request is logged to `data/cache/requests.log`.
 
 **Limitations:**
-- With `lat`/`lon` input there's no block group. For an *unmetered* building, year built then falls back to the
+- With `lat`/`lon` input there's no block group unless the caller passes `block_group` (/api does). For an *unmetered* building, year built then falls back to the
   median of the metered buildings and heating fuel to gas; pass `heating_fuel` if you know it.
 - A point outside the 0.1° weather cells already cached triggers one archive download for that cell.
 - Footprints cover the City of Ann Arbor only.
