@@ -17,19 +17,19 @@ export default function StartScreen() {
     <main className={styles.intro}>
       <div className={styles.grid}>
         <section className={styles.copy}>
-          <p className={styles.eyebrow}>Hidden Rent · Ann Arbor, MI</p>
-          <h1 className={styles.heading}>
+          <p className={`${styles.eyebrow} ${styles.enter}`} style={{ ["--d" as string]: "0.9s" }}>Hidden Rent · Ann Arbor, MI</p>
+          <h1 className={`${styles.heading} ${styles.enter}`} style={{ ["--d" as string]: "1s" }}>
             The rent
             <br />
             you don&apos;t see.
           </h1>
-          <p className={styles.mission}>
+          <p className={`${styles.mission} ${styles.enter}`} style={{ ["--d" as string]: "1.25s" }}>
             Helping renters <mark className={styles.hl}>see</mark> and <mark className={styles.hl}>cut</mark> their energy use, for{" "}
             <mark className={`${styles.hl} ${styles.blue}`}>the planet</mark> and <mark className={styles.hl}>their wallet</mark>, through{" "}
             <mark className={`${styles.hl} ${styles.blue}`}>friendly competition</mark>.
           </p>
-          <IntroStats stats={STATS} />
-          <div className={styles.actions}>
+          <IntroStats stats={STATS} startAfterMs={2300} />
+          <div className={`${styles.actions} ${styles.enterCta}`}>
             <Link className={styles.start} href="/loading?next=/address">
               Find my hidden rent
               <img src="/hero/arrow-up-right.svg" alt="" width={18} height={18} />
@@ -41,10 +41,10 @@ export default function StartScreen() {
               <span className={styles.secondaryNote}>How Hidden Rent scores a home in 3 steps</span>
             </div>
           </div>
-          <p className={styles.sources}>{SOURCES}</p>
+          <p className={`${styles.sources} ${styles.enter}`} style={{ ["--d" as string]: "4.1s" }}>{SOURCES}</p>
         </section>
         {/* Purely visual: the one start action is the button. It leans toward the button when that button is hovered. */}
-        <div className={styles.photo} aria-hidden="true">
+        <div className={`${styles.photo} ${styles.houseIn}`} aria-hidden="true">
           <img className={styles.ghostRed} src="/hero/house.png" alt="" />
           <img className={styles.ghostBlue} src="/hero/house.png" alt="" />
           <img className={styles.house} src="/hero/house.png" alt="" />

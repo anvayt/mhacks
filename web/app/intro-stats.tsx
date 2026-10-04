@@ -39,16 +39,19 @@ function Counter({ value, run }: { value: string; run: boolean }) {
   return <span className={styles.value}>{text}</span>;
 }
 
-export function IntroStats({ stats }: { stats: Stat[] }) {
+export function IntroStats({ stats, startAfterMs = 0 }: { stats: Stat[]; startAfterMs?: number }) {
   const ref = useRef<HTMLUListElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (!("IntersectionObserver" in window)) return setInView(true);
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setInView(true); io.disconnect(); } }, { threshold: 0.35 });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let timer = 0;
+    const go = () => { timer = window.setTimeout(() => setInView(true), reduce ? 0 : startAfterMs); };
+    if (!("IntersectionObserver" in window)) { go(); return () => clearTimeout(timer); }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { io.disconnect(); go(); } }, { threshold: 0.35 });
     io.observe(el);
-    return () => io.disconnect();
+    return () => { io.disconnect(); clearTimeout(timer); };
   }, []);
   return (
     <ul ref={ref} className={`${styles.stats} ${inView ? styles.inView : ""}`}>
