@@ -4,7 +4,7 @@
 id: P2-FF
 title: Fast-forward simulation (API + board control + agent command)
 owner: P2              # lead-assigned across /api, /web (board) and /agent
-status: in-progress
+status: done           # dev 5410f1c
 branch: p2/fast-forward
 type: build
 checkpoint: lead beta test
@@ -78,9 +78,19 @@ none modeled: "Nothing to fast-forward yet: none of your commitments has modeled
 with numbers." 1-365 days, else a usage hint.
 
 ## Done when
-- [ ] Tests: 365-day weighting sums to the annual delta (± rounding), October < January per day, nothing written to
+- [x] Tests: 365-day weighting sums to the annual delta (± rounding), October < January per day, nothing written to
       any table, placeholders give 0, auth (property needs owner/agent; session anonymous), rate-limited path.
-- [ ] Live on :8081: 1514 Morton Ave (gas + single-pane, windows) 1/7/30/365 days, 365 ≈ projection's annual delta;
+- [x] Live on :8081: 1514 Morton Ave (gas + single-pane, windows) 1/7/30/365 days, 365 ≈ projection's annual delta;
       1022 S Forest Ave (heat pump); Arrowwood (only placeholders → "pick a modeled commitment").
-- [ ] Board screenshots before/after a 30-day fast-forward (375 px works); `npm run build`, agent tests, API tests,
+- [x] Board screenshots before/after a 30-day fast-forward (375 px works); `npm run build`, agent tests, API tests,
       `make phase2-check` 16/16; dev fast-forwarded; contract-changes entry.
+
+## Handoff
+- dev `5410f1c`: `api/app/simulate.py` (+ the `/projection` delta split in `app/commitments.py`, rate limit in
+  `app/public_guard.py`); `web/app/board/fast-forward.tsx` + `.module.css`, mounted in `web/app/leaderboard.tsx`;
+  agent `ff <days>` (`conversation.ts`, `phase2Replies.ts` `fastForwardText`, `api.ts` `checkFastForward`).
+- Live (:8081, P1 on :8001): 1514 Morton Ave, gas + single-pane, windows: 1 / 7 / 30 / 365 days = $0.15 / $0.94 /
+  $6.48 / $125.00 and 0.86 / 5.26 / 36.26 / 699.0 kg, vs /projection's $125 and 699 kg a year (January $23.56 vs
+  October $5.95). 1022 S Forest Ave, electric + heat pump: $0.88 / $5.19 / $49.03 / $1,111 vs $1,111 and 2,509 kg a
+  year. 2322 Arrowwood Trl: placeholders only, so $0 and "Pick a modeled commitment to see savings add up."
+- By design, the page gradient doesn't move: a simulation never changes rank.
