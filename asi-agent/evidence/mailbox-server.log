@@ -1,0 +1,15 @@
+INFO:     [Hidden Rent]: Starting agent with address: agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum
+INFO:     [Hidden Rent]: Hidden Rent address: agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum
+INFO:     [Hidden Rent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8130&address=agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum
+INFO:     [Hidden Rent]: Starting server on http://127.0.0.1:8130 (Press CTRL+C to quit)
+INFO:     [Hidden Rent]: Starting mailbox client for https://agentverse.ai
+WARNING:  [Hidden Rent]: Agent mailbox not found: create one using the agent inspector
+INFO:     [Hidden Rent]: Manifest published successfully: AgentChatProtocol
+INFO:     [uagents.registration]: Registration on Almanac API successful
+INFO:     [mailbox]: Successfully registered as mailbox agent in Agentverse
+INFO:     [Hidden Rent]: MAILBOX REGISTRATION VERIFIED: Hidden Rent profile registered
+INFO:     [Hidden Rent]: Chat reply sent; figures from Hidden Rent API
+INFO:     [Hidden Rent]: Chat acknowledgement received
+INFO:httpx:HTTP Request: POST http://localhost:8000/estimate "HTTP/1.1 503 Service Unavailable"
+INFO:     [Hidden Rent]: Chat reply sent; figures from Hidden Rent API
+INFO:     [Hidden Rent]: Chat acknowledgement received
