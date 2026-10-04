@@ -1,0 +1,768 @@
+{
+  "captured_at_utc": "2026-10-04T06:25:27.905359+00:00",
+  "api_revision": "fd8c31c0b40148b1940d9dddd36c4fdfd6bf3691",
+  "request": {
+    "method": "GET",
+    "path": "/session/1d07ee17b7"
+  },
+  "status": 200,
+  "elapsed_seconds": 0.002,
+  "response": {
+    "session_id": "1d07ee17b7",
+    "building": {
+      "lat": 42.26254914787,
+      "lon": -83.729299593899,
+      "footprint_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -83.72843265025293,
+              42.26247118664901
+            ],
+            [
+              -83.72843030350441,
+              42.26234231844342
+            ],
+            [
+              -83.72835338770469,
+              42.262343091731296
+            ],
+            [
+              -83.72835443522375,
+              42.26240062585819
+            ],
+            [
+              -83.72832071085232,
+              42.262400964865975
+            ],
+            [
+              -83.7283209911652,
+              42.26241639906311
+            ],
+            [
+              -83.7282860212621,
+              42.262416751303014
+            ],
+            [
+              -83.72828688117322,
+              42.262464012843
+            ],
+            [
+              -83.72832463759549,
+              42.26246363353101
+            ],
+            [
+              -83.72832479487444,
+              42.262472270741
+            ],
+            [
+              -83.72843265025293,
+              42.26247118664901
+            ]
+          ]
+        ]
+      },
+      "year_built": 1938,
+      "type": "Single-Family Detached",
+      "address": "1514 MORTON AVE, ANN ARBOR, MI, 48104",
+      "sqft_estimated": false,
+      "year_built_source": "ACS 5-yr B25035 median year built, block group 261614004003",
+      "warnings": [],
+      "sqft": 2753.0
+    },
+    "bill": {
+      "covers": "heating + cooling only (P1 model); base electricity, hot water and fixed charges not yet",
+      "annual": {
+        "p10": 1283,
+        "p50": 2185.0,
+        "p90": 3070
+      },
+      "seasonal": {
+        "winter": {
+          "p10": 611,
+          "p50": 1040.0,
+          "p90": 1461
+        },
+        "spring": {
+          "p10": 291,
+          "p50": 496.0,
+          "p90": 697
+        },
+        "summer": {
+          "p10": 177,
+          "p50": 301.0,
+          "p90": 423
+        },
+        "fall": {
+          "p10": 204,
+          "p50": 347.0,
+          "p90": 488
+        }
+      },
+      "monthly": {
+        "jan": {
+          "p10": 222,
+          "p50": 378.0,
+          "p90": 531
+        },
+        "feb": {
+          "p10": 201,
+          "p50": 342.0,
+          "p90": 481
+        },
+        "mar": {
+          "p10": 167,
+          "p50": 285.0,
+          "p90": 400
+        },
+        "apr": {
+          "p10": 86,
+          "p50": 147.0,
+          "p90": 207
+        },
+        "may": {
+          "p10": 38,
+          "p50": 65.0,
+          "p90": 91
+        },
+        "jun": {
+          "p10": 47,
+          "p50": 80.0,
+          "p90": 112
+        },
+        "jul": {
+          "p10": 75,
+          "p50": 127.0,
+          "p90": 178
+        },
+        "aug": {
+          "p10": 55,
+          "p50": 94.0,
+          "p90": 132
+        },
+        "sep": {
+          "p10": 28,
+          "p50": 47.0,
+          "p90": 66
+        },
+        "oct": {
+          "p10": 56,
+          "p50": 95.0,
+          "p90": 133
+        },
+        "nov": {
+          "p10": 121,
+          "p50": 206.0,
+          "p90": 289
+        },
+        "dec": {
+          "p10": 188,
+          "p50": 320.0,
+          "p90": 450
+        }
+      },
+      "band_method": "p10/p90 = the grade range's $ (grade_band_usd, see grade_span_method) widened by \u00b130%: P1's median error vs held-out real Ann Arbor gas meters for this estimate path (resstock). Never wider than before the last answer. Seasons and months are scaled by the same ratios."
+    },
+    "co2_t": {
+      "p10": 6.94,
+      "p50": 11.82,
+      "p90": 16.61
+    },
+    "score": 45,
+    "grade": "C",
+    "percentile_peers": 0.454,
+    "percentile_city": 0.42,
+    "hidden_rent_usd_mo": 4,
+    "grade_span": [
+      "B",
+      "C",
+      "D"
+    ],
+    "locked": false,
+    "grade_band_usd": {
+      "p10": 1830,
+      "p50": 2185.0,
+      "p90": 2363
+    },
+    "grade_span_method": "The grades your answers can still reach: p50 \u00d7 the model's lowest/highest ratio for each of the 1 question(s) not answered yet (each varied over its options, ratios multiplied), never wider than before the last answer. The $ range (bill.band_method) also includes the model's error vs real meters.",
+    "badges": [],
+    "questions": [
+      {
+        "id": "cooling_code",
+        "text": "What air conditioning does the unit have?",
+        "options": [
+          {
+            "value": "0",
+            "label": "No AC"
+          },
+          {
+            "value": "1",
+            "label": "Window/room AC"
+          },
+          {
+            "value": "2",
+            "label": "Central AC"
+          },
+          {
+            "value": "3",
+            "label": "Heat pump"
+          }
+        ]
+      }
+    ],
+    "heating_cooling": {
+      "location": {
+        "lat": 42.262408681964544,
+        "lon": -83.7283761815115,
+        "matched_address": null,
+        "block_group": "261614004003"
+      },
+      "building": {
+        "name": null,
+        "gfa_ft2": 2180.0,
+        "gfa_source": "footprint area \u00d7 stories \u00f7 1.26 (median ratio vs reported GFA, 125 benchmarked buildings)",
+        "year_built": 1938,
+        "year_built_source": "ACS 5-yr B25035 median year built, block group 261614004003",
+        "stories": 2.0,
+        "buildings_on_property": 1,
+        "heating_fuel": "gas",
+        "heating_fuel_source": "ACS 5-yr B25040 house heating fuel, block group 261614004003",
+        "heating_fuel_shares": {
+          "gas_share": 0.919,
+          "electric_share": 0.067
+        },
+        "building_type": "Single-Family Detached",
+        "building_type_source": "caller"
+      },
+      "unit_sqft": 2753.0,
+      "unit_sqft_source": "caller",
+      "mode": "normal",
+      "method": "resstock",
+      "seasons": [
+        {
+          "season": "winter",
+          "months": [
+            1,
+            2,
+            12
+          ],
+          "heating": {
+            "usd": 1040.0,
+            "gas_ccf": 1156.8,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 0.0
+          },
+          "total_usd": 1040.0,
+          "weather": {
+            "tmean_f": 26.7,
+            "hdd65": 3460.0,
+            "cdd65": 0.0,
+            "hdd60": 3009.0
+          }
+        },
+        {
+          "season": "spring",
+          "months": [
+            3,
+            4,
+            5
+          ],
+          "heating": {
+            "usd": 475.0,
+            "gas_ccf": 489.4,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 22.0,
+            "electric_kwh": 102.0
+          },
+          "total_usd": 496.0,
+          "weather": {
+            "tmean_f": 47.2,
+            "hdd65": 1673.0,
+            "cdd65": 39.0,
+            "hdd60": 1273.0
+          }
+        },
+        {
+          "season": "summer",
+          "months": [
+            6,
+            7,
+            8
+          ],
+          "heating": {
+            "usd": 3.0,
+            "gas_ccf": 3.7,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 297.0,
+            "electric_kwh": 1395.0
+          },
+          "total_usd": 301.0,
+          "weather": {
+            "tmean_f": 70.2,
+            "hdd65": 53.0,
+            "cdd65": 533.0,
+            "hdd60": 10.0
+          }
+        },
+        {
+          "season": "fall",
+          "months": [
+            9,
+            10,
+            11
+          ],
+          "heating": {
+            "usd": 311.0,
+            "gas_ccf": 364.8,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 36.0,
+            "electric_kwh": 176.0
+          },
+          "total_usd": 347.0,
+          "weather": {
+            "tmean_f": 51.4,
+            "hdd65": 1306.0,
+            "cdd65": 67.0,
+            "hdd60": 949.0
+          }
+        }
+      ],
+      "annual": {
+        "heating_usd": 1830.0,
+        "cooling_usd": 355.0,
+        "total_usd": 2185.0,
+        "gas_ccf": 2014.7,
+        "electric_kwh": 1673.0,
+        "hdd65": 6491.0,
+        "cdd65": 639.0,
+        "tmean_f": 49.0
+      },
+      "months": [
+        {
+          "month": 1,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 378.0,
+            "gas_ccf": 427.3,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 0.0
+          },
+          "total_usd": 378.0,
+          "weather": {
+            "tmean_f": 24.1,
+            "hdd65": 1267.0,
+            "cdd65": 0.0,
+            "hdd60": 1112.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.295,
+            "gas_bias": 0.05,
+            "elec_median_abs_error": 0.329,
+            "elec_bias": -0.192,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 2,
+          "year": null,
+          "days": 28,
+          "heating": {
+            "usd": 342.0,
+            "gas_ccf": 367.7,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 0.0
+          },
+          "total_usd": 342.0,
+          "weather": {
+            "tmean_f": 26.1,
+            "hdd65": 1098.0,
+            "cdd65": 0.0,
+            "hdd60": 957.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.327,
+            "gas_bias": 0.127,
+            "elec_median_abs_error": 0.334,
+            "elec_bias": -0.163,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 3,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 285.0,
+            "gas_ccf": 293.9,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 1.0
+          },
+          "total_usd": 285.0,
+          "weather": {
+            "tmean_f": 35.4,
+            "hdd65": 918.0,
+            "cdd65": 0.0,
+            "hdd60": 764.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.334,
+            "gas_bias": 0.051,
+            "elec_median_abs_error": 0.341,
+            "elec_bias": -0.103,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 4,
+          "year": null,
+          "days": 30,
+          "heating": {
+            "usd": 145.0,
+            "gas_ccf": 149.0,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 1.0,
+            "electric_kwh": 6.0
+          },
+          "total_usd": 147.0,
+          "weather": {
+            "tmean_f": 47.4,
+            "hdd65": 529.0,
+            "cdd65": 2.0,
+            "hdd60": 388.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.367,
+            "gas_bias": 0.2,
+            "elec_median_abs_error": 0.328,
+            "elec_bias": -0.047,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 5,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 45.0,
+            "gas_ccf": 46.5,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 20.0,
+            "electric_kwh": 95.0
+          },
+          "total_usd": 65.0,
+          "weather": {
+            "tmean_f": 58.9,
+            "hdd65": 226.0,
+            "cdd65": 36.0,
+            "hdd60": 121.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.362,
+            "gas_bias": -0.015,
+            "elec_median_abs_error": 0.297,
+            "elec_bias": -0.039,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 6,
+          "year": null,
+          "days": 30,
+          "heating": {
+            "usd": 3.0,
+            "gas_ccf": 3.5,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 77.0,
+            "electric_kwh": 349.0
+          },
+          "total_usd": 80.0,
+          "weather": {
+            "tmean_f": 68.2,
+            "hdd65": 38.0,
+            "cdd65": 133.0,
+            "hdd60": 9.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.34,
+            "gas_bias": -0.042,
+            "elec_median_abs_error": 0.262,
+            "elec_bias": -0.077,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 7,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 0.0,
+            "gas_ccf": 0.0,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 127.0,
+            "electric_kwh": 584.0
+          },
+          "total_usd": 127.0,
+          "weather": {
+            "tmean_f": 72.0,
+            "hdd65": 5.0,
+            "cdd65": 223.0,
+            "hdd60": 0.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.337,
+            "gas_bias": 0.076,
+            "elec_median_abs_error": 0.275,
+            "elec_bias": -0.032,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 8,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 0.0,
+            "gas_ccf": 0.1,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 93.0,
+            "electric_kwh": 462.0
+          },
+          "total_usd": 94.0,
+          "weather": {
+            "tmean_f": 70.4,
+            "hdd65": 10.0,
+            "cdd65": 176.0,
+            "hdd60": 0.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.328,
+            "gas_bias": 0.05,
+            "elec_median_abs_error": 0.275,
+            "elec_bias": -0.053,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 9,
+          "year": null,
+          "days": 30,
+          "heating": {
+            "usd": 13.0,
+            "gas_ccf": 17.2,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 33.0,
+            "electric_kwh": 161.0
+          },
+          "total_usd": 47.0,
+          "weather": {
+            "tmean_f": 63.3,
+            "hdd65": 113.0,
+            "cdd65": 62.0,
+            "hdd60": 45.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.346,
+            "gas_bias": -0.078,
+            "elec_median_abs_error": 0.284,
+            "elec_bias": -0.079,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 10,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 92.0,
+            "gas_ccf": 110.8,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 3.0,
+            "electric_kwh": 15.0
+          },
+          "total_usd": 95.0,
+          "weather": {
+            "tmean_f": 51.4,
+            "hdd65": 427.0,
+            "cdd65": 6.0,
+            "hdd60": 288.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.335,
+            "gas_bias": 0.059,
+            "elec_median_abs_error": 0.319,
+            "elec_bias": -0.021,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 11,
+          "year": null,
+          "days": 30,
+          "heating": {
+            "usd": 206.0,
+            "gas_ccf": 236.7,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 0.0
+          },
+          "total_usd": 206.0,
+          "weather": {
+            "tmean_f": 39.5,
+            "hdd65": 765.0,
+            "cdd65": 0.0,
+            "hdd60": 616.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.332,
+            "gas_bias": 0.107,
+            "elec_median_abs_error": 0.337,
+            "elec_bias": -0.08,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        },
+        {
+          "month": 12,
+          "year": null,
+          "days": 31,
+          "heating": {
+            "usd": 320.0,
+            "gas_ccf": 361.8,
+            "electric_kwh": 0.0
+          },
+          "cooling": {
+            "usd": 0.0,
+            "electric_kwh": 0.0
+          },
+          "total_usd": 320.0,
+          "weather": {
+            "tmean_f": 29.6,
+            "hdd65": 1096.0,
+            "cdd65": 0.0,
+            "hdd60": 941.0,
+            "basis": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape"
+          },
+          "accuracy": {
+            "gas_median_abs_error": 0.298,
+            "gas_bias": 0.023,
+            "elec_median_abs_error": 0.308,
+            "elec_bias": -0.082,
+            "basis": "held-out real Ann Arbor meters for this calendar month and estimate path (total monthly gas / electricity)"
+          }
+        }
+      ],
+      "model_detail": {
+        "method": "resstock",
+        "building_ft2": 2180.0,
+        "unit_ft2": 2753.0,
+        "unit_share": 1.26279,
+        "heating_fuel": "gas",
+        "degree_days_year": {
+          "hdd60": 5241.0,
+          "hdd55": 4134.0,
+          "cdd65": 639.0
+        },
+        "equation": "season energy = intensity \u00d7 season degree-days \u00d7 2,180 ft\u00b2 / 1,000 \u00d7 unit share 1.26279; heating uses HDD60, cooling uses CDD65",
+        "intensities": [
+          {
+            "model": "ResStock XGBoost",
+            "heat_ccf_per_1000ft2_per_hdd": 0.13964,
+            "heat_kwh_per_1000ft2_per_hdd": 4.43447,
+            "cool_kwh_per_1000ft2_per_cdd": 0.95087,
+            "used": true
+          }
+        ],
+        "renter_answers_used": {
+          "window_panes": 1.0
+        }
+      },
+      "weather_source": "PRISM 800m 1991-2020 normals + ERA5 1991-2020 daily shape",
+      "prices": {
+        "gas_usd_per_ccf": "EIA MI residential marginal (fixed charges removed), by month",
+        "electricity_usd_per_kwh": "EIA-861M MI residential average, by month"
+      },
+      "sources": [
+        "PRISM Climate Group, Oregon State University (800 m tmean)",
+        "Open-Meteo (ERA5 reanalysis / forecast / ECMWF SEAS5)",
+        "US EIA Michigan residential prices (N3010MI3, N3010MI2, EIA-861M)",
+        "NREL ResStock 2024.2 Michigan (18,756 simulated homes)",
+        "City of Ann Arbor building footprints; US Census geocoder + ACS 5-yr (B25037, B25040)"
+      ],
+      "accuracy": {
+        "seasonal_gas_median_abs_error": {
+          "all": 0.299,
+          "winter": 0.302,
+          "spring": 0.306,
+          "summer": 0.299,
+          "fall": 0.29
+        },
+        "basis": "ResStock applied to held-out real Ann Arbor buildings \u226510k ft\u00b2; small buildings have no local meter data, so expect at least this error",
+        "cooling_note": "cooling is validated less well than heating (building features barely beat the median)",
+        "monthly_gas_median_abs_error_all_months": 0.334,
+        "monthly_elec_median_abs_error_all_months": 0.308,
+        "simulation_heldout_median_abs_error": {
+          "heating": 0.211,
+          "cooling": 0.319
+        }
+      }
+    },
+    "answers": {
+      "heating_fuel": "gas",
+      "window_panes": "1"
+    },
+    "model_params": {
+      "lat": 42.262408681964544,
+      "lon": -83.7283761815115,
+      "unit_sqft": 2753,
+      "building_type": "Single-Family Detached",
+      "block_group": "261614004003"
+    },
+    "used_fixes": true
+  }
+}

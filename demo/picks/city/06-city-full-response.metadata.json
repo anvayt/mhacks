@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-10-04T06:27:34.251788+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/city",
+    "headers": {
+      "Accept-Encoding": "identity"
+    }
+  },
+  "status": 200,
+  "response_headers": {
+    "date": "Sun, 04 Oct 2026 06:27:33 GMT",
+    "server": "uvicorn",
+    "vary": "Accept-Encoding, Origin",
+    "cache-control": "public, max-age=3600",
+    "content-length": "13752664",
+    "content-type": "application/geo+json"
+  },
+  "response_body_file": "06-city-full-response.geojson.gz",
+  "storage_encoding": "gzip-compressed original HTTP body; decompress to restore exact JSON bytes",
+  "decoded_bytes": 13752664,
+  "gzip_bytes": 3618953,
+  "sha256_decoded": "5db90c97289bdafb257e6fa9d9f38668e9a088ca4e470b6e5f644d45672e7d13",
+  "feature_count": 25670
+}
