@@ -24,7 +24,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app import bills, commitments, db, sessions
+from app import bills, commitments, db, gcal, sessions
 from app.estimate import MULTIFAMILY, _fail, estimate
 from app.geo.footprints import _index
 from app.map_widget import _selected
@@ -432,7 +432,7 @@ def _me(user_id: str) -> dict:
             "leaderboard_opt_in": u["leaderboard_opt_in"], "timezone": u["timezone"],
             "reminder_prefs": u["reminder_prefs"], "current_property_id": u["current_property_id"],
             "properties": props, "current_estimate": est and {k: v for k, v in est.items() if k not in INTERNAL_KEYS},
-            "pending_checkin": u["pending_checkin"]}
+            "pending_checkin": u["pending_checkin"], "calendar_connected": gcal.is_connected(u["id"])}
 
 
 @router.get("/me/{user_id}")
