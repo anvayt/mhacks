@@ -1,10 +1,47 @@
-# MHacks 2026
+# MHacks 2026: Hidden Rent
 
-**Start here: [results/SUMMARY.md](results/SUMMARY.md).** It has the recommended tracks, what every research agent found, the final debate, and the build plan for our main idea, **Clean Hours** (plus backup ideas).
+Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
+in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), `/web` (P3, not yet).
 
-**Plan in one line:** Sustainability main track · Judged by an LLM + Dumbest Idea · sponsors: Relay, SpaceX "Make it Legendary", Fetch.ai, ElevenLabs, FREE-WILi (optional: Figma, Notability; Capital One only if FREE-WILi falls through).
+## Run the whole thing
 
-## What's in `results/`
+Needs Python 3 + [uv](https://docs.astral.sh/uv/), Node 20+, and on macOS `brew install libomp` (xgboost/lightgbm).
+Secrets go only in git-ignored `.env` files; every variable name is in [`.env.example`](.env.example).
+
+| Piece | Port | Set up once | Start |
+|---|---|---|---|
+| `/model` heating + cooling (P1) | 8001 | `make -C model setup && make -C model build` (first build downloads ~1 h of PRISM/ResStock/city/weather data, then works from `model/data/`) | `make -C model dashboard` |
+| `/api` FastAPI (P2) | 8000 | `cd api && uv sync && uv run python scripts/fetch_footprints.py` (~30 s, city GIS into `/data/`) | `cd api && uv run uvicorn app.main:app --port 8000` |
+| `/agent` iMessage agent (P4) | | `cd agent && npm ci && cp .env.example .env` (Photon creds for real iMessage) | `cd agent && npm run agent` (no creds or `AGENT_TERMINAL=1`: terminal chat) |
+| onboarding page (P4) | 8787 | same as `/agent` | `cd agent && npm run onboard` |
+| `/web` (P3) | | not on `dev` yet | |
+
+Start order: model, then api, then agent. `/api` calls the model over HTTP at `MODEL_BASE_URL` (default
+`http://localhost:8001`); the agent calls `/api` at `API_BASE_URL` (default `http://localhost:8000`).
+
+```bash
+curl -s localhost:8000/estimate -H 'content-type: application/json' -d '{"address": "912 Mary St, Ann Arbor, MI"}'
+curl -s localhost:8000/estimate -H 'content-type: application/json' \
+  -d '{"url": "https://www.zillow.com/homedetails/1514-Morton-Ave-Ann-Arbor-MI-48104/12345_zpid/"}'
+```
+
+Tests (each from the repo root):
+
+```bash
+make -C model test                       # needs make -C model build first
+(cd api && uv run pytest -q)             # /estimate end-to-end tests skip unless the model server is up
+(cd agent && npm test && npm run typecheck)
+```
+
+`POST /estimate` today returns real `building` fields and heating + cooling `bill` p50s (annual + per season, from
+P1's model; `heating_cooling` has P1's full answer). Not yet filled (null/empty): `session_id`, `bill` p10/p90 and
+`monthly`, `co2_t`, score/grade/percentiles/hidden rent, badges, questions. Errors are 422
+`{"detail": {"code", "message"}}` with codes `missing_input`, `needs_address` (+ `hint`), `not_found` (outside Ann
+Arbor), `not_a_home`; 503 when the model or the address lookup is down.
+
+## Research (`results/` on `main`)
+
+Start with `results/pivot-round2/00-synthesis.md` (why Hidden Rent). `results/SUMMARY.md` is the earlier, superseded "Clean Hours" plan.
 
 | Folder | Contents |
 |---|---|
