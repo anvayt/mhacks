@@ -14,7 +14,7 @@ export type Estimate = {
     year_built?: number | null;
     year_built_source?: string | null;
   };
-  bill: { annual: Band; note?: string | null };
+  bill: { annual: Band; building_annual?: Band; note?: string | null }; // building_annual: heat is in the rent
   co2_t: Band | null;
   score: number | null;
   grade: string | null;
@@ -57,6 +57,9 @@ export async function currentEstimate(): Promise<Estimate> {
 /** Multi-unit buildings and townhouses get sq ft from floor area ÷ units, so ask for the listing's number. */
 export const needsUnitSize = (e: Estimate) => !!e.building.sqft_estimated && e.building.type !== "Single-Family Detached";
 
+/** What the renter's bill.annual covers: cooling only when heat is included in the rent (wave 6). */
+export const billCovers = (e: Estimate) => (e.bill.building_annual ? "cooling" : "heating + cooling");
+
 export const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** "$301–$5,154" (p10–p90), or the p50 alone when the API has no band. */
@@ -65,11 +68,11 @@ export function usdRange(b: Band | null | undefined): string | null {
   return b.p10 != null && b.p90 != null ? `${usd(b.p10)}–${usd(b.p90)}` : usd(b.p50);
 }
 
-/** "B 🔒 locked" or "B–D · answer more to lock it". */
+/** Next to the grade: "🔒 locked" or "range B–D · answer more to lock it". */
 export function gradeStatus(e: Estimate): string {
   const span = e.grade_span ?? [];
-  if (e.locked || span.length < 2) return `${e.grade ?? "—"} 🔒 locked`;
-  return `${span[0]}–${span[span.length - 1]} · answer more to lock it`;
+  if (e.locked || span.length < 2) return "🔒 locked";
+  return `range ${span[0]}–${span[span.length - 1]} · answer more to lock it`;
 }
 
 // Phone login (POST /auth/web/start → text "login <code>" → poll GET /auth/web/{login_id}).

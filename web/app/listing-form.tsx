@@ -11,7 +11,7 @@ const ONBOARD = process.env.NEXT_PUBLIC_ONBOARD_URL ?? "http://localhost:8787"; 
 
 function errorText(err: ApiError): string {
   if (err.code === "needs_address") {
-    return `${err.message} Type the street address${err.hint ? ` (the listing says ${err.hint})` : ""}.`;
+    return err.hint ? `${err.message} The listing only says: ${err.hint}.` : err.message;
   }
   return err.message;
 }
