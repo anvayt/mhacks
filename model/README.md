@@ -79,6 +79,12 @@ e["annual"]    # yearly totals
      "weather": {"tmean_f": 26.4, "hdd65": 3486.0, "cdd65": 0.0, "hdd60": 3034.0}}
   ],
   "annual": {"heating_usd", "cooling_usd", "total_usd", "gas_ccf", "electric_kwh", "hdd65", "cdd65", "tmean_f"},
+  "months": [                        // 12 rows, chronological (forecast mode starts at the current month)
+    {"month": 1, "year": null, "days": 31,
+     "heating": {"usd", "gas_ccf", "electric_kwh"}, "cooling": {"usd", "electric_kwh"}, "total_usd",
+     "weather": {"tmean_f", "hdd65", "hdd60", "cdd65", "basis"},
+     "accuracy": {"gas_median_abs_error", "gas_bias", "elec_median_abs_error", "elec_bias"}}   // held-out, this month + path
+  ],
   "method": "metered" | "meter_model+resstock" | "resstock",     // estimate path, see §3
   "building": {"name", "gfa_ft2", "year_built", "stories", "buildings_on_property", "heating_fuel", "building_type",
                "...": "each has a *_source field saying where it came from"},
@@ -90,6 +96,13 @@ e["annual"]    # yearly totals
   "weather_source", "prices", "sources"
 }
 ```
+
+Seasons and annual are plain sums of the 12 months (the model computes month by month). A single month is less certain
+than a season: on held-out real meters the median error of a month's total gas is 11.4% for metered buildings and 32%
+for unmetered ones (vs 7.4% / 28.7% per season). Low-use months (spring and summer gas, spring and fall cooling) are the
+least reliable, and unmetered winter electricity is biased about −17%. In forecast mode, months beyond about 2 weeks
+come from the seasonal-forecast ensemble mean or normals, so month-to-month detail isn't a skilful forecast.
+Per-month errors: `results/validation_real.json` → `monthly_gas_vs_real_meters`, `monthly_elec_vs_real_meters`.
 
 Units: gas in **ccf** (1 ccf ≈ 1.04 therms), electricity in **kWh**, money in **USD**. Building totals are scaled to
 the unit by floor area.
