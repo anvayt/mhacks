@@ -28,6 +28,7 @@ export type PublicBoard = {
 };
 export type VerifiedBoard = { entries: { rank: number; alias?: string; geoid?: string; value: number; unit: string; demo: boolean }[]; empty_reason: string | null; metric_note?: string };
 export type Calibration = {
+  extracted?: { estimated_from_amount?: boolean; note?: string };
   pct_vs_expected_for_weather: number; streak_months: number; badges: string[]; verified?: boolean;
   snapshot?: Snapshot | null; note?: string; noise_floor?: number | null;
   impact?: { co2_kg_avoided: number; usd_saved: number } | null;
@@ -41,7 +42,7 @@ export function errorText(error: unknown): string {
   if (error instanceof ApiError) return [error.message, error.hint].filter(Boolean).join(" ");
   return error instanceof Error ? error.message : "Something went wrong. Try again.";
 }
-export const gradeSpan = (grade: string, span?: string[]) => span?.length ? span.join("–") : grade;
+export const gradeSpan = (grade: string, span?: string[]) => span?.length ? (span.length > 1 ? `${span[0]}–${span[span.length - 1]}` : span[0]) : grade;
 export function billRange(band: Band) {
   return band.p10 != null && band.p90 != null ? `${money(band.p10)}–${money(band.p90)}/yr (P10–P90)` : `About ${money(band.p50)}/yr; range unavailable`;
 }
