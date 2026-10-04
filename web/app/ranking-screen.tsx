@@ -17,6 +17,7 @@ import {
 } from "./flow-api";
 import { ApiError, save } from "./lib/api";
 import styles from "./ranking-screen.module.css";
+import { ScoreBoost } from "./score-boost";
 
 const pct = (x: number) => Math.round(x * 100);
 
@@ -195,6 +196,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
             </aside>
           </section>
         ) : null}
+        {e ? <ScoreBoost session={e.session_id} /> : null}
         <button className="ghost-action ranking-next" type="button" disabled={!nextReady || !e} onClick={onNext}>
           Next
           <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
