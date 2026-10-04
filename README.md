@@ -3,6 +3,8 @@
 Hidden Rent shows the energy bill a rental listing doesn't. The plan, the API contract (§10) and every team rule live
 in `PLAN.md` on `main`; this branch (`dev`) holds the code: `/model` (P1), `/api` (P2), `/agent` (P4), and the integrated `/web` (P3).
 
+model-data.zip: https://drive.google.com/file/d/1vPeqWjf1fGszt8odAUCstQ1Z1lUcO6ZS/view?usp=sharing
+
 ## Make commands
 
 Everything runs from the `dev` branch, at the repo root.
