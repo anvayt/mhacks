@@ -35,9 +35,12 @@ def fake_hc(params: dict, metered: bool = False) -> dict:
         "unit_sqft": sqft, "unit_sqft_source": "caller", "mode": "normal",
         "method": "metered" if metered else "resstock",
         "seasons": [{"season": s, "total_usd": round(total * f), "heating": {"usd": round(total * f * 0.8)},
-                     "cooling": {"usd": round(total * f * 0.2)}} for s, f in SHARE.items()],
-        "annual": {"heating_usd": round(total * 0.8), "cooling_usd": round(total * 0.2), "total_usd": float(total)},
-        "months": [{"month": i + 1, "total_usd": round(total * f)} for i, f in enumerate(MONTH_SHARE)],
+                     "cooling": {"usd": round(total * f * 0.2), "electric_kwh": round(total * f)}} for s, f in SHARE.items()],
+        "annual": {"heating_usd": round(total * 0.8), "cooling_usd": round(total * 0.2), "total_usd": float(total),
+                   "electric_kwh": float(total)},
+        "months": [{"month": i + 1, "total_usd": round(total * f),
+                    "cooling": {"usd": round(total * f * 0.2), "electric_kwh": round(total * f)}}
+                   for i, f in enumerate(MONTH_SHARE)],
         "accuracy": {"seasonal_gas_median_abs_error": {"all": err, "winter": err}, "basis": "held-out real meters"},
     }
 
@@ -90,23 +93,50 @@ def test_answers_narrow_the_band_and_lock_the_grade():
     for q, a in (("heating_fuel", "gas"), ("window_panes", "double pane"), ("floor_level", 1), ("cooling_code", "Window AC")):
         prev, e = e, _answer(sid, q, a)
         assert _width(e) < _width(prev), q
+        assert len(e["grade_span"]) <= len(prev["grade_span"]), q
         assert q not in [x["id"] for x in e["questions"]]
     assert e["answers"] == {"heating_fuel": "gas", "window_panes": "2", "floor_level": "1", "cooling_code": "1"}
-    assert e["locked"] and e["questions"] == [] and e["grade"] in e["grade_span"]
+    assert e["locked"] and e["questions"] == [] and e["grade_span"] == [e["grade"]]
+    assert e["bill"]["annual"]["p10"] < e["bill"]["annual"]["p50"]  # the $ range keeps the meter error
     assert e["bill"]["annual"]["p50"] == round(0.48 * 850 * 0.9)  # the answers reached the model
+
+
+def test_grade_span_excludes_meter_error():
+    e = _estimate()
+    g, a = e["grade_band_usd"], e["bill"]["annual"]
+    assert (a["p10"], a["p90"]) == (round(g["p10"] * (1 - 0.299)), round(g["p90"] * (1 + 0.299)))
+    assert e["grade_span"][0] == score.score_for(g["p10"], 850, MF)["grade"]
+    assert e["grade_span"][-1] == score.score_for(g["p90"], 850, MF)["grade"]
+    assert "meter" in e["grade_span_method"]
 
 
 def test_band_never_widens_after_an_answer():  # floor=middle makes the open window question swing more
     e = _estimate()
-    a, b = e["bill"]["annual"], _answer(e["session_id"], "floor_level", "middle")["bill"]["annual"]
-    assert 0 < a["p10"] <= b["p10"] <= b["p50"] <= b["p90"] <= a["p90"]
+    e2 = _answer(e["session_id"], "floor_level", "middle")
+    for k in (lambda x: x["bill"]["annual"], lambda x: x["grade_band_usd"]):
+        a, b = k(e), k(e2)
+        assert 0 < a["p10"] <= b["p10"] <= b["p50"] <= b["p90"] <= a["p90"]
 
 
-def test_metered_building_asks_nothing(monkeypatch):  # meters, not renter answers, drive the metered path
+def test_no_ac_zeroes_cooling():
+    e = _estimate()
+    no_ac = fake_hc({**e["model_params"], "cooling_code": "0"})["annual"]
+    assert e["grade_band_usd"]["p10"] <= no_ac["total_usd"] - no_ac["cooling_usd"]  # No AC counts as $0 cooling
+    e = _answer(e["session_id"], "cooling_code", "none")
+    hc = e["heating_cooling"]
+    assert e["bill"]["annual"]["p50"] == no_ac["total_usd"] - no_ac["cooling_usd"] and hc["annual"]["cooling_usd"] == 0
+    assert all(x["cooling"] == {"usd": 0, "electric_kwh": 0} for x in [*hc["seasons"], *hc["months"]])
+    assert sum(m["p50"] for m in e["bill"]["monthly"].values()) < no_ac["total_usd"]
+    assert e["bill"]["note"].startswith("No AC")
+
+
+def test_metered_building_asks_only_no_ac(monkeypatch):  # meters, not renter answers, drive the metered path
     monkeypatch.setitem(FEATURES, "matched_address", "1 metered way")
     e = _estimate()
-    assert e["questions"] == [] and e["locked"]
+    assert [q["id"] for q in e["questions"]] == ["cooling_code"]  # only "No AC" changes a metered estimate
+    e = _answer(e["session_id"], "cooling_code", "central")
     a = e["bill"]["annual"]
+    assert e["questions"] == [] and e["locked"]
     assert a["p10"] == round(a["p50"] * (1 - 0.074)) and a["p90"] == round(a["p50"] * (1 + 0.074))
 
 

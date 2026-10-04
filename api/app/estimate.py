@@ -27,6 +27,7 @@ SEASONS = ("winter", "spring", "summer", "fall")
 MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 NOT_A_HOME = "That doesn't look like a home. Send a residential address or listing."  # team decision (P2-04)
 EXPIRED = "That session expired. Send the listing again."
+NO_AC = "No AC: cooling cost set to $0; P1's cooling model only covers homes with AC."
 MULTIFAMILY = ("Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units")
 SKIP = {"skip", "not sure", "unsure", "idk", "dont know", "don't know", "i don't know"}
 # Renter questions -> /hc/estimate params: P1's ANSWERS codes (model/heating_cooling/resstock_model.py) plus
@@ -65,39 +66,61 @@ def _hc(params: dict) -> dict:
     return r.json()
 
 
+def _hc_ac(params: dict) -> dict:
+    """_hc, with cooling set to $0 (and 0 kWh) for "No AC": P1's cooling model only covers homes with AC."""
+    hc = _hc(params)
+    if str(params.get("cooling_code")) == "0":
+        a = hc["annual"]
+        a["electric_kwh"] -= sum(s["cooling"]["electric_kwh"] for s in hc["seasons"])
+        a["total_usd"] -= a["cooling_usd"]
+        a["cooling_usd"] = 0
+        for x in [*hc["seasons"], *hc.get("months", [])]:
+            x["total_usd"] -= x["cooling"]["usd"]
+            x["cooling"] = {**x["cooling"], "usd": 0, "electric_kwh": 0}
+    return hc
+
+
 def _scaled(p50, lo: float, hi: float) -> dict:
     return {"p10": round(p50 * lo), "p50": p50, "p90": round(p50 * hi)}
+
+
+def _cap(lo, hi, p50, prev: dict | None) -> tuple:
+    """Never wider than before the last answer: model interactions can make one open question swing more than two
+    did, but an answer only adds information."""
+    if prev and None not in (prev.get("p10"), prev.get("p90")) and prev["p10"] <= p50 <= prev["p90"]:
+        return max(lo, prev["p10"]), min(hi, prev["p90"])
+    return lo, hi
 
 
 def _respond(session_id: str, building: dict, params: dict, answers: dict, prev: dict | None = None) -> dict:
     """Run P1's model with the answers so far, then band, score and next questions; saved as the session's latest.
 
-    p10/p90: the model's own spread over the questions not answered yet (each varied across its options, one at a
-    time; the low/high ratios multiply, as P1's model works in log space, so p10 can't go negative), widened by P1's
-    held-out real-meter error for this estimate path. `prev` (the annual band before this answer) caps it: model
-    interactions can make one remaining question swing more than two did, but an answer only adds information."""
+    Grade range: the model's own spread over the questions not answered yet (each varied across its options, one at
+    a time; the low/high ratios multiply, as P1's model works in log space, so it can't go negative). The $ range
+    (p10/p90) widens that by P1's held-out real-meter error for this estimate path. Both are capped by `prev` (the
+    previous body)."""
     known = {q: v for q, v in answers.items() if v is not None}
-    hc = _hc({**params, **known})  # alone first: warms a never-seen weather cell before the parallel calls
+    hc = _hc_ac({**params, **known})  # alone first: warms a never-seen weather cell before the parallel calls
     btype = building["type"]
     open_qs = [q for q in QUESTIONS if q not in known and (q != "floor_level" or btype in MULTIFAMILY)
                and not (q == "heating_fuel" and hc["method"] == "metered")]  # metered: fuel is read off the meters
     jobs = [(q, v) for q in open_qs for v, _, _ in QUESTIONS[q][1]]
     with ThreadPoolExecutor(4) as ex:  # ponytail: fixed 4, P1's server is shared (city batch); raise if it idles
-        results = ex.map(lambda j: _hc({**params, **known, j[0]: j[1]})["annual"]["total_usd"], jobs)
+        results = ex.map(lambda j: _hc_ac({**params, **known, j[0]: j[1]})["annual"]["total_usd"], jobs)
         totals: dict[str, list] = {}
         for (q, _), t in zip(jobs, results):
             totals.setdefault(q, []).append(t)
     swing = {q: (min(t), max(t)) for q, t in totals.items()}
     p50 = hc["annual"]["total_usd"]
     err = (hc.get("accuracy", {}).get("seasonal_gas_median_abs_error") or {}).get("all") or 0
-    p10 = round(p50 * prod(min(1, lo / p50) for lo, _ in swing.values() if p50) * (1 - err))
-    p90 = round(p50 * prod(max(1, hi / p50) for _, hi in swing.values() if p50) * (1 + err))
-    if prev and None not in (prev["p10"], prev["p90"]) and prev["p10"] <= p50 <= prev["p90"]:
-        p10, p90 = max(p10, prev["p10"]), min(p90, prev["p90"])
+    g_lo = round(p50 * prod(min(1, lo / p50) for lo, _ in swing.values() if p50))
+    g_hi = round(p50 * prod(max(1, hi / p50) for _, hi in swing.values() if p50))
+    g_lo, g_hi = _cap(g_lo, g_hi, p50, prev and prev.get("grade_band_usd"))
+    p10, p90 = _cap(round(g_lo * (1 - err)), round(g_hi * (1 + err)), p50, prev and prev["bill"]["annual"])
     lo_r, hi_r = (p10 / p50, p90 / p50) if p50 else (1, 1)
 
     sqft = hc["unit_sqft"]
-    best, worst = score_for(p10, sqft, btype)["grade"], score_for(p90, sqft, btype)["grade"]  # high cost = worse
+    best, worst = score_for(g_lo, sqft, btype)["grade"], score_for(g_hi, sqft, btype)["grade"]  # high cost = worse
     span = list(GRADES[GRADES.index(best):GRADES.index(worst) + 1])
     # ask only what moves this estimate and wasn't skipped, biggest swing first
     ask = sorted((q for q in open_qs if q not in answers and swing[q][1] - swing[q][0] >= 1),
@@ -113,13 +136,19 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
                  "seasonal": {x: _scaled(seasons[x]["total_usd"], lo_r, hi_r) for x in SEASONS if x in seasons},
                  "monthly": {MONTHS[m["month"] - 1]: _scaled(m["total_usd"], lo_r, hi_r) for m in hc.get("months", [])},
                  # additive
-                 "band_method": f"p10/p90 = p50 × the model's lowest/highest ratio for each of the {len(open_qs)} "
-                                f"question(s) not answered yet (each varied over its options, ratios multiplied), "
-                                f"widened by ±{err:.0%}: P1's median error vs held-out real Ann Arbor gas meters for "
-                                f"this estimate path ({hc['method']}). Never wider than before the last answer. "
-                                "Seasons and months are scaled by the same ratios."},
+                 "band_method": f"p10/p90 = the grade range's $ (grade_band_usd, see grade_span_method) widened by "
+                                f"±{err:.0%}: P1's median error vs held-out real Ann Arbor gas meters for this "
+                                f"estimate path ({hc['method']}). Never wider than before the last answer. "
+                                "Seasons and months are scaled by the same ratios.",
+                 **({"note": NO_AC} if known.get("cooling_code") == "0" else {})},
         "co2_t": None,
         **score_for(p50, sqft, btype), "grade_span": span, "locked": len(span) == 1 or not ask,
+        # additive
+        "grade_band_usd": {"p10": g_lo, "p50": p50, "p90": g_hi},
+        "grade_span_method": f"The grades your answers can still reach: p50 × the model's lowest/highest ratio for each "
+                             f"of the {len(open_qs)} question(s) not answered yet (each varied over its options, "
+                             "ratios multiplied), never wider than before the last answer. The $ range "
+                             "(bill.band_method) also includes the model's error vs real meters.",
         "badges": [],
         "questions": [{"id": q, "text": QUESTIONS[q][0],
                        "options": [{"value": v, "label": lab} for v, lab, _ in QUESTIONS[q][1]]} for q in ask],
@@ -205,7 +234,7 @@ def post_answer(req: AnswerRequest) -> dict:
     if req.question_id not in QUESTIONS:
         raise _fail(422, "bad_answer", "I don't have that question. Answer one of the questions I sent, or say skip.")
     answers = {**s["answers"], req.question_id: _parse(req.question_id, req.answer)}
-    return _respond(s["session_id"], s["building"], s["model_params"], answers, s["bill"]["annual"])
+    return _respond(s["session_id"], s["building"], s["model_params"], answers, s)
 
 
 @router.get("/session/{session_id}")
