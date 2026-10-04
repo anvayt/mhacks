@@ -62,7 +62,7 @@ export function LookalikeStrip({ steps, step }: Props) {
   const ticks = useMemo(() => {
     const step = (hi - lo) / 3 > 400 ? 500 : 250;
     const out: number[] = [];
-    for (let t = Math.ceil(lo / step) * step; t <= hi - step; t += step) out.push(t);
+    for (let t = Math.ceil(lo / step) * step; t <= hi - step * 1.3; t += step) out.push(t);
     return out;
   }, [lo, hi]);
 
@@ -99,14 +99,14 @@ export function LookalikeStrip({ steps, step }: Props) {
             {usd(t)}
           </span>
         ))}
-        <span style={{ left: "100%", transform: "translateX(-100%)" }}>{usd(hi)} and up</span>
+        <span style={{ left: "100%", transform: "translateX(-100%)" }}>{usd(hi)}+</span>
       </div>
       <figcaption className={styles.stripCaption}>
-        Each dot is one simulated home like this one, priced for this address. The bar spans the middle 8 in 10:{" "}
+        Each dot is a similar simulated home. Middle 8 in 10:{" "}
         <strong>
           {usd(current.p10)}–{usd(current.p90)}
-        </strong>{" "}
-        a year.
+        </strong>
+        /yr
       </figcaption>
     </figure>
   );
