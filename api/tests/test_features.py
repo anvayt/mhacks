@@ -71,6 +71,18 @@ def test_large_apartment_near_campus():
 
 
 @needs_data
+def test_tower_with_units_outside_footprint_or_vacant_type():
+    f = get_features("721 S Forest Ave, Ann Arbor, MI")  # Verve: its 218 UNIT rows are TYPE "Vacant"
+    assert f["in.geometry_building_type_recs"] == MF5 and f["est_units"] > 100
+
+
+@needs_data
+def test_implausible_unit_sqft_falls_back_to_median():
+    f = get_features("405 S Main St, Ann Arbor, MI")  # The Standard: unit points in a 2-story podium
+    assert f["in.sqft"] >= 322 and f["warnings"] and f["sqft_estimated"]
+
+
+@needs_data
 def test_caller_overrides():
     f = get_features("912 Mary St, Ann Arbor, MI", unit_sqft=850, year_built=2015)
     assert f["in.sqft"] == 850 and not f["sqft_estimated"]

@@ -21,6 +21,11 @@ from app.geo.geocode import geocode
 SQFT_PER_M2 = 10.7639  # 1 m = 3.28084 ft (exact definition: 0.3048 m/ft)
 COUNTY = "Washtenaw County"
 SFD, MF24, MF5 = "Single-Family Detached", "Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units"
+# in.sqft bounds in the ResStock 2024.2 MI baseline parquet (checked by the P2-01 verifier, 2026-10-03):
+# multi-family minimum 322, single-family-detached maximum 5,587. Outside them, the estimate is suspect.
+SQFT_MIN = {MF24: 322, MF5: 322}
+SQFT_MAX = {SFD: 5587}
+MF_RENTER_MEDIAN_SQFT = 854  # ResStock 2024.2 MI renter-occupied multi-family median in.sqft (n=2,628, same check)
 
 
 def vintage(year: int) -> str:
@@ -67,6 +72,10 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
     building_sqft = round(b.area_m2 * SQFT_PER_M2 * stories)
     units = len(b.addresses)
     units_src = f"{units} residential mailing address(es) inside the footprint (City of Ann Arbor MailingAddress)"
+    if b.street_units > units:
+        units_src = (f"{b.street_units} '{b.street} UNIT n' rows, any TYPE (City of Ann Arbor MailingAddress); "
+                     f"more than the {units} residential address(es) inside the footprint")
+        units = b.street_units
     if units == 0 and p["Struc_Type"] == "Residential":
         units, units_src = 1, "no mailing address inside the footprint; Residential footprint assumed 1 unit"
     btype = building_type(p["Struc_Type"], units)
@@ -83,6 +92,15 @@ def get_features(address: str, unit_sqft: float | None = None, year_built: int |
         sqft_src = f"building floor area {building_sqft} sq ft / {units} units (includes hallways and common areas)"
     else:
         sqft, sqft_src, sqft_est = building_sqft, "footprint area (UTM 17N) x stories", False
+
+    if sqft is not None and not SQFT_MIN.get(btype, 0) <= sqft <= SQFT_MAX.get(btype, sqft):
+        warnings.append(f"in.sqft {sqft} is outside the ResStock 2024.2 MI range for {btype} "
+                        "(multi-family min 322, single-family detached max 5,587 sq ft)")
+        if is_multi and not unit_sqft:
+            # Usual cause: the unit points sit in a low podium/annex footprint, not the tower (405 S Main St).
+            sqft, sqft_est = MF_RENTER_MEDIAN_SQFT, True
+            sqft_src = (f"ResStock 2024.2 MI renter multi-family median {MF_RENTER_MEDIAN_SQFT} sq ft (n=2,628), "
+                        f"replacing implausible {sqft_src}")
 
     if year_built:
         year, year_src = int(year_built), "given by caller (listing)"

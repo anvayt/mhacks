@@ -4,13 +4,16 @@ Sources:
 - City of Ann Arbor BuildingFootprints FeatureServer (OSI/BuildingFootprints/FeatureServer/0):
   polygons with STORIES, ABG_BLD_HG (height above ground, feet), Struc_Type.
 - City of Ann Arbor MailingAddress FeatureServer (MailingAddress/FeatureServer/0): one point per
-  postal address, incl. unit rows ("2567 AVANT AVE UNIT 101"). Counting the "General Mailing"
-  addresses inside a footprint gives its number of units.
+  postal address, incl. unit rows ("2567 AVANT AVE UNIT 101"). Units = the larger of the "General Mailing"
+  addresses inside the footprint and the "... UNIT n" rows (any TYPE) for the address's street line, because
+  some buildings' unit rows are TYPE "Vacant" (721 S Forest Ave) or sit 5-11 m outside the footprint
+  (2901 Northbrook Pl, 1770 Broadway St).
 Geometry is projected to UTM 17N (EPSG:32617) so areas and distances are in metres.
 """
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass
 from functools import cache
 
@@ -49,6 +52,8 @@ class Building:
     addresses: list[str]   # residential ("General Mailing") addresses inside the footprint
     match: str             # how the footprint was found
     distance_m: float      # 0 if the point is inside the footprint
+    street: str | None     # street line whose city point located the footprint (None: geocoder point used)
+    street_units: int      # "<street> UNIT n" rows in the city layer for `street`, any TYPE
 
 
 @dataclass
@@ -62,6 +67,7 @@ class _Index:
     addr_utm: np.ndarray
     addr_tree: shapely.STRtree
     addr_by_street: dict[str, int]
+    units_by_street: Counter[str]
     ft_per_story: float
     ft_offset: float
 
@@ -86,7 +92,8 @@ def _index() -> _Index:
     slope, offset = np.polyfit(hs[:, 1], hs[:, 0], 1)
 
     return _Index(props, wgs, utm, shapely.STRtree(utm), street, residential, addr_utm, shapely.STRtree(addr_utm),
-                  _first_by_key(street), float(slope), float(offset))
+                  _first_by_key(street), Counter(street_key(s) for s in street if " UNIT " in s),
+                  float(slope), float(offset))
 
 
 def _first_by_key(streets) -> dict[str, int]:
@@ -127,13 +134,13 @@ def find_building(lon: float, lat: float, streets: list[str] = ()) -> Building:
     garages). Raises LookupError if nothing is within 25 m.
     """
     ix = _index()
-    pt, how = _project(np.array([Point(lon, lat)]))[0], "census geocoder point"
+    pt, how, key = _project(np.array([Point(lon, lat)]))[0], "census geocoder point", None
     # Same street line in another town would match too, so the city point must be near the geocode.
     # ponytail: 250 m guard, generous vs. the <40 m geocoder offsets seen on test addresses.
     for k in map(street_key, streets):
         i = ix.addr_by_street.get(k)
         if i is not None and shapely.distance(ix.addr_utm[i], pt) <= CITY_POINT_MAX_M:
-            pt, how = ix.addr_utm[i], f"city mailing-address point for {k!r}"
+            pt, how, key = ix.addr_utm[i], f"city mailing-address point for {k!r}", k
             break
 
     near = ix.tree.query(pt, predicate="dwithin", distance=NEAREST_MAX_M)
@@ -150,4 +157,6 @@ def find_building(lon: float, lat: float, streets: list[str] = ()) -> Building:
         addresses=_addresses_in(ix, i),
         match=f"{how}, {'inside footprint' if dist == 0 else f'nearest footprint {dist:.1f} m away'}",
         distance_m=round(float(dist), 1),
+        street=key,
+        street_units=ix.units_by_street[key] if key else 0,
     )
