@@ -99,6 +99,22 @@ uv run uvicorn app.main:app --reload --port 8000
   `commitment_not_found`, 409 `bad_transition`, 422 `unknown_action` / `unknown_commitment` / `missing_input`, 503
   `model_unavailable`. History (`GET /properties/{id}/history`) lists them. `app/bills.py` is a stub until the bills
   slice merges (snapshots, bills, impact are empty).
+- Boards (`app/boards.py`, NC-06): `GET /leaderboard` without `board` is unchanged. `GET /leaderboard?board=verified_cut|
+  co2_avoided|streak|follow_through|neighborhood[&scope=]` → `{board, scope, coverage, entries: [{alias | geoid, value,
+  unit, evidence, demo, rank}], empty_reason, year, model_version, metric_note}`: opted-in homes with verified bill
+  impact only (aliases, never phones/addresses; tracts need 5 homes). 422 `bad_board` / `bad_scope`.
+  `GET /leaderboard/position/{property_id}` (agent key or bearer) → `{current: {score, grade, percentile_city, rank, of},
+  projected: {rank, score, percentile_city, label} | null (the latest /projection's own score/percentile_city),
+  neighbors, percentile_basis, label, current_source, model_version}`; 404 `not_found`, 503 `position_unavailable`.
+  Demo entries only with `DEMO_SEED=1` (`uv run python scripts/seed_demo_board.py`), labelled `demo: true`.
+- Calendar (`app/gcal.py`, NC-08; `GOOGLE_CLIENT_ID`/`SECRET`, `GOOGLE_REDIRECT_URI`, `CALENDAR_STATE_SECRET`,
+  `WEB_ORIGIN`; no Google creds = labelled mock mode): `POST /calendar/connect {user_id}` → `{auth_url, mock, message?}`;
+  `GET /calendar/callback` → 303 to `WEB_ORIGIN?calendar=connected`; `POST /calendar/reminders {user_id, commitment_id,
+  start?, cadence: once|daily|weekly}` → `{reminder_id, event_id, html_link, mock}`; `DELETE /calendar/reminders/{id}`.
+  `/me` has `calendar_connected`. Errors: 400 `invalid_calendar_state`, 404 `not_found`, 422 `calendar_not_connected` /
+  `commitment_not_accepted` / `bad_cadence` / `bad_start` / `calendar_denied` / `missing_input`, 503 `calendar_unavailable`.
+- `make phase2-check` (`scripts/phase2-e2e.sh`, root): the Phase 2 flow against `API_BASE_URL` with `AGENT_API_KEY`,
+  on a fictional phone; no texts or events sent.
 
 ## CO₂ and fix sources (checked Oct 4, 2026)
 
