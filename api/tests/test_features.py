@@ -1,11 +1,18 @@
 """Address -> features. Real Ann Arbor addresses need the footprint cache (scripts/fetch_footprints.py);
 the first run also calls the Census geocoder / Census Reporter once, later runs are offline."""
 
+import json
+from collections import Counter
+
 import httpx
+import numpy as np
+import shapely
+from shapely.geometry import Point, box, mapping
 import pytest
 from fastapi.testclient import TestClient
 
 from app.geo import FOOTPRINTS_PATH
+from app.geo import features, footprints, geocode as geocoder
 from app.geo.features import MF5, MF24, SFA, SFD, building_type, get_features, snap_stories, townhouse_row, vintage
 from app.geo.footprints import street_key
 from app.main import app
@@ -32,6 +39,9 @@ def test_building_type_mapping():
     assert building_type("Residential", 5) == MF5
     assert building_type("Commercial", 12) == MF5  # apartments above shops
     assert building_type("Public", 0) is None
+    assert building_type("Office", 1) is None
+    assert building_type("Office", 5) is None
+    assert building_type("Public", 12) is None
 
 
 def test_stories_snap_to_resstock_categories():
@@ -166,3 +176,157 @@ def test_townhouse_guard_big_floor_area_per_address(street, btype):
     src = f["sources"]["in.geometry_building_type_recs"]
     assert f["in.geometry_building_type_recs"] == btype
     assert src.startswith("unit-count rule") and "townhouse rule skipped by guard" in src
+
+
+@needs_data
+@pytest.mark.parametrize("street", ["2500 Packard St", "3600 Green Ct", "1300 Victors Way"])
+def test_office_addresses_are_not_homes(street):
+    f = get_features(f"{street}, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] is None
+    assert f["in.sqft"] is None and f["warnings"]
+    assert "Office" in f["sources"]["in.geometry_building_type_recs"]
+    # A supplied size cannot turn a known office into a home.
+    assert get_features(f"{street}, Ann Arbor, MI", unit_sqft=850)["in.sqft"] is None
+
+
+@needs_data
+def test_633_church_residential_oversize_is_estimated():
+    f = get_features("633 Church St, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] == SFD  # city marks this Residential, not Office
+    assert f["in.sqft"] == 1698 and f["sqft_estimated"]
+    assert "median" in f["sources"]["in.sqft"]
+    assert get_features("633 Church St, Ann Arbor, MI", unit_sqft=2838)["in.sqft"] == 2838
+
+
+@needs_data
+@pytest.mark.parametrize("street,btype", [("2843 Hardwick Rd", SFA), ("912 Mary St", MF24)])
+def test_gross_floor_area_requires_unit_size(street, btype):
+    f = get_features(f"{street}, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] == btype and f["sqft_estimated"]
+    assert any("garages" in warning and "conditioned" in warning for warning in f["warnings"])
+    known = get_features(f"{street}, Ann Arbor, MI", unit_sqft=1000)
+    assert known["in.sqft"] == 1000 and not known["sqft_estimated"]
+
+
+@needs_data
+def test_1780_broadway_uses_city_point_and_all_units():
+    f = get_features("1780 Broadway St, Ann Arbor, MI")
+    assert f["in.geometry_building_type_recs"] == MF5
+    assert f["est_units"] == 105 and f["in.sqft"] == 1263
+    assert "OBJECTID 17797" in f["sources"]["footprint"]
+    assert f["sources"]["lat_lon"].startswith("City of Ann Arbor")
+
+
+@needs_data
+def test_2865_bolgos_is_absent_from_both_sources():
+    # No 2865 BOLGOS CIR in the 65,138-point city cache (2026-10-04). Do not guess
+    # 3265 Bolgos Cir or 2865 Barclay Way; neither is the requested address.
+    assert footprints.city_address("2865 Bolgos Cir, Ann Arbor, MI") is None
+    with pytest.raises(LookupError, match="Census geocoder and city MailingAddress"):
+        get_features("2865 Bolgos Cir, Ann Arbor, MI")
+
+
+@needs_data
+def test_ashley_mews_replaces_displaced_census_point_and_block_group():
+    f = get_features("143 Ashley Mews, Ann Arbor, MI")
+    assert f["matched_address"].startswith("143 ASHLEY MEWS,")
+    assert "OBJECTID 34711" in f["sources"]["footprint"]
+    assert f["in.geometry_building_type_recs"] == SFA
+    assert f["block_group_geoid"] == "261614005006"  # displaced S Ashley was 261614001001
+
+
+@pytest.mark.parametrize("btype,units,area_sqft,expected", [(SFD, 1, 9000, 1698), (MF5, 5, 40000, 854),
+                                                          (MF24, 4, 400, 854)])
+def test_implausible_residential_sizes_fall_back_offline(monkeypatch, btype, units, area_sqft, expected):
+    b = footprints.Building({"OBJECTID": 1, "STORIES": 1, "Struc_Type": "Residential", "PackedPin": None},
+                            mapping(box(-83.75, 42.27, -83.74, 42.28)), area_sqft / features.SQFT_PER_M2,
+                            [f"1 MAIN ST UNIT {i}" for i in range(units)], "fixture", 0, "1 MAIN ST", units)
+    monkeypatch.setattr(features, "find_building", lambda *a, **k: b)
+    monkeypatch.setattr(features, "geocode", lambda a: {"lon": -83.75, "lat": 42.27,
+                                                        "matched_address": a, "block_geoid": None})
+    f = get_features("1 Main St", year_built=1960)
+    assert f["in.geometry_building_type_recs"] == btype
+    assert f["in.sqft"] == expected and f["sqft_estimated"]
+
+
+@pytest.mark.parametrize("struc_type,packed_pin", [("Commercial", None), ("Residential", "Garage"),
+                                                  ("Residential", "Carport")])
+def test_non_home_use_and_implausible_commercial_area(monkeypatch, struc_type, packed_pin):
+    b = footprints.Building({"OBJECTID": 1, "STORIES": 1, "Struc_Type": struc_type, "PackedPin": packed_pin},
+                            mapping(box(-83.75, 42.27, -83.74, 42.28)), 10000,
+                            ["1 MAIN ST"], "fixture", 0, "1 MAIN ST", 0)
+    monkeypatch.setattr(features, "find_building", lambda *a, **k: b)
+    monkeypatch.setattr(features, "geocode", lambda a: {"lon": -83.75, "lat": 42.27,
+                                                        "matched_address": a, "block_geoid": None})
+    f = get_features("1 Main St", year_built=1960)
+    assert f["in.geometry_building_type_recs"] is None and f["in.sqft"] is None
+
+
+@pytest.fixture
+def local_city_index(monkeypatch, tmp_path):
+    # Metre-based fixture: a nearer unrelated building and a requested-address building 70 m away.
+    origin = footprints._TO_UTM.transform(-83.75, 42.28)
+    x, y = origin
+    polygons = np.array([box(x + 30, y - 5, x + 40, y + 5), box(x + 70, y - 5, x + 80, y + 5)])
+    points = np.array([Point(x + 35, y), Point(x + 75, y)])
+    ix = footprints._Index([{"OBJECTID": 1}, {"OBJECTID": 2}], polygons, polygons, shapely.STRtree(polygons),
+                           np.array(["2 MAIN ST", "1 MAIN ST UNIT 1"]), np.array([True, True]), points,
+                           shapely.STRtree(points), {"1 MAIN ST": 1}, Counter({"1 MAIN ST": 1}), 11.1, 1.4)
+    monkeypatch.setattr(footprints, "_index", lambda: ix)
+    cache = tmp_path / "city.geojson"
+    cache.write_text("{}")
+    monkeypatch.setattr(footprints, "FOOTPRINTS_PATH", cache)
+    monkeypatch.setattr(footprints, "ADDRESSES_PATH", cache)
+    return ix
+
+
+def test_city_point_requires_exact_address_and_locality(local_city_index):
+    assert footprints.city_address("1 Main St, Ann Arbor, MI") is not None
+    assert footprints.city_address("1 Main St, Detroit, MI") is None
+    assert footprints.city_address("1 Main St, Ann Arbor, CA") is None
+    assert footprints.city_address("1 Main St, Ann Arbor, MI 48104") is not None
+    assert footprints.city_address("3 Main St, Ann Arbor, MI") is None
+
+
+def test_wider_search_only_accepts_matching_address(local_city_index):
+    local_city_index.addr_by_street.clear()  # exercise fallback without a city point
+    b = footprints.find_building(-83.75, 42.28, ["1 Main St, Ann Arbor, MI"])
+    assert b.props["OBJECTID"] == 2 and b.distance_m == 70
+    assert "expanded search" in b.match
+    with pytest.raises(LookupError, match="no matching-address footprint"):
+        footprints.find_building(-83.75, 42.28, ["3 Main St, Ann Arbor, MI"])
+
+
+@pytest.mark.parametrize("census_hit", [None, {"matched_address": "1 WRONG ST", "lon": -83.76,
+                                             "lat": 42.29, "block_geoid": "wrong"}])
+def test_city_geocoder_fallback_and_offline_cache(monkeypatch, tmp_path, local_city_index, census_hit):
+    address = "1 Main St, Ann Arbor, MI"
+    cache = tmp_path / "geocode.json"
+    cache.write_text(json.dumps({geocoder._key(address): census_hit}))
+    monkeypatch.setattr(geocoder, "CACHE_PATH", cache)
+    calls = []
+
+    def coordinate_response(url, **kwargs):
+        calls.append((url, kwargs))
+        assert url.endswith("/coordinates")
+        return httpx.Response(200, request=httpx.Request("GET", url),
+                              json={"result": {"geographies": {"2020 Census Blocks": [{"GEOID": "261614005006000"}]}}})
+
+    monkeypatch.setattr(httpx, "get", coordinate_response)
+    hit = geocoder.geocode(address)
+    assert hit["matched_address"] == "1 MAIN ST, ANN ARBOR, MI"
+    assert hit["block_geoid"] == "261614005006000" and len(calls) == 1
+    assert geocoder.geocode(address) == hit and len(calls) == 1
+
+
+def test_city_point_survives_census_outage_without_wrong_block(monkeypatch, tmp_path, local_city_index):
+    monkeypatch.setattr(geocoder, "CACHE_PATH", tmp_path / "empty.json")
+
+    def unavailable(*a, **k):
+        raise httpx.ConnectError("offline")
+
+    monkeypatch.setattr(httpx, "get", unavailable)
+    hit = geocoder.geocode("1 Main St, Ann Arbor, MI")
+    assert hit["block_geoid"] is None and hit["source"].startswith("City of Ann Arbor")
+    with pytest.raises(httpx.ConnectError):
+        geocoder.geocode("1 Main St, Detroit, MI")
