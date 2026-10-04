@@ -39,6 +39,20 @@ def test_link_without_address_asks_for_it():  # hint-only site; never auto-geoco
     assert _code(r) == "needs_address" and "Arbor St" in r.json()["detail"]["hint"]
 
 
+@pytest.mark.parametrize("sqft", [-50, 0, 1e9])
+def test_bad_unit_sqft(sqft):  # the bill scales with unit size: -50 used to return -$81/yr
+    r = client.post("/estimate", json={"address": "1514 Morton Ave, Ann Arbor, MI", "unit_sqft": sqft})
+    assert _code(r) == "bad_unit_sqft"
+
+
+@needs_data
+@needs_model
+def test_model_error_is_503(monkeypatch):  # a real non-422 error from the model server (404 here), not a bare 500
+    monkeypatch.setattr("app.estimate.MODEL_BASE_URL", f"{MODEL_BASE_URL}/no-such-path")
+    r = client.post("/estimate", json={"address": "1514 Morton Ave, Ann Arbor, MI 48104"})
+    assert r.status_code == 503 and r.json()["detail"]["code"] == "model_unavailable"
+
+
 @needs_data
 def test_not_a_home():  # UM LSA Building: Public footprint, no residential address
     assert _code(client.post("/estimate", json={"address": "500 S State St, Ann Arbor, MI 48109"})) == "not_a_home"
