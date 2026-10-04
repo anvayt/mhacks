@@ -1,10 +1,11 @@
 // In-process stand-in for /estimate + /answer until P2-04 serves sessions, questions and grades (USE_MOCK_API=1).
 // Shaped like PLAN.md §10. Its numbers are made up for wiring only; the agent labels every mock reply "demo data".
+import { MockPhase2 } from "./mockPhase2.ts";
 import type { Api, ApiResult, Band, Calibration, Estimate, EstimateRequest, Fixes, Question } from "./api.ts";
 
 // P2's real questions (api/app/estimate.py QUESTIONS): {value, label} options, values not always 1..n.
 const QUESTIONS: Question[] = [
-  { id: "heating_fuel", text: "Is the heat gas or electric?", options: [{ value: "gas", label: "Gas" }, { value: "electric", label: "Electric" }] },
+  { id: "heating_fuel", text: "Is the heat gas or electric, or included in your rent?", options: [{ value: "gas", label: "Gas" }, { value: "electric", label: "Electric" }, { value: "included", label: "Heat is included in my rent" }] },
   { id: "window_panes", text: "Are the windows single-, double- or triple-pane?",
     options: [{ value: "1", label: "Single-pane" }, { value: "2", label: "Double-pane" }, { value: "3", label: "Triple-pane" }] },
   { id: "floor_level", text: "Is the unit on the ground floor, a middle floor or the top floor?",
@@ -33,12 +34,12 @@ const STAGES: { halfWidth: number; span: string[] }[] = [
 
 const band = (p50: number, half: number): Band => ({ p10: p50 - half, p50, p90: p50 + half });
 
-function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered: Set<string>, address: string, skipped = new Set<string>()): Estimate {
+function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered: Set<string>, address: string, skipped = new Set<string>(), values: Record<string, string> = {}): Estimate {
   const stage = STAGES[Math.min(answered.size, STAGES.length - 1)];
   const p50 = Math.round(1.6 * sqft);
   const open = QUESTIONS.filter((q) => !answered.has(q.id) && !skipped.has(q.id));
   const locked = stage.span.length === 1 || open.length === 0;
-  return {
+  const result: Estimate = {
     session_id: sessionId,
     building: { address, type: "Multi-Family with 2 - 4 Units", sqft, sqft_estimated: sqftEstimated, year_built: 1962, year_built_source: "mock" },
     bill: {
@@ -58,19 +59,30 @@ function build(sessionId: string, sqft: number, sqftEstimated: boolean, answered
     percentile_peers: 0.68,
     percentile_city: 0.71,
     hidden_rent_usd_mo: 22,
-    badges: answered.has("window_panes") ? ["double-pane-club"] : [],
+    badges: Number(values.window_panes) >= 2 ? ["double-pane-club"] : [],
+    answers: values,
     questions: locked ? [] : open,
   };
+  if (values.heating_fuel === "included") {
+    result.bill.building_annual = result.bill.annual;
+    result.bill.annual = band(Math.round(p50 * .16), Math.round(stage.halfWidth * .16));
+    result.bill.seasonal = { winter: band(0, 0), spring: band(0, 0), summer: result.bill.annual, fall: band(0, 0) };
+    result.bill.note = "Heat is paid by your landlord: your bill shows cooling only; the grade still rates the building.";
+    result.hidden_rent_method = "Demo cooling-only comparison.";
+  }
+  return result;
 }
 
 export function mockApi(): Api {
-  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string>; skipped?: Set<string>; bills?: number }>();
+  const sessions = new Map<string, { sqft: number; sqftEstimated: boolean; address: string; answered: Set<string>; skipped?: Set<string>; bills?: number; values?: Record<string, string> }>();
   const body = (id: string) => {
     const s = sessions.get(id)!;
-    return build(id, s.sqft, s.sqftEstimated, s.answered, s.address, s.skipped);
+    return build(id, s.sqft, s.sqftEstimated, s.answered, s.address, s.skipped, s.values);
   };
   let next = 1;
-  return {
+  const phase2 = new MockPhase2((req) => api.estimate(req), (id) => api.session(id));
+  const api: Api = {
+    ...phase2.methods,
     mock: true,
     async estimate(req: EstimateRequest): Promise<ApiResult> {
       if ("url" in req && !/\d/.test(req.url)) {
@@ -80,13 +92,13 @@ export function mockApi(): Api {
       const id = `mock-${next++}`;
       const s = { sqft: req.unit_sqft ?? 850, sqftEstimated: req.unit_sqft == null, address, answered: new Set<string>() };
       sessions.set(id, s);
-      return { ok: true, data: build(id, s.sqft, s.sqftEstimated, s.answered, s.address) };
+      return { ok: true, data: body(id) };
     },
     async session(id: string): Promise<ApiResult> {
       // Stands in for a session the website created: unknown ids are made up on the spot.
       let s = sessions.get(id);
       if (!s) sessions.set(id, (s = { sqft: 850, sqftEstimated: false, address: "Demo listing from the website, Ann Arbor, MI", answered: new Set() }));
-      return { ok: true, data: build(id, s.sqft, s.sqftEstimated, s.answered, s.address) };
+      return { ok: true, data: body(id) };
     },
     async calibrate(req): Promise<ApiResult<Calibration>> {
       const s = sessions.get(req.session_id);
@@ -95,15 +107,15 @@ export function mockApi(): Api {
       const pct = s.bills === 1 ? -12 : -8; // below normal → streak grows
       return {
         ok: true,
-        data: {
+        data: await phase2.bill(req, {
           pct_vs_expected_for_weather: pct,
           streak_months: s.bills,
           badges: ["weather-beater"],
           meaningful: true,
           noise_floor: 9.5,
           note: "Gas only: electricity (kWh) isn't compared with the weather yet.",
-          estimate: build(req.session_id, s.sqft, s.sqftEstimated, s.answered, s.address),
-        },
+          estimate: build(req.session_id, s.sqft, s.sqftEstimated, s.answered, s.address, s.skipped, s.values),
+        }),
       };
     },
     async fixes(sessionId: string): Promise<ApiResult<Fixes>> {
@@ -138,8 +150,9 @@ export function mockApi(): Api {
         return { ok: false, code: "bad_answer", message: `Sorry, I didn't catch that. ${q.text} Reply ${labels.slice(0, -1).join(", ")} or ${labels.at(-1)}, or say skip.` };
       }
       if (v === null) (s.skipped ??= new Set()).add(question_id);
-      else s.answered.add(question_id);
+      else { s.answered.add(question_id); (s.values ??= {})[question_id] = v; }
       return { ok: true, data: body(session_id) };
     },
   };
+  return api;
 }
