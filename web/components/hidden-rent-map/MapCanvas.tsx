@@ -131,7 +131,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
         map.addSource("satellite", { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_ATTRIBUTION });
         map.addLayer({ id: "satellite", type: "raster", source: "satellite", layout: { visibility: "none" } });
         map.addControl(buttonGroup([["map", "Map"], ["satellite", "Satellite"]], (view) =>
-          map?.setLayoutProperty("satellite", "visibility", view === "satellite" ? "visible" : "none")), "top-left");
+          map?.setLayoutProperty("satellite", "visibility", view === "satellite" ? "visible" : "none")), "top-right");
 
         map.addSource("block-group", {
           type: "geojson",
@@ -167,7 +167,7 @@ export function MapCanvas({ data, focus, homeColor, highlightId, onHoverBuilding
         map.addControl(buttonGroup([["all", "All homes"], ["graded", "Graded only"], ["mine", "Just mine"]], (show) => {
           map?.setLayoutProperty("city-3d", "visibility", show === "mine" ? "none" : "visible");
           map?.setFilter("city-3d", show === "graded" ? ["all", others, ["in", ["get", "grade"], ["literal", ["A", "B", "C", "D", "F"]]]] : others);
-        }), "top-left");
+        }), "top-right");
 
         map.addSource("home", {
           type: "geojson",
