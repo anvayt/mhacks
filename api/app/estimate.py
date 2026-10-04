@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from shapely.geometry import shape
 
-from app import badges, co2, sessions
+from app import badges, co2, score, sessions
 from app.geo.features import get_features
 from app.links import resolve_link
 from app.score import GRADES, score_for
@@ -32,12 +32,18 @@ MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", 
 NOT_A_HOME = "That doesn't look like a home. Send a residential address or listing."  # team decision (P2-04)
 EXPIRED = "That session expired. Send the listing again."
 NO_AC = "No AC: cooling cost set to $0; P1's cooling model only covers homes with AC."
+HEAT_INCLUDED = "Heat is paid by your landlord: your bill shows cooling only; the grade still rates the building."
+HIDDEN_RENT_COOLING = ("Heat is included in your rent, so hidden rent compares cooling only: (your cooling $/yr − the "
+                       "median cooling $ per sq ft of same-type Ann Arbor homes × your sq ft) / 12.")
 MULTIFAMILY = ("Multi-Family with 2 - 4 Units", "Multi-Family with 5+ Units")
 SKIP = {"skip", "not sure", "unsure", "idk", "dont know", "don't know", "i don't know"}
 # Renter questions -> /hc/estimate params: P1's ANSWERS codes (model/heating_cooling/resstock_model.py) plus
 # heating_fuel. Options are (value, label, extra words a renter might text instead of the label).
 QUESTIONS = {
-    "heating_fuel": ("Is the heat gas or electric?", [("gas", "Gas", "natural"), ("electric", "Electric", "")]),
+    # "included": the model keeps its block-group fuel (the grade rates the building); the renter's bill has no heat
+    "heating_fuel": ("Is the heat gas or electric, or included in your rent?",
+                     [("gas", "Gas", "natural heat"), ("electric", "Electric", "heat"),
+                      ("included", "Heat is included in my rent", "landlord pays paid")]),
     "window_panes": ("Are the windows single-, double- or triple-pane?",
                      [("1", "Single-pane", "one"), ("2", "Double-pane", "two"), ("3", "Triple-pane", "three")]),
     "floor_level": ("Is the unit on the ground floor, a middle floor or the top floor?",
@@ -71,17 +77,27 @@ def _hc(params: dict) -> dict:
     return r.json()
 
 
+def _model_answer(q: str, v) -> bool:
+    """Answers that are model inputs: not skips, and not "heat included" (the building's fuel stays the model's)."""
+    return v is not None and not (q == "heating_fuel" and v == "included")
+
+
 def session_params(s: dict) -> dict:
     """A saved session's /hc/estimate params with its answers (heating_fuel, window_panes, ...; "2" -> 2)."""
-    known = {q: int(v) if v.isdigit() else v for q, v in s["answers"].items() if v is not None}
+    known = {q: int(v) if v.isdigit() else v for q, v in s["answers"].items() if _model_answer(q, v)}
     return {**s["model_params"], **known}
+
+
+def renter_usd_key(s: dict) -> str:
+    """Which annual/month $ the renter pays: cooling only when heat is included in the rent."""
+    return "cooling_usd" if (s.get("answers") or {}).get("heating_fuel") == "included" else "total_usd"
 
 
 def _hc_ac(params: dict) -> dict:
     """_hc, with cooling set to $0 (and 0 kWh) for "No AC": P1's cooling model only covers homes with AC, so
     cooling_code=0 is never sent (out of its training data: it moved 912 Mary St's heating $3,199 -> $4,246)."""
     no_ac = str(params.get("cooling_code")) == "0"
-    hc = _hc({k: v for k, v in params.items() if not (no_ac and k == "cooling_code")})
+    hc = _hc({k: v for k, v in params.items() if not (no_ac and k == "cooling_code") and _model_answer(k, v)})
     if no_ac:
         a = hc["annual"]
         a["electric_kwh"] -= sum(s["cooling"]["electric_kwh"] for s in hc["seasons"])
@@ -112,7 +128,7 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
     a time; the low/high ratios multiply, as P1's model works in log space, so it can't go negative). The $ range
     (p10/p90) widens that by P1's held-out real-meter error for this estimate path. Both are capped by `prev` (the
     previous body)."""
-    known = {q: v for q, v in answers.items() if v is not None}
+    known = {q: v for q, v in answers.items() if _model_answer(q, v)}  # "heat included": fuel stays open
     hc = _hc_ac({**params, **known})  # alone first: warms a never-seen weather cell before the parallel calls
     btype = building["type"]
     open_qs = [q for q in QUESTIONS if q not in known and (q != "floor_level" or btype in MULTIFAMILY)
@@ -129,8 +145,12 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
     g_lo = round(p50 * prod(min(1, lo / p50) for lo, _ in swing.values() if p50))
     g_hi = round(p50 * prod(max(1, hi / p50) for _, hi in swing.values() if p50))
     g_lo, g_hi = _cap(g_lo, g_hi, p50, prev and prev.get("grade_band_usd"))
-    p10, p90 = _cap(round(g_lo * (1 - err)), round(g_hi * (1 + err)), p50, prev and prev["bill"]["annual"])
+    prev_bill = prev and (prev["bill"].get("building_annual") or prev["bill"]["annual"])
+    p10, p90 = _cap(round(g_lo * (1 - err)), round(g_hi * (1 + err)), p50, prev_bill)
     lo_r, hi_r = (p10 / p50, p90 / p50) if p50 else (1, 1)
+    full = {"p10": p10, "p50": p50, "p90": p90}  # the building's heating + cooling $ band
+    included = answers.get("heating_fuel") == "included"
+    usd = (lambda x: x["cooling"]["usd"]) if included else (lambda x: x["total_usd"])  # what the renter pays
 
     sqft = hc["unit_sqft"]
     best, worst = score_for(g_lo, sqft, btype)["grade"], score_for(g_hi, sqft, btype)["grade"]  # high cost = worse
@@ -145,15 +165,18 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
                      "year_built": hc["building"].get("year_built", building["year_built"]),
                      "year_built_source": hc["building"].get("year_built_source", building["year_built_source"])},
         "bill": {"covers": "heating + cooling only (P1 model); base electricity, hot water and fixed charges not yet",
-                 "annual": {"p10": p10, "p50": p50, "p90": p90},
-                 "seasonal": {x: _scaled(seasons[x]["total_usd"], lo_r, hi_r) for x in SEASONS if x in seasons},
-                 "monthly": {MONTHS[m["month"] - 1]: _scaled(m["total_usd"], lo_r, hi_r) for m in hc.get("months", [])},
+                 "annual": _scaled(hc["annual"]["cooling_usd"], lo_r, hi_r) if included else full,
+                 "seasonal": {x: _scaled(usd(seasons[x]), lo_r, hi_r) for x in SEASONS if x in seasons},
+                 "monthly": {MONTHS[m["month"] - 1]: _scaled(usd(m), lo_r, hi_r) for m in hc.get("months", [])},
+                 **({"building_annual": full} if included else {}),  # additive: the grade's $ (heat + cooling)
                  # additive
                  "band_method": f"p10/p90 = the grade range's $ (grade_band_usd, see grade_span_method) widened by "
                                 f"±{err:.0%}: P1's median error vs held-out real Ann Arbor gas meters for this "
                                 f"estimate path ({hc['method']}). Never wider than before the last answer. "
                                 "Seasons and months are scaled by the same ratios.",
-                 **({"note": NO_AC} if known.get("cooling_code") == "0" else {})},
+                 **({"note": " ".join(n for n, on in ((NO_AC, known.get("cooling_code") == "0"),
+                                                       (HEAT_INCLUDED, included)) if on)}
+                    if known.get("cooling_code") == "0" or included else {})},
         "co2_t": None,  # below, from the bill band
         **score_for(p50, sqft, btype), "grade_span": span, "locked": len(span) == 1 or not ask,
         # additive
@@ -168,7 +191,11 @@ def _respond(session_id: str, building: dict, params: dict, answers: dict, prev:
         "heating_cooling": hc,  # additive: P1's full answer (heating vs cooling, energy, weather, method, accuracy)
         "answers": answers, "model_params": params,  # additive (see app/sessions.py)
     }
-    body["co2_t"] = co2.co2_t(hc, body["bill"])
+    body["co2_t"] = co2.co2_t(hc, {"annual": full})  # the building's emissions, heat included or not
+    if included:
+        med = score.peer_cooling(btype)
+        body["hidden_rent_usd_mo"] = None if med is None else int(round((hc["annual"]["cooling_usd"] - med * sqft) / 12))
+        body["hidden_rent_method"] = HIDDEN_RENT_COOLING
     body["badges"] = badges.badges(body, used_fixes=bool(prev and prev.get("used_fixes")),
                                    previous_grade=prev and prev.get("grade"))
     if prev and prev.get("used_fixes"):

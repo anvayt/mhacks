@@ -31,6 +31,14 @@ def peer_costs(building_type: str | None) -> np.ndarray:
     return np.sort(np.array(rows)) if len(rows) >= MIN_PEERS else _p1_buildings()
 
 
+@lru_cache
+def peer_cooling(building_type: str) -> float | None:
+    """Median cooling $ per sq ft of same-type city homes (annual − heating, api/data/city_scores.csv), for hidden
+    rent when heat is included in the rent."""
+    rows = [(r["annual_usd"] - r["heating_usd"]) / r["sqft"] for r in city._table() if r["type"] == building_type]
+    return float(np.median(rows)) if rows else None
+
+
 def grade_of(score: int) -> str:
     for grade, low in (("A", 80), ("B", 60), ("C", 40), ("D", 20)):
         if score >= low:
