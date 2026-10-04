@@ -5101,8 +5101,8 @@
    "url": "https://a2maps.a2gov.org/a2arcgis/rest/services/OSI/BuildingFootprints/FeatureServer/0"
   },
   {
-   "label": "US Census TIGER block groups (Washtenaw County) + ACS 5-year via Census Reporter",
-   "url": "https://api.censusreporter.org"
+   "label": "US Census block groups (TIGERweb ACS 2023 outline; ACS 5-year year built and heating fuel)",
+   "url": "https://tigerweb.geo.census.gov/"
   },
   {
    "label": "NREL ResStock 2024.2, Michigan baseline (18,756 simulated homes)",
