@@ -3,13 +3,13 @@ def record_snapshot(property_id: str, source: str, body: dict) -> dict:
     return {}
 
 
-def list_snapshots(property_id) -> list[dict]:
+def list_snapshots(property_id: str) -> list[dict]:
     return []
 
 
-def list_bills(property_id) -> list[dict]:
+def list_bills(property_id: str) -> list[dict]:
     return []
 
 
-def list_impact(property_id) -> list[dict]:
+def list_impact(property_id: str) -> list[dict]:
     return []
