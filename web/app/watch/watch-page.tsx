@@ -36,12 +36,13 @@ export default function WatchPage() {
     return () => { active = false; };
   }, [session]);
 
-  async function play() {
+  function play() {
     const v = video.current, a = audio.current;
     if (playing) { v?.pause(); a?.pause(); setPlaying(false); return; }
     setPlaying(true);
-    v?.play().catch(() => {});
-    if (a && !audioFailed) await a.play().catch(() => setAudioFailed(true));
+    // Voice first, clip from the audio's onPlaying: Chromium pauses already-playing media when a sound starts.
+    if (a && !audioFailed) a.play().catch(() => { setAudioFailed(true); v?.play().catch(() => {}); });
+    else v?.play().catch(() => {});
   }
 
   // Captions: the sentence the voice is on, by its share of the script's characters (good enough for one voice).
@@ -72,6 +73,7 @@ export default function WatchPage() {
             aria-label={playing ? "Pause the report" : "Play the report"}>{playing ? "❚❚" : "▶ Play report"}</button>
         </div>
         <audio ref={audio} src={`${API}/narration/${enc}`} preload="none" onError={() => setAudioFailed(true)}
+          onPlaying={() => { video.current?.play().catch(() => {}); }}
           onTimeUpdate={(e) => { const a = e.currentTarget; if (a.duration) setProgress(a.currentTime / a.duration); }}
           onEnded={() => { video.current?.pause(); setPlaying(false); setProgress(1); }} />
         <figcaption className={styles.credit}>Illustration generated with Grok Imagine, not this building. Narration by Grok Voice.</figcaption>
