@@ -4,7 +4,7 @@ import socket
 
 import pytest
 
-from app.listing import parse_listing_url
+from app.listing import find_url, parse_listing_url
 
 FOUND = [
     # Zillow homedetails: APT / UNIT / '#' units, plain houses
@@ -249,32 +249,49 @@ def test_map_links_with_address(url, source, address, unit, zip_, ll):
 VCARD = ("BEGIN:VCARD\nVERSION:3.0\nN:;Current Location;;;\nFN:Current Location\n"
          "item1.URL;type=pref:http://maps.apple.com/?ll=42.280826\\,-83.743038\nitem1.X-ABLabel:map url\nEND:VCARD\n")
 COORDS = [
-    # place name + pin: look up by point, keep the name as a hint
+    # Named pins (hint set) need confirming: the name may be a business or a whole city, whose pin is
+    # the city centre (real maps.app.goo.gl/N7Qqbomd6kmiEfst6 -> 'Ann Arbor, Michigan, ...').
     ("https://www.google.com/maps/place/Arbor+Club+Apartments/@42.30,-83.79,15z/data=!4m6!3m5!1s0x0:0x1!8m2"
-     "!3d42.2992!4d-83.7989!16s", "google_maps", "Arbor Club Apartments", (42.2992, -83.7989)),
-    # dropped pin: the place text is degrees-minutes-seconds, not a hint
-    ("https://www.google.com/maps/place/42%C2%B016'50.9%22N+83%C2%B044'34.8%22W/@42.2808,-83.743,17z/data=!3m1"
-     "!4b1!4m4!3m3!8m2!3d42.280806!4d-83.743", "google_maps", None, (42.280806, -83.743)),
-    ("https://www.google.com/maps/@42.2808,-83.743,17z", "google_maps", None, (42.2808, -83.743)),
-    ("https://www.google.com/maps/search/?api=1&query=42.2808,-83.7430", "google_maps", None, (42.2808, -83.743)),
-    ("https://maps.google.com/maps?q=loc:42.2808,-83.7430", "google_maps", None, (42.2808, -83.743)),
-    ("https://www.google.com/maps/@?api=1&map_action=map&center=42.2808%2C-83.743&zoom=17", "google_maps", None,
-     (42.2808, -83.743)),
-    ("https://maps.apple.com/?ll=42.280826,-83.743038&q=Dropped%20Pin", "apple_maps", None, (42.280826, -83.743038)),
+     "!3d42.2992!4d-83.7989!16s", "google_maps", "Arbor Club Apartments", (42.2992, -83.7989), True),
+    ("https://www.google.com/maps/place/Ann+Arbor,+Michigan,+USA/@42.2733,-83.8,12z/data=!3m1!4b1!4m6!3m5"
+     "!1s0x883cb00ee6c8d5b5:0x2f0ad5d4b22ab9b7!8m2!3d42.2808256!4d-83.7430378!16zL20vMHFwc3k", "google_maps",
+     "Ann Arbor, Michigan, USA", (42.2808256, -83.7430378), True),
+    ("https://maps.apple.com/place?address=Ann%20Arbor,%20MI,%20United%20States&coordinate=42.2808,-83.743"
+     "&name=Ann%20Arbor", "apple_maps", "Ann Arbor, MI, United States", (42.2808, -83.743), True),
     ("https://maps.apple.com/place?coordinate=42.299200,-83.798900&name=Arbor%20Club%20Apartments", "apple_maps",
-     "Arbor Club Apartments", (42.2992, -83.7989)),
+     "Arbor Club Apartments", (42.2992, -83.7989), True),
+    # bare map views: wherever the map was looking, not a chosen point
+    ("https://www.google.com/maps/@42.2808,-83.743,17z", "google_maps", None, (42.2808, -83.743), True),
+    ("https://www.google.com/maps/@?api=1&map_action=map&center=42.2808%2C-83.743&zoom=17", "google_maps", None,
+     (42.2808, -83.743), True),
+    # unnamed explicit points: safe to look up by point. Dropped pin text is degrees-minutes-seconds.
+    ("https://www.google.com/maps/place/42%C2%B016'50.9%22N+83%C2%B044'34.8%22W/@42.2808,-83.743,17z/data=!3m1"
+     "!4b1!4m4!3m3!8m2!3d42.280806!4d-83.743", "google_maps", None, (42.280806, -83.743), False),
+    ("https://www.google.com/maps/search/?api=1&query=42.2808,-83.7430", "google_maps", None, (42.2808, -83.743), False),
+    ("https://maps.google.com/maps?q=loc:42.2808,-83.7430", "google_maps", None, (42.2808, -83.743), False),
+    ("https://maps.apple.com/?ll=42.280826,-83.743038&q=Dropped%20Pin", "apple_maps", None,
+     (42.280826, -83.743038), False),
     # iMessage location share: a CL.loc.vcf vCard (commas escaped as '\,')
-    (VCARD, "apple_maps", None, (42.280826, -83.743038)),
+    (VCARD, "apple_maps", None, (42.280826, -83.743038), False),
     ("sent you my location http://maps.apple.com/?ll=42.280826,-83.743038&q=My%20Location", "apple_maps", None,
-     (42.280826, -83.743038)),
+     (42.280826, -83.743038), False),
 ]
 
 
-@pytest.mark.parametrize("url,source,hint,ll", COORDS)
-def test_map_links_coords_only(url, source, hint, ll):
+@pytest.mark.parametrize("url,source,hint,ll,needs", COORDS)
+def test_map_links_coords_only(url, source, hint, ll, needs):
     assert parse_listing_url(url) == {"address": None, "unit": None, "zip": None, "source": source,
-                                      "needs_address": False, "hint": hint, "lat": ll[0], "lon": ll[1],
+                                      "needs_address": needs, "hint": hint, "lat": ll[0], "lon": ll[1],
                                       "coords_only": True}
+
+
+@pytest.mark.parametrize("text", [
+    "is it this one? https://maps.app.goo.gl/N7Qqbomd6kmiEfst6.",
+    "(https://maps.app.goo.gl/N7Qqbomd6kmiEfst6)",
+    'he said "https://maps.app.goo.gl/N7Qqbomd6kmiEfst6"!',
+])
+def test_find_url_drops_trailing_punctuation(text):
+    assert find_url(text) == "https://maps.app.goo.gl/N7Qqbomd6kmiEfst6"
 
 
 def test_not_maps():
