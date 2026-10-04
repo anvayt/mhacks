@@ -1,0 +1,100 @@
+{
+  "source": "NREL ResStock 2024.2 MI baseline (18,756 simulated homes)",
+  "targets": {
+    "heat_gas_per_hdd": {
+      "n": 14341,
+      "public_record_only": {
+        "test_median_ape": 0.248,
+        "test_r2_log": 0.508
+      },
+      "all_answers": {
+        "test_median_ape": 0.211,
+        "test_r2_log": 0.603
+      },
+      "feature_importance": {
+        "year_built": 0.38199999928474426,
+        "btype_code": 0.25600001215934753,
+        "sqft": 0.07400000095367432,
+        "stories": 0.0689999982714653,
+        "occupants": 0.06199999898672104,
+        "renter": 0.050999999046325684,
+        "foundation_code": 0.03700000047683716,
+        "floor_level": 0.035999998450279236,
+        "window_panes": 0.017999999225139618,
+        "cooling_code": 0.014999999664723873
+      }
+    },
+    "heat_elec_per_hdd": {
+      "n": 1794,
+      "public_record_only": {
+        "test_median_ape": 0.364,
+        "test_r2_log": 0.272
+      },
+      "all_answers": {
+        "test_median_ape": 0.279,
+        "test_r2_log": 0.39
+      },
+      "feature_importance": {
+        "btype_code": 0.28600001335144043,
+        "year_built": 0.21699999272823334,
+        "stories": 0.09300000220537186,
+        "renter": 0.08699999749660492,
+        "sqft": 0.07100000232458115,
+        "occupants": 0.06400000303983688,
+        "floor_level": 0.05299999937415123,
+        "cooling_code": 0.04899999871850014,
+        "foundation_code": 0.04500000178813934,
+        "window_panes": 0.03400000184774399
+      }
+    },
+    "cool_per_cdd": {
+      "n": 16533,
+      "public_record_only": {
+        "test_median_ape": 0.38,
+        "test_r2_log": 0.217
+      },
+      "all_answers": {
+        "test_median_ape": 0.319,
+        "test_r2_log": 0.52
+      },
+      "feature_importance": {
+        "cooling_code": 0.35199999809265137,
+        "sqft": 0.3009999990463257,
+        "btype_code": 0.10300000011920929,
+        "renter": 0.07000000029802322,
+        "year_built": 0.04500000178813934,
+        "stories": 0.029999999329447746,
+        "occupants": 0.028999999165534973,
+        "floor_level": 0.02800000086426735,
+        "foundation_code": 0.024000000208616257,
+        "window_panes": 0.017999999225139618
+      }
+    }
+  },
+  "calibration_to_meters": {
+    "heat_gas": 1.141,
+    "cool": 0.702,
+    "heat_elec": 1.0,
+    "evidence": {
+      "metered_median_heat_ccf_per_1000ft2_per_hdd60": 0.0618,
+      "resstock_mf5_median_heat": 0.0541,
+      "metered_median_cool_kwh_per_1000ft2_per_cdd65": 0.912,
+      "resstock_mf5_median_cool": 1.298,
+      "n_metered_heat": 101,
+      "n_metered_cool": 96
+    },
+    "applies_to": [
+      "Multi-Family with 2 - 4 Units",
+      "Multi-Family with 5+ Units"
+    ]
+  },
+  "weather_stations": 31,
+  "mf5_median_unit_sqft": 854.0,
+  "answers": {
+    "window_panes": "1 (single-pane) or 2 (double-pane); 3 if triple",
+    "floor_level": "unit position in a multifamily building: 0 ground/bottom, 1 middle, 2 top",
+    "foundation_code": "0 heated basement, 1 unheated basement, 2 slab, 3 crawlspace, 4 open/pier",
+    "cooling_code": "0 none, 1 window/room AC, 2 central AC, 3 heat pump",
+    "occupants": "number of people"
+  }
+}
