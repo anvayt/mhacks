@@ -15,7 +15,8 @@ Run from the repo root (macOS needs `brew install libomp` first for xgboost/ligh
 ```bash
 make -C model setup     # .venv + requirements (Python 3.12)
 make -C model build     # downloads all source data once, trains, validates, pre-scores Ann Arbor
-make -C model test      # 7 tests
+make -C model leakage   # air-leakage model (section 6); its tests need it
+make -C model test      # 14 tests
 make -C model dashboard # heating/cooling server (model.heating_cooling.server) → http://localhost:8001/dashboard (API docs /docs)
 make -C model stop
 ```
