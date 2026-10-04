@@ -34,22 +34,24 @@ def fakes(monkeypatch, tmp_path):
 
 def test_script_reads_the_sessions_numbers():
     text = client.get("/narration/nar1/script").json()["text"]
-    assert text.startswith("Here's your Hidden Rent report for 1514 Morton Ave.")
-    assert "It grades B to D, most likely a C." in text
-    assert "about $1,200 to $3,500 a year to heat and cool" in text
+    assert text.startswith("Your Hidden Rent report for 1514 Morton Ave.")
+    assert "It grades B to D, likely a C." in text
+    assert "Most likely about $2,100 a year to heat and cool. Answer a few questions to narrow it down." in text
+    assert "$1,200" not in text  # a wide p10-p90 band is not read out
     assert "$40 a month of hidden rent" in text
     assert "about 11 tons of CO2" in text
     assert "Ask the landlord: is the heat gas or electric" in text
     assert text.endswith("This is a prediction, not a bill.")
-    assert 40 <= len(text.split()) <= 70
+    assert 40 <= len(text.split()) <= 75  # "about 40-70 words"
 
 
 def test_script_variants():
     s = {**BODY, "grade_span": ["A"], "grade": "A", "hidden_rent_usd_mo": -15, "co2_t": {"p50": 3.21},
+         "bill": {"annual": {"p10": 1500, "p50": 2000, "p90": 2900}},
          "questions": [], "answers": {"heating_fuel": "included"}}
     text = narration.script(s)
     assert "It earns an A." in text and "grades" not in text
-    assert "a year to cool, and your landlord pays the heat" in text
+    assert "Most likely about $2,000 a year to cool, and your landlord pays the heat. Somewhere between $1,500 and $2,900." in text
     assert "$20 a month less than similar homes" in text  # round(15, -1): ties go to even, 20
     assert "about 3.2 tons" in text
     assert "last winter's gas bills" in text
