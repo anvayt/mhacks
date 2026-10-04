@@ -54,9 +54,9 @@ Given any Ann Arbor street address, return the building features the bill model 
 - [x] No secrets committed; every value lists its source (PLAN.md §0)
 
 ## Follow-up (team decisions Oct 3, ~9:20 PM; branch p2/address-features)
-- [ ] **Townhouse rule:** classify row/attached homes as `Single-Family Attached` (ResStock category) instead of small multi-family.
-- [ ] **Stories snapping:** snap `in.geometry_stories` to the nearest ResStock 2024.2 MI category (1–15, 20, 21, 35); keep the raw count in `stories_raw`.
-- **FOR MERGE (tell P1/Dennis):** `in.geometry_stories` is snapped to ResStock's categories (e.g. 26-story Tower Plaza → 21 or 35, nearest). If P1's model treats stories as a number instead, use `stories_raw`. Decide at merge.
+- [x] **Townhouse rule:** classify row/attached homes as `Single-Family Attached` (ResStock category) instead of small multi-family.
+- [x] **Stories snapping:** snap `in.geometry_stories` to the nearest ResStock 2024.2 MI category (1–15, 20, 21, 35); keep the raw count in `stories_raw`.
+- **FOR MERGE (tell P1/Dennis):** `in.geometry_stories` is snapped to ResStock's categories (e.g. 26-story Tower Plaza → 21, nearest). If P1's model treats stories as a number instead, use `stories_raw`. Decide at merge.
 
 ## Handoff (fill in when done; DEV_STRATEGY #1)
 **Branch `p2/address-features` @ 2731a80, pushed. Not merged into dev.** All "Done when" items pass (12 tests).
@@ -84,5 +84,11 @@ Given any Ann Arbor street address, return the building features the bill model 
 - Multi-unit `in.sqft` = building floor area ÷ unit count; includes hallways, so it runs high. Below 322 it falls back to the 854 median (above).
 
 **Known gaps**: 2020+ builds bin to `2010s` (no ResStock bin); footprint area may include attached garages; a few tall buildings have odd `STORIES` (e.g. The Standard = 2); geocode cache is per-address on first use (network needed once per new address); no offline demo fixtures (team decision: testing after merge).
+
+**Follow-up done (90f1541, pushed, not merged; 23 tests pass)**
+- Townhouse rule → `Single-Family Attached`, checked before the unit-count rule: Residential footprint, 2+ residential addresses each with its own house number, no `UNIT` rows (in the footprint or for the street line), ≤ 3 stories (raw). The city draws a townhouse row as one footprint and numbers each home (2841…2851 Hardwick Rd); apartments get `UNIT n` rows or share a number (912 / 912 1/2). Also catches side-by-side duplexes (506/508 Packard), which RECS 2020 counts as SFA. `in.sqft` = floor area ÷ townhouses. `sources["in.geometry_building_type_recs"]` starts with `townhouse rule:` or `unit-count rule:`. Shared-wall rule skipped: touching footprints (≤ 0.3 m) occur 3 times city-wide. ~2,000 of 32,572 Residential footprints now return SFA (co-ops, condo rows, UM Northwood IV/V).
+- SFA: 2843 Hardwick Rd (6 units, 3,112 sq ft), 2877 Rayfield Ave (4, 3,112), 3422 Burbank Dr (6, 1,564), 2685 Arrowwood Trl (8, 1,268). Unchanged: 912 Mary St MF 2-4, 2901 Northbrook Pl MF 5+, 1514 Morton Ave and 2121 Vinewood Blvd SFD.
+- `in.geometry_stories` snapped to 1–15, 20, 21, 35 (ties down); `stories_raw` holds the count and `building_sqft` uses it. 555 E William St (Tower Plaza): raw 26 → "21".
+- Open: North Oaks sq ft includes the tuck-under garage (listing says 2,117 for 2877 Rayfield); condo townhouses numbered `... UNIT n` stay multi-family; no ResStock SFA sq ft bounds are checked.
 
 **Who acts next**: P2-04 (`/estimate`: call `get_features`, decide what to do with `null` type), P2-06 (city batch: reuse `footprints._index()` / unit counts).
