@@ -6,10 +6,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.city import router as city_router
 from app.estimate import estimate
 from app.geo.features import get_features
 
 app = FastAPI(title="Hidden Rent API")
+app.include_router(city_router)
 # /web calls /estimate from the browser (Next.js dev server on :3000)
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("WEB_ORIGINS", "http://localhost:3000").split(","),
                    allow_methods=["*"], allow_headers=["*"])
