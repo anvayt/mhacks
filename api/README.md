@@ -132,10 +132,20 @@ uv run uvicorn app.main:app --reload --port 8000
   `POST /reminders/{id}/sent` after delivery; `POST /reminders/inbound {user_id}` on any reply; `POST
   /reminders/demo-send {user_id, kind?}` (ignores clock and cap). Agent key or bearer: `POST /reminders/{user_id}/stop
   | pause | resume`. Weather reminders come from /forecast's alerts (`costly_week` only when ≥ $5 above normal).
+  `/reminders/inbound` also returns `replying_to: {reminder_id, kind, local_date, commitment_id?} | null` (the reminder
+  delivered, or demo-shown, since the previous reply, from today or yesterday local). A task reminder's `text_hint`
+  carries the habit streak ("Habit streak 4 days; reply done to keep it.").
+- Daily habit streak (`app/habits.py`; agent key or bearer): `POST /habits/{user_id}/checkin {date?, commitment_id?,
+  source: imessage|web}` → `{current, best, checked_in_today, last_checkin_date, badges}`; idempotent per local day
+  (user's `timezone`, default America/Detroit); only today or yesterday (422 `bad_date`); needs an accepted or
+  completed commitment at the current home (422 `no_habits`). Streak = consecutive local days ending today, or
+  yesterday while today is pending. `GET /habits/{user_id}` → the same + `checkins` (last 30 days). `GET /me` has
+  `habit_streak {current, best, checked_in_today}`; badges `habit-3`, `habit-7` (best streak). Self-reported, not savings.
 - Boards (`app/boards.py`, NC-06): `GET /leaderboard` without `board` is unchanged. `GET /leaderboard?board=verified_cut|
-  co2_avoided|streak|follow_through|neighborhood[&scope=]` → `{board, scope, coverage, entries: [{alias | geoid, value,
+  co2_avoided|streak|follow_through|neighborhood|habit_streak[&scope=]` → `{board, scope, coverage, entries: [{alias | geoid, value,
   unit, evidence, demo, rank}], empty_reason, year, model_version, metric_note}`: opted-in homes with verified bill
-  impact only (aliases, never phones/addresses; tracts need 5 homes). 422 `bad_board` / `bad_scope`.
+  impact only (aliases, never phones/addresses; tracts need 5 homes). `habit_streak`: opted-in renters with a chosen
+  alias, current habit streak in days (ties by `best`), evidence `self_reported_checkins`. 422 `bad_board` / `bad_scope`.
   `GET /leaderboard/position/{property_id}` (agent key or bearer) → `{current: {score, grade, percentile_city, rank, of},
   projected: {rank, score, percentile_city, label} | null (the latest /projection's own score/percentile_city),
   neighbors, percentile_basis, label, current_source, model_version}`; 404 `not_found`, 503 `position_unavailable`.
