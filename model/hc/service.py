@@ -9,8 +9,9 @@
 Routing, most grounded first:
   1. **metered**: the address falls inside an Ann Arbor benchmarked property with a good PRISM fit → that
      building's own change-point model from real monthly meters.
-  2. **meter_model**: unmetered building ≥ 10,000 ft² → intensity predicted from 101 metered Ann Arbor
-     buildings (building-level regression), rescaled by local degree-days.
+  2. **meter_model+resstock**: unmetered multifamily ≥ 10,000 ft² → geometric mean of the intensity predicted
+     from 101 metered Ann Arbor buildings and the meter-calibrated ResStock intensity (best on held-out meters),
+     rescaled by local degree-days.
   3. **resstock**: smaller buildings (houses, 2–4 units) → ResStock per-degree-day model (+ renter answers),
      calibrated to real meters for multifamily.
 A ResStock cross-check is returned alongside 1 and 2.
@@ -76,6 +77,7 @@ def _res():
             "building_model": json.loads((RESULTS / "building_model_validation.json").read_text()),
             "resstock": json.loads((RESULTS / "resstock_hc_validation.json").read_text()),
             "leakage": json.loads((RESULTS / "leakage_analysis.json").read_text()) if (RESULTS / "leakage_analysis.json").exists() else None,
+            "real": json.loads((RESULTS / "validation_real.json").read_text()) if (RESULTS / "validation_real.json").exists() else None,
         },
     }
 
@@ -275,8 +277,12 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
     it_rs = _intensity_resstock(rs_feat, btype, answers)
     if method is None:
         if float(feat["gfa_ft2"]) >= METER_MODEL_MIN_SQFT and is_mf:
-            it = _intensity_meter_model(feat)
-            method = "meter_model"
+            # geometric mean of the meter-trained model and calibrated ResStock: the best no-meter path on
+            # held-out real meters (results/validation_real.json)
+            im = _intensity_meter_model(feat)
+            it = {k: float(np.sqrt(im[k] * it_rs[k])) for k in ("heat_ccf_per_hdd", "cool_kwh_per_cdd")}
+            it["heat_kwh_per_hdd"] = im["heat_kwh_per_hdd"]
+            method = "meter_model+resstock"
             sources.append("City of Ann Arbor energy benchmarking (101 metered buildings, building-level model)")
         else:
             it = it_rs
@@ -307,21 +313,21 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         out["cross_check_resstock"] = {"heating_usd": ca["heating_usd"], "cooling_usd": ca["cooling_usd"],
                                        "calibrated_to_meters": it_rs["calibrated_to_meters"]}
     v = r["validation"]
-    if method == "metered":
-        acc = v["leakage"]["real_meters"]["A1_out_of_year_degree_day_accuracy"] if v["leakage"] else None
-        out["accuracy"] = {"basis": "out-of-year test on real meters (fit 2 years, predict the 3rd)",
-                           "annual_gas_median_abs_error": acc and acc["annual_gas_median_abs_error"]}
-    elif method == "meter_model":
-        bm = v["building_model"]["targets"]
-        out["accuracy"] = {"basis": "cross-validated against metered Ann Arbor buildings",
-                           "heating_median_abs_error": bm["heat_gas"]["cv"][bm["heat_gas"]["chosen"]]["median_ape"],
-                           "cooling_median_abs_error": bm["cool_elec"]["cv"][bm["cool_elec"]["chosen"]]["median_ape"]}
-    else:
+    real = (v.get("real") or {}).get("seasonal_gas_vs_real_meters", {}).get("median_abs_pct_error", {})
+    path = {"metered": "metered", "meter_model+resstock": "blend", "resstock": "resstock"}[method]
+    out["accuracy"] = {
+        "seasonal_gas_median_abs_error": real.get(path),
+        "basis": {"metered": "this building's own meters, predicting a held-out year",
+                  "blend": "Ann Arbor buildings held out of training (never seen), seasonal gas vs real meters",
+                  "resstock": "ResStock applied to held-out real Ann Arbor buildings ≥10k ft²; small buildings have no "
+                              "local meter data, so expect at least this error"}[path],
+        "cooling_note": "cooling is validated less well than heating (building features barely beat the median)",
+    }
+    if method == "resstock":
         rv = v["resstock"]["targets"]
         key = "all_answers" if answers else "public_record_only"
-        out["accuracy"] = {"basis": f"held-out ResStock homes ({key.replace('_', ' ')}); simulation, not meters",
-                           "heating_median_abs_error": rv["heat_gas_per_hdd"][key]["test_median_ape"],
-                           "cooling_median_abs_error": rv["cool_per_cdd"][key]["test_median_ape"]}
+        out["accuracy"]["simulation_heldout_median_abs_error"] = {
+            "heating": rv["heat_gas_per_hdd"][key]["test_median_ape"], "cooling": rv["cool_per_cdd"][key]["test_median_ape"]}
     return out
 
 
@@ -347,8 +353,10 @@ def bill_check(year: int, month: int, gas_ccf: float, unit_sqft: float, address:
     heat = s["heating"]["gas_ccf"] * share
     base = _res()["gas_base_ccf_per_1000ft2_day"] * unit_sqft / 1000 * float(row["days"])
     expected = heat + base
-    acc = _res()["validation"]["leakage"]["real_meters"]["A1_out_of_year_degree_day_accuracy"]
-    noise = acc["winter_month_p90_abs_error"] if month in (12, 1, 2) else None
+    # noise floor = p90 winter-month error of this estimate path on held-out real meters
+    real = _res()["validation"]["real"]["seasonal_gas_vs_real_meters"]["p90_abs_pct_error_winter"]
+    path = {"metered": "metered", "meter_model+resstock": "blend", "resstock": "resstock"}[est["method"]]
+    noise = real[path] if month in (12, 1, 2) else None
     pct = gas_ccf / expected - 1
     return {"year": year, "month": month, "actual_gas_ccf": gas_ccf,
             "expected_gas_ccf": round(expected, 1), "expected_heating_ccf": round(heat, 1), "expected_base_ccf": round(base, 1),
@@ -357,4 +365,4 @@ def bill_check(year: int, month: int, gas_ccf: float, unit_sqft: float, address:
             "noise_floor": noise,
             "meaningful": (abs(pct) > noise) if noise else None,
             "method": est["method"],
-            "note": "winter months only are reliable (heating dominates); noise floor = p90 out-of-year winter-month error on real meters"}
+            "note": "only winter months are judged (heating dominates). noise_floor = p90 winter error of this estimate path on held-out real Ann Arbor meters; a bill inside it is consistent with the estimate"}
