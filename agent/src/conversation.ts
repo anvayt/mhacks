@@ -64,7 +64,8 @@ export class Conversations {
     if (ADDRESS.test(text)) return this.estimate(s, { address: text });
 
     const p = s.pending;
-    if (!p && s.sessionId && /^(fix|fixes|landlord|email)\b/i.test(text)) return (await this.fixes(s)).join("\n\n");
+    // A clear command works at any point, even mid-interview.
+    if (s.sessionId && /^(fix|fixes|landlord|email)\b/i.test(text)) return (await this.fixes(s)).join("\n\n");
     if (p?.kind === "address") return this.estimate(s, { address: text });
     if (p?.kind === "unit_sqft") return this.unitSize(s, text);
     if (p?.kind === "question") return this.answer(s, p.question, text);
@@ -138,6 +139,11 @@ export class Conversations {
   }
 
   private async answer(s: ChatState, q: Question, text: string): Promise<string> {
+    if (/^skip\b/i.test(text)) {
+      s.answered.add(q.id); // not sent to the API; just ask the next one
+      s.pending = null;
+      return this.withNextQuestion(s, "Skipped.");
+    }
     const option = matchOption(q, text);
     if (!option) return `Sorry, I didn't catch that.\n${questionText(q)}`;
     if (!s.sessionId) return WELCOME;
@@ -165,7 +171,7 @@ export class Conversations {
       s.pending = { kind: "question", question: q };
       return `${body}\n\n${questionText(q)}`;
     }
-    if (e?.locked) return `${body}\n\nGrade locked in. Send another listing to compare.`;
+    if (e?.locked) return `${body}\n\nGrade locked in. Send another listing to compare, or after move-in text me a photo of your bill.`;
     return body;
   }
 
