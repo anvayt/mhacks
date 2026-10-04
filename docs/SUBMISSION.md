@@ -10,15 +10,15 @@ Rule for every track: claim only what we can demo. Don't tick prizes we didn't i
 
 - [ ] **Make the GitHub repo public** (we'll do this later, but **before 11:30**). Lead: GitHub → `anvayt/mhacks` → Settings → *Change visibility* → Public. ASI:One requires a public repo, and Devpost judges click the link. The git history was scanned for every key in `.env` and none of them appear, so it is safe to open. `.env` and the agent seed are git-ignored.
 - [ ] **Demo video, 3–5 minutes** on YouTube (unlisted is fine), link in Devpost. **ASI:One requires it**, and Devpost judges watch it. Show the web report → iMessage → ASI:One chat. Script: [PITCH.md](PITCH.md).
-- [ ] **Live URLs filled in below** (from the Fly/Vercel deploy, see `DEPLOY.md`). No localhost and no tunnel links anywhere in Devpost.
+- [x] **Live URLs filled in below** (Fly/Vercel deploy). No localhost and no tunnel links anywhere in Devpost.
 - [ ] **All 4 teammates added to the Devpost project** (each person accepts the invite).
 - [ ] **ASI:One Submission Agent done by everyone** (section 2, ASI:One). The team stays *Incomplete* until every member joins.
 
 | What | URL |
 |---|---|
-| Website (Vercel) | `TODO` |
-| API (Fly) | `TODO` |
-| iMessage onboarding / QR card | `TODO` (+ `/card` for the printable QR) |
+| Website (Vercel) | https://hidden-rent-mhacks.vercel.app |
+| API (Fly) | https://hidden-rent-api-mhacks.fly.dev (`/health`) |
+| iMessage onboarding / QR card | https://hidden-rent-agents-mhacks.fly.dev (printable QR: `/card`) |
 | GitHub | https://github.com/anvayt/mhacks |
 | Agentverse profile | https://agentverse.ai/agents/details/agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum/profile |
 | Demo video | `TODO` |
@@ -127,12 +127,12 @@ Rules: build with **Notability Pro at some point during the hackathon**, tag "No
 
 ---
 
-## 4. Stale lines in DEVPOST.md to fix before pasting
+## 4. Stale lines in DEVPOST.md (fixed)
 
-- [ ] *What it does*: "handing an open web session over to iMessage is not built yet". **It's built** (*Continue in iMessage* on the report page). Rewrite the sentence.
-- [ ] *Fetch.ai ASI:One* section: replace "local preview", "not yet complete" and the `make asi-agent` localhost run instructions with the live Agentverse/ASI:One flow, once the deployed rehearsal passes.
-- [ ] *Submission fields and human TODOs*: replace the "temporary tunnel" / "Reprint the QR card after any tunnel restart" notes with the Fly onboarding URL.
-- [ ] Any `TODO P1/P2/P3/P4` markers: resolve or delete.
+- [x] *What it does*: "handing an open web session over to iMessage is not built yet". **It's built** (*Continue in iMessage* on the report page). Rewrite the sentence.
+- [x] *Fetch.ai ASI:One* section: replace "local preview", "not yet complete" and the `make asi-agent` localhost run instructions with the live Agentverse/ASI:One flow, once the deployed rehearsal passes.
+- [x] *Submission fields and human TODOs*: replace the "temporary tunnel" / "Reprint the QR card after any tunnel restart" notes with the Fly onboarding URL.
+- [ ] Remaining `TODO` markers (team names, video, ASI:One shared chat link, P1 model sign-off): resolve, or delete them while pasting.
 
 ## 5. Final 5-minute check before Submit
 
