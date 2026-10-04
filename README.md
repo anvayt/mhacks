@@ -19,7 +19,7 @@ Point `MODEL_DIR` at the checkout with P1's **already-built** artifacts and matc
 ```bash
 AGENT_TERMINAL=1 make demo       # terminal chat, real API estimates, no iMessages
 # In a second terminal, from the same checkout:
-make demo-warm                  # five real estimates, one forecast session per weather cell
+make demo-warm                  # estimates + each map, forecast per weather cell, city layer
 make demo-check                 # isolated API/model with outbound Python networking blocked
 ```
 
@@ -63,6 +63,93 @@ reports attempts even if an existing cached fallback succeeds. Photon/iMessage, 
 installation, and first-use tuichat downloads still need separate network checks. No real messages are sent by
 warm/check; validate the launcher with `AGENT_TERMINAL=1`.
 Run `bash scripts/test-demo.sh` for the bounded cleanup, dotenv, and forecast-cell regression checks; these use no real model calls or messages.
+
+## Run the demo publicly
+
+On demo morning, from the same checkout in each terminal:
+
+1. Have P1 bring up the **already-built** model on `:8001`; confirm `curl http://localhost:8001/hc/answers`.
+2. Set private `AGENT_API_KEY` in `.env` (also used by the agent), real Photon credentials, and `USE_MOCKS=0`.
+   Run `AGENT_TERMINAL=1 make demo` for a safe rehearsal; use plain `make demo` for the team's authorized live
+   iMessage agent. Keep that terminal open.
+3. In another terminal, run `make demo-public`. If needed, install its only additional prerequisite with
+   `brew install cloudflared`. It starts three account-free HTTPS tunnels, writes **URLs only** to git-ignored
+   `data/demo/public.env`, and asks the existing demo supervisor to restart its API, web, and onboarding with them.
+   It never restarts the model or agent. It prints the judge URL and terminal QR. **Reprint P4's `/card`** at the
+   printed onboarding URL each time: quick-tunnel URLs change on restart (NEW_CHANGES §13 R4).
+4. Run `make demo-warm`, then `make demo-check`. Warming reports timings for every estimate and session map,
+   one forecast per weather cell, and `/city` once. Maps warm the cached TIGERweb block-group outline. Check also
+   exercises these routes under the existing isolated-process outbound guard; a model-down failure is not a pass.
+5. Open the printed **judge URL on a phone**, test the listing and sign-in flows, and keep the launch terminals open.
+
+`make demo-public` can also start API/web/onboarding itself when all three ports are free. It does not start the
+model or agent. Ctrl-C then closes its tunnels and those three owned services. When connected to `make demo`,
+Ctrl-C instead asks that supervisor to restore local URLs, leaving its services and agent running. Tunnels use
+loopback origins. Reused or independently started services are never restarted: stop them through their own
+terminals, then use this checkout's `make demo`. Commands use a cooperative mailbox, **never stored PID files as
+permission to kill**. A crashed supervisor may leave `data/demo/services.lock` (or `public.lock`); inspect the
+ports/old launcher first, then remove only the stale directory. A second public launcher is refused.
+
+The API uses a single-process in-memory public budget: **30 expensive requests per IP per minute**, and
+**3 bill photos per IP per 10 minutes** (each photo runs two paid vision calls). These are demo operating budgets,
+not model accuracy thresholds. Estimate, answer, compare, calibrate, map, forecast and model-calling property,
+projection, fixes, suggestion and position routes share the budget; web-login starts also count. `429` uses
+`detail.code=slow_down`, renter-facing copy and `Retry-After`. Only a constant-time match to a **nonempty**
+`AGENT_API_KEY` bypasses rate limits; bearer sign-in does not. The byte cap applies even to agent requests:
+**8 MiB base64 photo**, **8 MiB + 64 KiB total JSON**, counted while streaming regardless of Content-Length.
+Oversize requests get `413 bill_too_large`, inviting a smaller photo or typed numbers. Budgets reset on restart
+and are per API worker; use the launcher's single worker for this demo, not a distributed deployment.
+
+CORS allows listed origins only, never wildcard credentials. The public launcher adds the web tunnel to
+`WEB_ORIGINS`, sets `WEB_ORIGIN` for Calendar's return link, and enables `PUBLIC_TUNNEL=1`. Only then does the
+API trust Cloudflare's `CF-Connecting-IP`, and only from its loopback peer; it runs with `--no-proxy-headers`
+so untrusted forwarded headers cannot change that trust check. Do not expose that loopback socket through
+another proxy while this mode is enabled. `/health` stays HTTP 200 for API liveness and returns
+`{"status":"ok"|"degraded","model":{"available":true|false}}` after a two-second `/hc/answers` check.
+
+Public tunnels do **not** fix onboarding `/join` abuse: that separate `:8787` route is P4-owned and still needs
+its NEW_CHANGES §13 R5/D17 cap before unrestricted sharing. Real Google OAuth also needs a matching registered
+redirect URI; random API tunnel URLs do not update Google Console automatically. Tunnel HTTP checks establish
+reachability, not successful model estimates or merged web screens. The branch starts at dev `534f67a`; use the
+integrated web and a working model for the final phone rehearsal. Nothing in warm/check/public sends texts,
+allowlists phones, or creates Calendar events.
+
+### Public-demo verification (Oct 4, 2026)
+
+`cd api && uv run pytest -q`: **588 passed, 2 skipped** (the opt-in integration checks), one existing
+Starlette/httpx deprecation warning. `bash scripts/test-demo.sh` passes dotenv safety, owned-group cleanup,
+selective restart, per-session map warming and per-weather-cell forecast warming. Shell syntax and diff checks pass.
+
+`API_BASE_URL=http://localhost:8050 make demo-warm`, with the real model after P1 restored `:8001`:
+
+| Address | Annual heating + cooling p50 | Estimate | Map |
+|---|---:|---:|---:|
+| 2322 Arrowwood Trl | $470 | 0.183 s | 0.667 s |
+| 624 Church St | $265 | 0.247 s | 0.233 s |
+| 1022 S Forest Ave | $2,179 | 0.213 s | 0.190 s |
+| 615 S Main St | $143 | 0.230 s | 0.235 s |
+| 1514 Morton Ave | $2,117 | 0.182 s | 0.228 s |
+
+One forecast warmed in **1.559 s**; four same-cell requests were skipped as intended. `/city` warmed in
+**0.025 s** (its first load was 1.230 s). Result: **5 estimates, 5 maps, 1 forecast, city; 0 failures**.
+The earlier model-down pass honestly returned five `503 model_unavailable`; no model process was started,
+stopped, rebuilt or replaced by this task.
+
+`make demo-public` was run with installed cloudflared and isolated application databases. All three local
+services started, then restarted with the captured public settings. Cloudflare edge TCP connections on
+port 7844 timed out (`DialContext ... i/o timeout`), so the web URL returned **HTTP 530** and the launcher failed its
+reachability check. Generated URLs (now closed, **not working judge URLs**):
+
+- Web: `https://relations-gasoline-profits-professor.trycloudflare.com`
+- API: `https://oem-governor-driver-investment.trycloudflare.com`
+- Onboarding: `https://disks-movement-bobby-vpn.trycloudflare.com`
+
+Runtime logs: `/tmp/mhacks-public-live/`; successful warm responses: `/tmp/mhacks-public-warm-restored/`.
+Cleanup removed its tunnels, listeners on 8000/3000/8787, locks and public.env while leaving the separately
+owned 8050 API intact. A second local-only lifecycle test used the supervisor mailbox to apply public settings
+and restore local settings; CORS changed to the public origin and back, with the three services still running.
+No `/join`, Photon send, Google event or real-phone operation was called. A working tunnel network and P4's
+onboarding abuse cap remain required before the final public phone rehearsal.
 
 ## Run the whole thing
 
