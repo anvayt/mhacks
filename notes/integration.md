@@ -1,6 +1,6 @@
 # Hidden Rent: how the integrated demo runs
 
-Wave 7 is on `dev` at `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64` (October 4, 2026). Code runs from `dev`; coordination and submission drafts stay on `main`. The final check table and complete terminal conversation are in [WAVE7_VERIFICATION.md](../docs/WAVE7_VERIFICATION.md). The midnight snapshot is retained below as history.
+Wave 7 is on `dev` at `97aec3677e77129baca1b439fd9561e18cb24aa9` (October 4, 2026). Code runs from `dev`; coordination and submission drafts stay on `main`. The final check table and complete terminal conversation are in [WAVE7_VERIFICATION.md](../docs/WAVE7_VERIFICATION.md). The midnight snapshot is retained below as history.
 
 ## What is integrated
 
@@ -81,7 +81,7 @@ A locked grade means the API has one reachable grade **or no remaining eligible 
 
 ## Verification and known limits
 
-API **616 passed, 2 skipped**; agent **70 passed** and typecheck passed; `npm ci` and production web build passed; final Phase 2 check **16/16**. Final full browser smoke result: **433 passed, 0 warnings, 0 failures; 0 HTTP 429s; 37 guarded browser requests, peak 25/minute**. The first complete browser run had 350 passing assertions, nine legacy warnings, zero failures and zero 429s; its 37 guarded browser requests peaked at 22/minute. The final harness repeat supersedes its assertion count. See [full verification and exact terminal transcript](../docs/WAVE7_VERIFICATION.md).
+API **616 passed, 2 skipped**; agent **70 passed** and typecheck passed; `npm ci` and production web build passed; final Phase 2 check **16/16**. Latest full browser smoke result: **444 passed, 0 warnings, 0 failures; 0 HTTP 429s; 38 guarded browser requests, peak 25/minute**. This production-build repeat includes 11 null-size regression checks (one intercepted compare request is included in the count). Comparison and board labels show “size unknown”; peer dollar bars are withheld when size is missing. The first complete browser run had 350 passing assertions, nine legacy warnings, zero failures and zero 429s; its 37 guarded browser requests peaked at 22/minute. The final harness repeat supersedes its assertion count. See [full verification and exact terminal transcript](../docs/WAVE7_VERIFICATION.md).
 
 - Heating/cooling only; relative predicted grades are not official GRH inspection scores. Public-record year/fuel/size can be inferred. Real-meter validation on larger buildings does not establish the same accuracy for small rentals; cooling is less validated. P1 still owns final running-artifact/result sign-off.
 - P1 look-alikes remain empty; unsupported fixes remain tips without numbers. Metered homes currently have no priced commitment effects. The session-preserving “Continue in iMessage” web link is still open in requests.md.

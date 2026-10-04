@@ -1,6 +1,16 @@
 # Wave 7 verification
 
-Final integrated code: `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64` on `dev`. Run date: October 4, 2026. API **8060**, production web **3006**, P1's existing model **8001**. Tests used scratch session/account/calibration SQLite databases and `USE_MOCKS=1` for fictional phone onboarding. Model estimates were real; no real iMessages or Calendar events were sent. No model process was started, stopped, restarted or rebuilt.
+## Reviewed-head follow-up
+
+Latest `dev`: `97aec3677e77129baca1b439fd9561e18cb24aa9`. W1 `5ffd90a`, W2 `d1f3054` and W3 `17fd15f` are all ancestors of this commit, verified against the requested exact heads. Comparison and board size labels now show “size unknown” for null `building.sqft`; peer cost bars are omitted when unit size cannot support that calculation, while the current bar and rank remain visible. Both response types now allow null sizes.
+
+Rebuilt the production web and reran `scripts/web-smoke.sh all` on API **8060** and web **3006**, with `SMOKE_ENV_FILE=/Users/anvaytodkar/Code/mhacks/.env` loaded through uv: **444 passed, 0 warnings, 0 failures, 0 HTTP 429s**. The 11 added checks inject only null size into real response bodies and verify both pages at 375 px. The request counter recorded 38 guarded browser requests (including the intercepted compare regression request), peak 25 in any 60 seconds. Logs: `/tmp/wave7-null-size-build.log` and `/tmp/wave7-null-size-smoke.log`. Backend/agent code is unchanged from the complete checks below; the existing model on 8001 was untouched.
+
+The P2-acknowledged contract entry explicitly records saved-session comparisons, each listing's own 404/422/503 status and code/message/hint, and friendly `model_unavailable` / `lookup_unavailable` text. The default-120 configurable guard and production launcher remain in place.
+
+## Initial wave 7 verification
+
+Initial verified integration: `de8ccdbe014dea2f421b5582c72bd9d3bb3e9e64` on `dev`. Run date: October 4, 2026. API **8060**, production web **3006**, P1's existing model **8001**. Tests used scratch session/account/calibration SQLite databases and `USE_MOCKS=1` for fictional phone onboarding. Model estimates were real; no real iMessages or Calendar events were sent. No model process was started, stopped, restarted or rebuilt.
 
 ## Results
 
