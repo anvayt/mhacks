@@ -11,6 +11,7 @@ const ADDRS = readFileSync(`${ROOT}demo/addresses.txt`, "utf8").split("\n").map(
 const COMPARE = ["624 Church St, Ann Arbor, MI", "1022 S Forest Ave, Ann Arbor, MI"];
 const ZUMPER = "https://www.zumper.com/apartments-for-rent/ann-arbor-mi";
 const NOT_HOME = "500 S State St, Ann Arbor, MI";
+const MAP_ADDRS = ["912 Mary St, Ann Arbor, MI", "615 S Main St, Ann Arbor, MI"];
 // Survey answers to pick when the API offers them (label text, exactly as the API sends it).
 const PICK = { heating_fuel: "Gas", window_panes: "Single-pane", floor_level: "Middle floor", cooling_code: "Central AC" };
 const HEAT_INCLUDED_ADDR = "1022 S Forest Ave"; // decision 4: this address answers "Heat is included in my rent"
@@ -229,6 +230,8 @@ async function webFlow(addr) {
     ok(w2, '"predicted" label', /predicted/i.test(bt));
     const sug = (await api(`/commitments/suggested?session_id=${sid}`)).data.commitments;
     const modeled = sug.filter((c) => !c.pending_model);
+    if (sug.length) await waitText(page, new RegExp(sug[0].title.slice(0, 20).replace(/[()]/g, ".")), 15000);
+    bt = await text(page);
     for (const c of sug.slice(0, 3)) ok(w2, `commitment "${c.title.slice(0, 30)}" listed`, bt.includes(c.title.slice(0, 20)), "", true);
     if (modeled.length) {
       const c = modeled[0];
@@ -277,7 +280,7 @@ async function webOnce() {
     const cmp = (await api("/compare", { listings: COMPARE.map((address) => ({ address })) })).data;
     const a = (await api("/estimate", { address: COMPARE[0] })).data;
     await page.goto(`${WEB}/compare?a=${encodeURIComponent(a.session_id)}`);
-    const inputs = page.getByLabel(/address|listing/i);
+    const inputs = page.getByRole("textbox", { name: /address|listing/i });
     await page.waitForFunction(() => {
       const i = document.querySelector("input");
       return i && i.value && !i.disabled;
@@ -334,25 +337,32 @@ async function webOnce() {
     await ctx.close();
   }
 
-  sc = "W3 map";
-  ({ ctx, page, calls } = await newPage(sc, { width: 1280, height: 900 }));
-  try {
-    await page.goto(`${WEB}/`);
-    await page.evaluate((id) => localStorage.setItem("hr_session_id", id), est.session_id);
-    await page.goto(`${WEB}/map?session=${est.session_id}`);
-    ok(sc, "map canvas renders", await page.locator("canvas").first().waitFor({ timeout: 20000 }).then(() => true, () => false));
-    await page.waitForTimeout(2000);
-    ok(sc, "GET /map/{session} called (not the 912 Mary St fixture)", calls.some((c) => c.startsWith("GET /map/")), [...new Set(calls)].join(" | "));
-    const t = await text(page);
-    ok(sc, "fixture address not shown", !/912 Mary/i.test(t), "", true);
-    ok(sc, "no NaN/undefined on page", !/\bNaN\b|undefined/.test(t), t.match(/\bNaN\b|undefined/)?.[0]);
-    await audit(page, sc, "/map desktop");
-    await page.setViewportSize({ width: 375, height: 812 });
-    await audit(page, sc, "/map 375px");
-  } catch (e) {
-    rec(sc, "aborted", "FAIL", e.message.split("\n")[0].slice(0, 200));
-  } finally {
-    await ctx.close();
+  for (const addr of MAP_ADDRS) {
+    sc = `W3 map ${short(addr)}`;
+    ({ ctx, page, calls } = await newPage(sc, { width: 1280, height: 900 }));
+    try {
+      const m = (await api("/estimate", { address: addr })).data;
+      const map = (await api(`/map/${m.session_id}`)).data;
+      await page.goto(`${WEB}/map?session=${m.session_id}`);
+      ok(sc, "map canvas renders", await page.locator("canvas").first().waitFor({ timeout: 30000 }).then(() => true, () => false));
+      await page.waitForFunction(() => document.querySelector("[data-city-count]") || document.querySelector("[role=alert]"), null, { timeout: 30000 }).catch(() => {});
+      const city = await page.locator("[data-city-count]").first().getAttribute("data-city-count").catch(() => null);
+      ok(sc, "city layer loaded", !!city, `${city} footprints`, true);
+      ok(sc, "GET /map/{session} called (not the fixture)", calls.some((c) => c.startsWith("GET /map/")), [...new Set(calls)].join(" | "));
+      const t = await text(page);
+      ok(sc, `address ${map.address.split(",")[0]} shown`, t.toUpperCase().includes(map.address.split(",")[0].toUpperCase()));
+      ok(sc, "no mock label / NaN / undefined", !/MOCK PREVIEW|\bNaN\b|undefined/.test(t), t.match(/MOCK PREVIEW|\bNaN\b|undefined/)?.[0]);
+      // ponytail: Next's route announcer is an empty role=alert, so only count alerts with text.
+      const alerts = (await page.locator("[role=alert]").allInnerTexts()).filter((s) => s.trim());
+      ok(sc, "no map error shown", !alerts.length, alerts.join(" "));
+      await audit(page, sc, "/map desktop");
+      await page.setViewportSize({ width: 375, height: 812 });
+      await audit(page, sc, "/map 375px");
+    } catch (e) {
+      rec(sc, "aborted", "FAIL", e.message.split("\n")[0].slice(0, 200));
+    } finally {
+      await ctx.close();
+    }
   }
 
   // Error paths on /address
