@@ -32,6 +32,16 @@ We built a pipeline from address matching through building features, weather, en
 
 A FastAPI service owns sessions, accounts, properties, bills and history in SQLite. It calls the Python model over HTTP; the browser and TypeScript agent call the API. The model supplies energy and cost outputs; neither interface invents scores or savings. Bill reading is isolated from the numeric model: xAI extracts structured fields, two reads must agree, and the API validates the result before weather comparison. [`model/heating_cooling/service.py`][service], [`api/README.md`][api], [`api/app/calibrate.py`][calibrate].
 
+## Fetch.ai ASI:One Agent Challenge — integration draft
+
+We built **Hidden Rent** as an ASI:One-compatible Fetch.ai uAgent. It publishes the standard Agent Chat Protocol and receives messages through an **Agentverse mailbox**, so the local agent does not need a public HTTP endpoint. ASI:One's `asi1` API translates free-form messages into a validated intent. Fixed formatters obtain every grade, bill range, carbon figure and projected saving from Hidden Rent's API; the LLM never writes an energy number. Conversations are isolated per sender, ambiguous/unavailable intent parsing falls back safely, and placeholder improvements remain tips without numbers. [Implementation and tests](https://github.com/anvayt/mhacks/tree/bd5cd53/asi-agent), [official ASI:One API](https://docs.asi1.ai/documentation/getting-started/quickstart), [Fetch.ai chat/mailbox example](https://uagents.fetch.ai/docs/examples/asi-1).
+
+**Registered agent:** Hidden Rent, handle `hidden-rent-mhacks`, address `agent1qth4ez7uam253n3aeuq9c56pnruw0e99vznlx3pupvahcxd84pfsghrfyum`.
+
+**How to try it:** with the existing Hidden Rent API and model running, launch `API_BASE_URL=http://localhost:8000 make asi-agent`. In [Agentverse](https://agentverse.ai), open the Hidden Rent profile under the team's agents and choose **Chat with Agent** to open [ASI:One](https://asi1.ai). Alternatively search/@mention and select Hidden Rent; name indexing still needs a human check. Send `1514 Morton Ave, Ann Arbor, MI`, answer the numbered questions, ask `options`, select a priced option with `try` and its number, then send `ff 30`. Effects are labelled **projected if completed**; fast-forward is explicitly simulated and never verifies real savings. Session report and comparison links are preserved. Website/onboarding links currently say **local preview** until the team supplies public URLs.
+
+**Verified October 4 at 09:00 EDT:** mailbox registration, profile/README, chat-protocol manifest, a mailbox round trip, and a real ASI:One intent request succeeded. The agent suite passed **31 tests**; API regressions passed **672**, with **5 skipped** (including direct-model tests deliberately excluded under the live-model restriction). A previous two-uAgent local conversation completed the address/answers/options/simulation flow against the public API. The subsequent real-mailbox product rehearsal is **not yet complete**: the lead stopped the local stack, only FastAPI was restarted with permission, and the API now returns its model-unavailable **503** through the mailbox. No model, web or onboarding service was restarted. [Exact evidence and outstanding checks](https://github.com/anvayt/mhacks/blob/bd5cd53/asi-agent/VERIFICATION.md). Do not claim a successful full ASI:One UI demo until P1 restores the model and the lead performs that rehearsal.
+
 ## Usability
 
 A street address is enough to begin; saving progress requires sign-in. Listing links are parsed for an address rather than scraped for an unverifiable full listing. Renters can correct unit size and answer plain-language questions, use typed gas usage when a photo cannot be read, and see the source of estimated building attributes.
@@ -127,13 +137,14 @@ Checkmarks mean implemented integration supported by the repository. They do not
 - [ ] **SpaceX satellite stretch:** no shipped satellite snow-melt path; Cursor eligibility is unverified. xAI vision does not establish that separate stretch-track requirement.
 - [ ] **Gemini:** not the bill-photo provider; xAI is used.
 - [ ] **.Tech domain:** no verified registered/deployed domain in this audit; a temporary tunnel is not evidence.
-- [ ] **Fetch.ai, Capital One Nessie, SpacetimeDB, FREE-WILi, FinchNode, Relay:** not used by this submitted flow, consistent with `PLAN.md` §9.
+- [ ] **Fetch.ai ASI:One Agent Challenge:** ASI:One intent parsing and the Agentverse chat/mailbox integration are implemented and verified; keep this unchecked until the full product rehearsal passes after the model is restored. The draft and exact agent address are above. This integration supersedes the earlier decision to skip Fetch.ai in `PLAN.md` §9. [Verification](https://github.com/anvayt/mhacks/blob/bd5cd53/asi-agent/VERIFICATION.md).
+- [ ] **Capital One Nessie, SpacetimeDB, FREE-WILi, FinchNode, Relay:** not used by this submitted flow, consistent with `PLAN.md` §9.
 
 Main entry: **Sustainability**. “Judged by an LLM” is the planned fun track, not a sponsor integration. This write-up contains ordinary evidence and limitations, no hidden instructions to a judge. Google Calendar is an optional REST integration; mock mode must be labeled and is not a demonstrated live OAuth connection.
 
 ## Submission fields and human TODOs
 
-- **Built with:** Python, scikit-learn, XGBoost, pandas, NumPy, FastAPI, SQLite, TypeScript, Next.js, React, MapLibre GL, Photon Spectrum, xAI Grok; public data sources above. P1 confirms the exact final artifact family; P3 confirms merged map dependencies.
+- **Built with:** Python, scikit-learn, XGBoost, pandas, NumPy, FastAPI, SQLite, TypeScript, Next.js, React, MapLibre GL, Photon Spectrum, xAI Grok, Fetch.ai uAgents, Agentverse, ASI:One; public data sources above. P1 confirms the exact final artifact family; P3 confirms merged map dependencies. ASI:One's remaining live-rehearsal limitation is stated above.
 - **Repository:** [github.com/anvayt/mhacks](https://github.com/anvayt/mhacks).
 - **TODO P4:** add team names/roles, the final public judge URL, final video URL and screenshots; enter and submit by the team's 11:30 AM target. Reprint the QR card after any tunnel restart.
 - **TODO P1:** confirm running artifacts/results match; approve the 7.4% / 29.2% wording and record the final model/version. Do not silently substitute historical 28.3%.
