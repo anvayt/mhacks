@@ -133,10 +133,11 @@ def test_api_endpoints():
 
 @needs_data
 @pytest.mark.parametrize("street", ["2843 Hardwick Rd", "2877 Rayfield Ave",  # North Oaks townhomes
-                                    "3422 Burbank Dr", "2685 Arrowwood Trl"])  # Chapel Hill condos, Arrowwood co-op
+                                    "3422 Burbank Dr", "2685 Arrowwood Trl",  # Chapel Hill condos, Arrowwood co-op
+                                    "506 Packard St"])  # side-by-side duplex (RECS: SFA)
 def test_townhouses_are_single_family_attached(street):
     f = get_features(f"{street}, Ann Arbor, MI")
-    assert f["in.geometry_building_type_recs"] == SFA and f["est_units"] >= 4
+    assert f["in.geometry_building_type_recs"] == SFA and f["est_units"] >= 2
     assert f["sources"]["in.geometry_building_type_recs"].startswith("townhouse rule")
     assert 800 < f["in.sqft"] < 4000 and f["sqft_estimated"]
 
@@ -155,3 +156,13 @@ def test_tall_tower_stories_snapped():
     f = get_features("555 E William St, Ann Arbor, MI")  # Tower Plaza, 26 stories
     assert f["stories_raw"] == 26 and f["in.geometry_stories"] == "21"
     assert "snapped" in f["sources"]["in.geometry_stories"] and f["sources"]["stories_raw"]
+
+
+@needs_data
+@pytest.mark.parametrize("street,btype", [("1500 Gilbert Ct", MF5),  # Escher Co-op, 10 addresses
+                                          ("1205 Hill St", MF24)])  # AEPhi sorority, 2 addresses
+def test_townhouse_guard_big_floor_area_per_address(street, btype):
+    f = get_features(f"{street}, Ann Arbor, MI")
+    src = f["sources"]["in.geometry_building_type_recs"]
+    assert f["in.geometry_building_type_recs"] == btype
+    assert src.startswith("unit-count rule") and "townhouse rule skipped by guard" in src
