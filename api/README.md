@@ -14,11 +14,19 @@ uv run uvicorn app.main:app --reload --port 8000
 - `GET /health` → `{"status": "ok"}`
 - `POST /estimate` `{"url": "<listing or map link>"}` | `{"address": "..."}` (+ optional `unit_sqft`) → PLAN.md §10 shape
   (`app/estimate.py`): link → `resolve_link` → `get_features` → P1's model over HTTP (`GET $MODEL_BASE_URL/hc/estimate`,
-  default `http://localhost:8001`; start it with `make -C model dashboard`). Real today: `building`, `bill.annual` /
-  `bill.seasonal` / `bill.monthly` p50 (heating + cooling only), `heating_cooling` (P1's full answer). Null/empty until
-  P2-03/P2-04: `session_id`, p10/p90, `co2_t`, score, grade, percentiles, hidden rent, badges, questions.
-  Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` + `hint`, `not_found`, `not_a_home`,
-  `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS` (default `http://localhost:3000`, for `/web`).
+  default `http://localhost:8001`; start it with `make -C model dashboard`). Real: `session_id` (SQLite at `SESSIONS_DB`,
+  default `../data/sessions.sqlite`), `building` (+ P2-01 `warnings`), `bill.annual` / `seasonal` / `monthly` p10/p50/p90
+  (heating + cooling only; how the band is made is in `bill.band_method`; "No AC" sets cooling to $0, `bill.note`),
+  score / grade / grade_span / locked (grade range = only what the answers can change: `grade_band_usd`,
+  `grade_span_method`) / percentiles / hidden rent (`app/score.py`, vs P1's 591 scored apartment buildings), `questions` (`{id, text,
+  options: [{value, label}]}`), `heating_cooling` (P1's full answer), `answers`, `model_params`. Null/empty until
+  merged: `co2_t` (P2-03), `badges`. Errors: 422 `{"detail": {"code", "message"}}` (`missing_input`, `needs_address` +
+  `hint`, `not_found`, `not_a_home`, `bad_unit_sqft` outside 100–10,000), 503 (`model_unavailable` when the model is
+  down or errors, `lookup_unavailable`). CORS allows `WEB_ORIGINS` (default `http://localhost:3000`, for `/web`).
+- `POST /answer` `{"session_id", "question_id", "answer"}` → same shape, re-run with every answer so far (narrower band,
+  next questions, `locked: true` once the span is one grade or no question moves the estimate). `answer` is an option
+  value, label words ("double pane") or "skip". 422 `bad_answer` (message lists the options), 404 `not_found`.
+- `GET /session/{id}` → the session's latest body; 404 `not_found` ("That session expired. Send the listing again.").
 - `GET /debug/features?address=...&unit_sqft=...&year_built=...` (internal, not part of PLAN.md §10) → building features; 404 if the address can't be geocoded or has no Ann Arbor footprint within 25 m.
 
 CLI, same output: `uv run python -m app.geo.features "912 Mary St, Ann Arbor, MI" [--unit-sqft 850] [--year-built 1965]`
