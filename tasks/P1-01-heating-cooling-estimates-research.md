@@ -2,11 +2,11 @@
 id: P1-01
 title: Research heating + cooling utility estimates per location (PRISM)
 owner: P1
-status: todo
-branch: p1/heating-cooling-research
+status: in-progress
+branch: p1/heating-cooling
 type: research
 checkpoint: 1:00 AM GO/NO-GO
-depends_on: []
+depends_on: [P1-02, P1-03, P1-04, P1-05, P1-06, P1-07]   # umbrella: research done here, build split into subtasks
 blocks: []                    # feeds the bill model's monthly/seasonal split (PLAN.md §6, §8 P1 list) and P2's /estimate
 merges: []
 services_touched:
