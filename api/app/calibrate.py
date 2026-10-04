@@ -19,7 +19,7 @@ import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app import sessions
+from app import badges, sessions
 from app.estimate import MODEL_BASE_URL, _fail
 
 router = APIRouter()
@@ -209,7 +209,8 @@ def calibrate(req: CalibrateRequest) -> dict:
     return {
         "pct_vs_expected_for_weather": pct,
         "streak_months": record(req.session_id, year, month, pct),
-        "badges": ["weather-beater"] if pct < 0 else [],  # placeholder rule: app/badges.py replaces this at merge
+        "badges": badges.badges(sess, calibration={"pct_vs_expected_for_weather": pct},
+                                used_fixes=bool(sess.get("used_fixes"))),
         "estimate": {k: v for k, v in sess.items() if k not in INTERNAL},
         # additive
         "year": year, "month": month,
