@@ -1,6 +1,6 @@
 ```yaml
 id: P2-03
-title: Tariff + CO₂ module (energy → $ and CO₂)
+title: CO₂ module (reuse P1's EIA pricing for heating/cooling $)
 owner: P2
 status: todo
 branch: p2/tariff-co2
@@ -16,7 +16,10 @@ services_read:
 contract_change: none
 ```
 
-## Goal
+## Team decision (Oct 3, ~9:45 PM)
+**Reuse P1's EIA pricing** for heating/cooling dollars (`model/data_sources/eia.py`: EIA MI marginal gas $/ccf by month, EIA-861M electricity $/kWh); P2 does **not** build DTE tariffs. This task shrinks to CO₂ factors only (gas 5.306 kg CO₂/therm per EPA; electricity at the eGRID RFCM rate), applied to P1's gas_ccf / electric_kwh.
+
+## Goal (original, superseded by the decision above)
 Price energy ourselves (ResStock 2024.2's bill columns are flagged as inconsistent; PLAN.md §6.1) and convert energy to CO₂.
 
 ## Outputs (what I expose)
