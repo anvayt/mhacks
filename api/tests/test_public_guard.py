@@ -41,10 +41,67 @@ def test_post_routes_limited(guarded, path):
     assert [client.post(path, json={}).status_code for _ in range(4)][-1] == 429
 
 
-@pytest.mark.parametrize('path', ['/map/a', '/forecast/a', '/commitments/suggested/a', '/leaderboard/position/a'])
+@pytest.mark.parametrize('path', ['/map/a', '/forecast/a', '/fixes/a', '/debug/features'])
 def test_get_routes_limited(guarded, path):
     client, _ = guarded
     assert [client.get(path).status_code for _ in range(4)][-1] == 429
+
+
+@pytest.mark.parametrize('path', [
+    '/leaderboard/position?session_id=s', '/leaderboard/position/property',
+    '/leaderboard/position/property/', '/commitments/suggested?session_id=s',
+    '/commitments/suggested/property', '/commitments/suggested/property?catalog_ids=window_upgrade',
+    '/leaderboard/position?note=catalog_ids%3Dwindow_upgrade',
+    '/leaderboard/position?catalog_ids_extra=window_upgrade',
+])
+def test_cached_reads_do_not_use_or_require_budget(guarded, path):
+    client, _ = guarded
+    assert [client.get(path).status_code for _ in range(4)] == [200] * 4
+    assert [client.post('/estimate', json={}).status_code for _ in range(4)] == [200, 200, 200, 429]
+    assert client.get(path).status_code == 200
+
+
+@pytest.mark.parametrize('path', ['/leaderboard/position', '/leaderboard/position/property/'])
+@pytest.mark.parametrize('query', [
+    'session_id=s&catalog_ids=window_upgrade', 'catalog%5Fids=window_upgrade',
+    '%63atalog_ids=window_upgrade', 'catalog_ids=', 'catalog_ids',
+    'catalog_ids=&catalog_ids=window_upgrade',
+])
+def test_position_what_if_uses_budget_even_with_escaped_query_names(guarded, path, query):
+    client, _ = guarded
+    assert [client.get(f'{path}?{query}').status_code for _ in range(4)] == [200, 200, 200, 429]
+
+
+def test_default_budget_and_photo_limits_remain_independent(monkeypatch):
+    monkeypatch.delenv('RATE_LIMIT_PER_MIN', raising=False)
+    now = [1000.0]
+    guard = PublicGuard(None, clock=lambda: now[0])
+    assert all(guard.allow('visitor', False) for _ in range(120))
+    assert not guard.allow('visitor', False)
+    assert all(guard.allow('photos', True) for _ in range(3))
+    assert not guard.allow('photos', True)
+    now[0] += 60
+    assert guard.allow('visitor', False)
+    assert not guard.allow('photos', True)
+    now[0] += 540
+    assert guard.allow('photos', True)
+    assert public_guard.MAX_PHOTO == 8 * 1024 * 1024
+    assert public_guard.MAX_BODY == public_guard.MAX_PHOTO + 64 * 1024
+
+
+def test_budget_can_be_configured_without_changing_photo_policy(monkeypatch):
+    monkeypatch.setenv('RATE_LIMIT_PER_MIN', '2')
+    guard = PublicGuard(None)
+    assert [guard.allow('visitor', False) for _ in range(3)] == [True, True, False]
+    assert guard.photo_limit == 3 and guard.photo_window == 600
+    assert PublicGuard(None, limit=7).limit == 7
+
+
+@pytest.mark.parametrize('value', ['0', '-1', 'invalid'])
+def test_bad_budget_configuration_is_rejected(monkeypatch, value):
+    monkeypatch.setenv('RATE_LIMIT_PER_MIN', value)
+    with pytest.raises(ValueError):
+        PublicGuard(None)
 
 
 def test_only_valid_nonempty_key_bypasses(guarded, monkeypatch):
@@ -70,7 +127,7 @@ def test_photo_limit_is_stricter_and_uses_parsed_key(guarded):
 
 
 def test_cf_header_only_with_explicit_loopback_trust(monkeypatch):
-    guard = PublicGuard(None)
+    guard = PublicGuard(None, limit=30)
     headers = {b'cf-connecting-ip': b'203.0.113.1', b'x-forwarded-for': b'203.0.113.2'}
     assert guard.visitor({'client': ('127.0.0.1', 10)}, headers) == '127.0.0.1'
     monkeypatch.setenv('PUBLIC_TUNNEL', '1')

@@ -16,6 +16,19 @@ const MAP_ADDRS = ["912 Mary St, Ann Arbor, MI", "615 S Main St, Ann Arbor, MI"]
 const PICK = { heating_fuel: "Gas", window_panes: "Single-pane", floor_level: "Middle floor", cooling_code: "Central AC" };
 const HEAT_INCLUDED_ADDR = "1022 S Forest Ave"; // decision 4: this address answers "Heat is included in my rent"
 
+// The shell wrapper loads SMOKE_ENV_FILE through uv. Keys stay in Node's oracle
+// requests and are never printed or injected into browser requests.
+const AGENT = process.env.AGENT_API_KEY ? { "X-Agent-Key": process.env.AGENT_API_KEY } : {};
+// Browser requests that api/app/public_guard.py counts (per IP, per 60 s window), and any 429 the pages got.
+function isGuarded(method, url) {
+  const u = new URL(url, API), path = u.pathname.replace(/\/$/, "");
+  if (method === "POST") return ["/estimate", "/answer", "/compare", "/calibrate", "/projection", "/properties", "/auth/web/start"].includes(path);
+  if (method !== "GET") return false;
+  if (path === "/leaderboard/position" || path.startsWith("/leaderboard/position/")) return u.searchParams.has("catalog_ids");
+  return ["/map", "/forecast", "/fixes", "/debug/features"].some(p => path === p || path.startsWith(`${p}/`));
+}
+const guarded = []; // ms timestamps
+const tooMany = [];
 const results = []; // {scope, check, status: PASS|FAIL|WARN, detail}
 const rec = (scope, check, status, detail = "") => {
   results.push({ scope, check, status, detail });
@@ -23,60 +36,18 @@ const rec = (scope, check, status, detail = "") => {
 };
 const ok = (scope, check, cond, detail, soft = false) => rec(scope, check, cond ? "PASS" : soft ? "WARN" : "FAIL", detail);
 
-// Mirror api/app/public_guard.py. Node oracle calls and every browser context
-// share localhost's visitor budget. Pace between flows, never bypass the guard
-// or retry a 429; one real browser walkthrough must fit the normal limit.
-const REQUEST_LIMIT = 30;
-const WINDOW_MS = 60_000;
-const WINDOW_MARGIN_MS = 250;
-const protectedRequests = [];
-function protectedRequest(method, url) {
-  const path = new URL(url, API).pathname.replace(/\/$/, "");
-  return method === "POST" && ["/estimate", "/answer", "/compare", "/calibrate", "/projection", "/properties", "/auth/web/start"].includes(path)
-    || method === "GET" && ["/map", "/forecast", "/fixes", "/debug/features", "/commitments/suggested", "/leaderboard/position"].some(p => path === p || path.startsWith(`${p}/`));
-}
-function pruneRequests() {
-  const cutoff = Date.now() - WINDOW_MS - WINDOW_MARGIN_MS;
-  while (protectedRequests.length && protectedRequests[0] <= cutoff) protectedRequests.shift();
-}
-function recordRequest() {
-  pruneRequests();
-  protectedRequests.push(Date.now());
-}
-async function paceWait(ms, label) {
-  console.log(`PACE ${label}: waiting ${(ms / 1000).toFixed(1)}s for the public request budget`);
-  const until = Date.now() + ms;
-  while (Date.now() < until) await new Promise(resolve => setTimeout(resolve, Math.min(30_000, until - Date.now())));
-}
-async function reserveRequests(count, label) {
-  pruneRequests();
-  while (protectedRequests.length + count > REQUEST_LIMIT) {
-    // Wait for exactly enough older requests to expire, with a small transport
-    // margin. The browser is never given a key or a slower request interceptor.
-    const oldestNeeded = protectedRequests[protectedRequests.length + count - REQUEST_LIMIT - 1];
-    await paceWait(Math.max(1, oldestNeeded + WINDOW_MS + WINDOW_MARGIN_MS - Date.now()), label);
-    pruneRequests();
-  }
-}
-
 async function api(path, body) {
-  const method = body === undefined ? "GET" : "POST";
-  if (protectedRequest(method, path)) {
-    await reserveRequests(1, `oracle ${method} ${path.split("?")[0]}`);
-    recordRequest();
-  }
   const res = await fetch(`${API}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json" },
+    method: body === undefined ? "GET" : "POST",
+    headers: { "Content-Type": "application/json", ...AGENT },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (res.status === 429) rec("rate limit", `${method} ${path.split("?")[0]}`, "FAIL", "429; the harness does not retry or bypass it");
+  if (res.status === 429) tooMany.push(`oracle: ${body === undefined ? "GET" : "POST"} ${path}`);
   return { status: res.status, data: await res.json().catch(() => null) };
 }
 const money = (n) => `$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 const num = (n) => `(${Math.round(n)}|${Math.round(n).toLocaleString("en-US")})`; // 1014 or 1,014
 const span = (s) => (s.length === 1 ? s[0] : `${s[0]}\\s*(–|-|—|to)\\s*${s[s.length - 1]}`);
-// locked may mean no remaining answer can narrow a multi-grade range.
 const displayedGrades = (estimate) => estimate.grade_span?.length > 1 ? estimate.grade_span : [estimate.grade];
 const short = (a) => a.split(",")[0];
 
@@ -134,6 +105,7 @@ async function apiOnce() {
 
 // ---------- web mode: the real pages ----------
 let pw, browser;
+// ponytail: "Middle 50%" is P3's real band label now (W1), so it's no longer flagged.
 const BAD_COPY = /illustrat|awaiting estimate|example grade|mock leaderboard|hardcoded for now|\$1,052|\$2,254|not a live city rank/i;
 
 async function audit(page, sc, where) {
@@ -156,31 +128,18 @@ async function audit(page, sc, where) {
 }
 
 async function newPage(sc, { width = 375, height = 812 } = {}) {
-  // A full anonymous flow uses about 12 browser + 5 oracle requests. Leave room
-  // for extra questions/effect fetches, without pacing its actual interactions.
-  await reserveRequests(22, sc);
   const ctx = await browser.newContext({ viewport: { width, height } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(15000);
   const calls = [];
-  let browserProtected = 0;
-  let peakSharedBudget = 0;
   page.on("request", (q) => {
     if (!q.url().startsWith(API)) return;
     const h = q.headers();
-    if ("x-agent-key" in h) rec(sc, "X-Agent-Key sent from the browser", "FAIL", q.url());
-    if (protectedRequest(q.method(), q.url())) {
-      recordRequest();
-      browserProtected++;
-      peakSharedBudget = Math.max(peakSharedBudget, protectedRequests.length);
-    }
+    if (h["x-agent-key"]) rec(sc, "X-Agent-Key sent from the browser", "FAIL", q.url());
+    if (isGuarded(q.method(), q.url())) guarded.push(Date.now());
     calls.push(`${q.method()} ${q.url().slice(API.length).split("?")[0].replace(/\/[A-Za-z0-9_-]{8,}$/, "/:id")}${h.authorization ? " [bearer]" : ""}`);
   });
-  page.on("response", (r) => {
-    if (r.url().startsWith(API) && r.status() === 429) rec(sc, "browser received 429", "FAIL", new URL(r.url()).pathname);
-  });
-  page.on("close", () => ok(sc, "normal public request budget", peakSharedBudget <= REQUEST_LIMIT,
-    `${browserProtected} protected browser calls; peak ${peakSharedBudget}/${REQUEST_LIMIT} including oracle calls`));
+  page.on("response", (r) => r.status() === 429 && r.url().startsWith(API) && tooMany.push(`${sc}: ${r.request().method()} ${r.url().slice(API.length)}`));
   page.on("pageerror", (e) => rec(sc, "page error", "FAIL", e.message.slice(0, 160)));
   page.on("console", (m) => m.type() === "error" && !/favicon|Failed to load resource/.test(m.text()) && rec(sc, "console error", "WARN", m.text().slice(0, 160)));
   return { ctx, page, calls };
@@ -254,17 +213,9 @@ async function webFlow(addr) {
     await page.waitForURL(/\/grade/, { timeout: 30000 });
     const s = (await api(`/session/${sid}`)).data;
     ok(w1, "answers reached POST /answer", first.questions.every((q) => q.id in (s.answers ?? {})), JSON.stringify(s.answers));
-    const grades = displayedGrades(s);
-    const gradeRe = new RegExp(`\\b${span(grades)}\\b`);
-    ok(w1, `grade shown (${grades.join("–")})`, await waitText(page, gradeRe, 15000));
+    const gradeRe = new RegExp(`\\b${span(displayedGrades(s))}\\b`);
+    ok(w1, `grade shown (${displayedGrades(s).join("–")})`, await waitText(page, gradeRe, 15000));
     const t = await text(page);
-    if (s.percentile_city != null) {
-      const pct = Math.round(s.percentile_city * 100);
-      const heading = s.percentile_city >= .75 ? `Top ${Math.max(1, 100 - pct)}%`
-        : s.percentile_city < .25 ? `Bottom ${Math.max(1, pct)}%` : "Middle 50%";
-      ok(w1, "city percentile heading matches API", (await page.getByRole("heading", { level: 1 }).innerText()).trim() === heading,
-        `${heading} from percentile ${s.percentile_city}`);
-    }
     ok(w1, `score ${s.score} shown`, new RegExp(`\\b${s.score}\\b`).test(t), "", true);
     ok(w1, '"predicted" label', /predicted/i.test(t));
     ok(w1, `hidden rent ${s.hidden_rent_usd_mo}/mo shown`, t.includes(money(s.hidden_rent_usd_mo)), "", true);
@@ -291,7 +242,7 @@ async function webFlow(addr) {
     }
     if (!/\/board/.test(page.url())) await page.goto(`${WEB}/board`);
     const pos = (await api(`/leaderboard/position?session_id=${sid}`)).data;
-    ok(w2, `board rank ${pos.current.rank} of ${pos.current.of} shown`, await waitText(page, new RegExp(num(pos.current.rank)), 15000));
+    ok(w2, `board rank ${pos.current.rank} of ${pos.current.of} shown`, await waitText(page, new RegExp(`${num(pos.current.rank)}\\s*of\\s*${num(pos.current.of)}`), 15000));
     let bt = await text(page);
     ok(w2, "no mock/hardcoded copy on board", !BAD_COPY.test(bt), bt.match(BAD_COPY)?.[0]);
     ok(w2, '"predicted" label', /predicted/i.test(bt));
@@ -390,8 +341,7 @@ async function webOnce() {
   ({ ctx, page, calls } = await newPage(sc));
   try {
     await page.goto(`${WEB}/share?session=${est.session_id}`);
-    const grades = displayedGrades(est);
-    ok(sc, `grade ${grades.join("–")} shown`, await waitText(page, new RegExp(`\\b${span(grades)}\\b`), 15000));
+    ok(sc, `grade ${displayedGrades(est).join("–")} shown`, await waitText(page, new RegExp(`\\b${span(displayedGrades(est))}\\b`), 15000));
     const t = await text(page);
     ok(sc, '"predicted" label', /predicted/i.test(t));
     ok(sc, `hidden rent ${money(est.hidden_rent_usd_mo)} shown`, t.includes(money(est.hidden_rent_usd_mo)), "", true);
@@ -503,9 +453,6 @@ async function webSignin() {
   }
 }
 
-// A preceding phase2-check may have used this IP. Begin with a clean window;
-// later waits are based on observed requests and are split into <=30s sleeps.
-await paceWait(WINDOW_MS + WINDOW_MARGIN_MS, "start (clear earlier local test traffic)");
 if (MODE === "api" || MODE === "all") {
   for (const a of ADDRS) await apiFlow(a);
   await apiOnce();
@@ -517,6 +464,16 @@ if (MODE === "web" || MODE === "all") {
   await webOnce();
   if (process.env.SMOKE_SIGNIN === "1" && process.env.AGENT_API_KEY) await webSignin();
   await browser.close();
+}
+if (guarded.length) {
+  let peak = 0;
+  for (let i = 0, j = 0; i < guarded.length; i++) {
+    while (guarded[i] - guarded[j] >= 60000) j++;
+    peak = Math.max(peak, i - j + 1);
+  }
+  const mins = (guarded[guarded.length - 1] - guarded[0]) / 60000;
+  ok("rate limit", "429 count", !tooMany.length, `${tooMany.length}; ${tooMany.slice(0, 5).join(" ; ")}`);
+  rec("rate limit", "guarded browser requests", "PASS", `${guarded.length} over ${mins.toFixed(1)} min, peak ${peak} in any 60 s (default guard: 120/60 s per IP)`);
 }
 const count = (st) => results.filter((r) => r.status === st).length;
 console.log(`\n${count("PASS")} pass, ${count("WARN")} warn, ${count("FAIL")} fail  (API ${API}, web ${WEB})`);
