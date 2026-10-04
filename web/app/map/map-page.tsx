@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { HiddenRentMap, MapStory, getMapWidgetData, type MapWidgetData, type Focus } from "@/components/hidden-rent-map";
 import { USE_MOCKS } from "@/components/hidden-rent-map/data";
-import { load } from "@/app/lib/api";
+import { apiFetch, load } from "@/app/lib/api";
 import styles from "./map.module.css";
 
 export default function MapPage() {
@@ -18,6 +18,12 @@ export default function MapPage() {
   const [step, setStep] = useState(0);
   const [focus, setFocus] = useState<Focus>("building");
   const [retrieved, setRetrieved] = useState("");
+  const [place, setPlace] = useState<{ grade: string; percentile_city: number | null } | null>(null);
+  // Where this home sits among every scored Ann Arbor building (same number the board ranks by).
+  useEffect(() => {
+    setPlace(null);
+    if (session) apiFetch<{ grade: string; percentile_city: number | null }>(`/session/${encodeURIComponent(session)}`).then(setPlace).catch(() => {});
+  }, [session]);
   useEffect(() => {
     setData(null); setError("");
     if (!session && !USE_MOCKS) return;
@@ -32,7 +38,7 @@ export default function MapPage() {
     <nav className={styles.nav}><Link href="/">Hidden Rent ↗</Link><span>Ann Arbor / City atlas</span>{session && <Link href={`/share?session=${encodeURIComponent(session)}`}>Share dossier ↗</Link>}</nav>
     <header className={styles.header}><p>PUBLIC RECORDS. YOUR ANSWERS. ONE HOME.</p><h1>Your place<br /><em>in the city.</em></h1><p>Heating + cooling, revealed one answer at a time.</p></header>
     {session === null && !USE_MOCKS ? <div className={styles.notice}>Start with a listing to see its map. <Link href="/">Check your place ↗</Link></div> : error ? <div className={styles.notice} role="alert"><p>{error}</p><button onClick={() => retry(attempt + 1)}>Try again</button> <Link href="/">Check another listing ↗</Link></div> : !data ? <div className={styles.notice} role="status">Finding your building and its real answer history…</div> : <>
-      <div className={styles.address}><h2>{data.address}</h2><span>{USE_MOCKS ? "MOCK PREVIEW · " : ""}City footprint #{data.building.id}</span></div>
+      <div className={styles.address}><h2>{data.address}</h2><span>{USE_MOCKS ? "MOCK PREVIEW · " : ""}City footprint #{data.building.id}{place?.percentile_city != null ? ` · Grade ${place.grade} · cheaper to heat and cool than ${Math.round(place.percentile_city * 100)}% of Ann Arbor homes` : ""}</span></div>
       <HiddenRentMap data={data} step={step} focus={focus} onFocusChange={setFocus} />
       <p className={styles.caption}>City of Ann Arbor footprints + ResStock predictions · retrieved {retrieved}. Grades compare heating + cooling cost per square foot within each building type. Unscored buildings are gray. Similar footprints are a geometric sample, not an efficiency ranking.</p>
       <div className={styles.history}><span>{step === 0 ? "Public record" : `Answer ${step} of ${data.steps.length - 1}`}</span><label htmlFor="map-step">Estimate history</label><input id="map-step" type="range" min="0" max={data.steps.length - 1} value={step} onChange={(e) => setStep(Number(e.target.value))} disabled={data.steps.length === 1} /><span>{data.steps[step].answer_label ?? "Before your answers"}</span></div>
