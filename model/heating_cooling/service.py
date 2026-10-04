@@ -189,9 +189,9 @@ def _seasonal(monthly: pd.DataFrame, w: pd.DataFrame, scale: float) -> tuple[lis
         wr = w.iloc[i]
         months.append({
             "month": int(r.month), "year": None if pd.isna(wr.get("year")) else int(wr["year"]), "days": int(wr["days"]),
-            "heating": {"usd": round(float(r.heat_usd), 0), "gas_ccf": round(float(r.heat_ccf), 1),
+            "heating": {"usd": round(float(r.heat_usd), 0), "usd_exact": float(r.heat_usd), "gas_ccf": round(float(r.heat_ccf), 1),
                         "electric_kwh": round(float(r.heat_kwh), 0)},
-            "cooling": {"usd": round(float(r.cool_usd), 0), "electric_kwh": round(float(r.cool_kwh), 0)},
+            "cooling": {"usd": round(float(r.cool_usd), 0), "usd_exact": float(r.cool_usd), "electric_kwh": round(float(r.cool_kwh), 0)},
             "total_usd": round(float(r.heat_usd + r.cool_usd), 0),
             "weather": {"tmean_f": round(float(climate.c_to_f(wr.tmean_c)), 1), "hdd65": round(float(wr.hdd65), 0),
                         "cdd65": round(float(wr.cdd65), 0), f"hdd{TAU_H_GAS}": round(float(wr[f"hdd{TAU_H_GAS}"]), 0),
@@ -365,6 +365,8 @@ def estimate_hc(address: str | None = None, lat: float | None = None, lon: float
         key = "all_answers" if answers else "public_record_only"
         out["accuracy"]["simulation_heldout_median_abs_error"] = {
             "heating": rv["heat_gas_per_hdd"][key]["test_median_ape"], "cooling": rv["cool_per_cdd"][key]["test_median_ape"]}
+    from model.heating_cooling.uncertainty import signed_quantiles
+    out["accuracy"]["signed_error_quantiles"] = signed_quantiles(method)
     return out
 
 
@@ -469,10 +471,12 @@ def weather(lat: float, lon: float, mode: str | int = "normal") -> dict:
 
 
 def bill_check(year: int, month: int, gas_ccf: float, unit_sqft: float, address: str | None = None,
-               lat: float | None = None, lon: float | None = None) -> dict:
+               lat: float | None = None, lon: float | None = None, noise_basis: str = "estimate_error") -> dict:
     """Compare one real monthly gas bill with what this location's actual weather that month predicts.
     Expected = heating (degree-days of that month at the PRISM cell) + non-heating gas baseload (median of
     metered Ann Arbor buildings). The noise floor is the out-of-year winter-month error on real meters."""
+    if noise_basis not in ("estimate_error", "within_building"):
+        raise ValueError("noise_basis must be estimate_error or within_building")
     est = estimate_hc(address=address, lat=lat, lon=lon, unit_sqft=unit_sqft, mode=year)
     w = climate.monthly_weather_years(est["location"]["lat"], est["location"]["lon"], [year])
     row = w.loc[w.month == month].iloc[0]
@@ -486,12 +490,22 @@ def bill_check(year: int, month: int, gas_ccf: float, unit_sqft: float, address:
     real = _res()["validation"]["real"]["seasonal_gas_vs_real_meters"]["p90_abs_pct_error_winter"]
     path = {"metered": "metered", "meter_model+resstock": "blend", "resstock": "resstock"}[est["method"]]
     noise = real[path] if month in (12, 1, 2) else None
+    estimate_error_floor = noise
+    noise_detail = None
+    basis_text = "Legacy p90 absolute cross-building seasonal estimate error (winter only)."
+    if noise_basis == "within_building":
+        from model.heating_cooling.uncertainty import bill_noise
+        noise_detail = bill_noise(est["method"], season)
+        noise = noise_detail["p90_abs_residual_fraction"] if noise_detail else None
+        basis_text = noise_detail["basis"] if noise_detail else "No within-building residual data available."
     pct = gas_ccf / expected - 1
     return {"year": year, "month": month, "actual_gas_ccf": gas_ccf,
             "expected_gas_ccf": round(expected, 1), "expected_heating_ccf": round(heat, 1), "expected_base_ccf": round(base, 1),
             "pct_vs_expected_for_weather": round(pct, 3), "hdd65_that_month": round(float(row["hdd65"]), 0),
             "tmean_f_that_month": round(float(climate.c_to_f(row["tmean_c"])), 1),
-            "noise_floor": noise,
+            "noise_floor": noise, "estimate_error_floor": estimate_error_floor,
+            "noise_basis": basis_text, "noise_basis_id": noise_basis, "noise_detail": noise_detail,
             "meaningful": (abs(pct) > noise) if noise else None,
             "method": est["method"],
-            "note": "only winter months are judged (heating dominates). noise_floor = p90 winter error of this estimate path on held-out real Ann Arbor meters; a bill inside it is consistent with the estimate"}
+            "note": ("only winter months are judged (heating dominates). noise_floor = p90 winter error of this estimate path on held-out real Ann Arbor meters; a bill inside it is consistent with the estimate"
+                     if noise_basis == "estimate_error" else basis_text + " " + (noise_detail or {}).get("limitation", ""))}
