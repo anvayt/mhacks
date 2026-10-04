@@ -36,9 +36,11 @@ The opener is text-only and the judge texts first (inbound-first), which avoids 
 |---|---|
 | `AGENT_TERMINAL=1` (or no Photon creds) | iMessage → Spectrum's terminal chat provider |
 | `USE_MOCKS=1` (or no Photon creds) | Photon user API → fake user + plain `sms:` link |
+| `USE_MOCK_API=1` | `/estimate` + `/answer` → `src/mockApi.ts` (sessions, grade span, questions, lock-in). Every reply starts with "[demo data, not a real estimate]". Turn off once P2-04 serves `/answer`. |
 
 ## Limits (Photon free plan)
 - 10 allowlisted users total (team phones included). Delete old users in the dashboard to free slots.
 - DMs only; no group chats on the shared pool.
 - Android numbers get SMS/RCS fallback.
-- Links and addresses go to the real `POST /estimate` at `API_BASE_URL` (default `http://localhost:8000`); the reply only repeats numbers from that response (PLAN.md §0 rule 4). API down → a "try again" text, no numbers. P4-02 adds the grade and the `/answer` interview.
+- Links and addresses go to the real `POST /estimate` at `API_BASE_URL` (default `http://localhost:8000`); replies only repeat numbers from API responses (PLAN.md §0 rule 4). API down → a "try again" text, no numbers.
+- **Interview loop** (`src/conversation.ts`, one state per chat): estimate card → if the unit size is estimated, "How big is the unit in sq ft?" (re-runs `/estimate` with `unit_sqft`, works on the real API today) → the API's `questions`, one at a time (reply with a number or the answer) → `POST /answer` → short update ("Grade B–C · $980–$1,740 (was …)") → "Grade B 🔒" when the API sets `locked`. A link without an address makes the next text the address. Until P2-04 serves `/answer`, real answers get an honest "can't refine yet" text.
