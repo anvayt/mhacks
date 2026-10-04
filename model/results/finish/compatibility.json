@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-10-04T12:21:05.195322+00:00",
+  "started_at": "2026-10-04T12:27:49.057388+00:00",
   "old_model_url": "http://localhost:8001",
   "new_model_url": "http://localhost:8011",
   "api_url": "http://localhost:8061",
@@ -15,14 +15,14 @@
       "preparation": [
         {
           "status": 200,
-          "elapsed_seconds": 1.006,
-          "response_sha256": "2ab835970b0ea06f6b1384040ce41c96dcdb1a9bc767e1ba3cbacac7d3e2d9f9",
+          "elapsed_seconds": 0.191,
+          "response_sha256": "e0cce895a65f51d29cd64196da1c559b35a3c1068518bcefa1531e947e63a90a",
           "numeric_count": 586
         },
         {
           "status": 200,
           "elapsed_seconds": 0.003,
-          "response_sha256": "2ab835970b0ea06f6b1384040ce41c96dcdb1a9bc767e1ba3cbacac7d3e2d9f9",
+          "response_sha256": "e0cce895a65f51d29cd64196da1c559b35a3c1068518bcefa1531e947e63a90a",
           "numeric_count": 586
         }
       ],
@@ -47,7 +47,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.047,
+            "elapsed_seconds": 0.056,
             "response_sha256": "5d5fc479c23540b486e3a4df19c6722c98adc579b9c040848be63dccc9c6ea3f",
             "numeric_count": 292,
             "numeric_leaves": {
@@ -347,7 +347,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.028,
+            "elapsed_seconds": 0.022,
             "response_sha256": "dfed20d3fe09efcc65219018be348fa6daf02d4c096d2f7c0c93581a2442fdbf",
             "numeric_count": 496,
             "numeric_leaves": {
@@ -864,7 +864,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.033,
+            "elapsed_seconds": 0.027,
             "response_sha256": "612cfe8510a8c965c022452916370c67a4bd88437d824993e4b72e068867d5a3",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -882,7 +882,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.027,
+            "elapsed_seconds": 0.024,
             "response_sha256": "83de7ab74d1d54cd6ae5b1ca1053e2f697545f36622b88211b5560e3be6e3018",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -911,7 +911,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.011,
+            "elapsed_seconds": 0.01,
             "response_sha256": "3ed482b05e7bb00af6b09d789e4247320b57ae7dd001199a5383a43de674189e",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -1093,7 +1093,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.008,
             "response_sha256": "3ed482b05e7bb00af6b09d789e4247320b57ae7dd001199a5383a43de674189e",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -1284,14 +1284,14 @@
       "preparation": [
         {
           "status": 200,
-          "elapsed_seconds": 0.904,
-          "response_sha256": "ac49046fc73a2edec9f183212e340876078a2af1e49fae14d0f8e4ec35976fc5",
+          "elapsed_seconds": 0.203,
+          "response_sha256": "080e6775a3d2df27c155dea2de8527122990a67657642590bc14130fc4df7dbf",
           "numeric_count": 591
         },
         {
           "status": 200,
-          "elapsed_seconds": 0.002,
-          "response_sha256": "ac49046fc73a2edec9f183212e340876078a2af1e49fae14d0f8e4ec35976fc5",
+          "elapsed_seconds": 0.003,
+          "response_sha256": "080e6775a3d2df27c155dea2de8527122990a67657642590bc14130fc4df7dbf",
           "numeric_count": 591
         }
       ],
@@ -1316,7 +1316,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.031,
+            "elapsed_seconds": 0.036,
             "response_sha256": "dcba6a18b5b5038c072a5dcc5160c65b159a9d732bb2571be92ccf14a23a9f4e",
             "numeric_count": 293,
             "numeric_leaves": {
@@ -1617,7 +1617,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.021,
             "response_sha256": "32d31b1e991a53ddf0f3f0667244e05ebe5a92ed331eb8558aa2094bab2790d5",
             "numeric_count": 497,
             "numeric_leaves": {
@@ -2135,7 +2135,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.024,
+            "elapsed_seconds": 0.028,
             "response_sha256": "943de843bd9c0c6eec61f3e5f86033c2c45d6c2a5440f8b4c8ebae1c2ba95a68",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -2153,7 +2153,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.024,
             "response_sha256": "3baf64f288f09ce5b39c8c793bda814e57223ab074e5fd187bf9f367d3e42cd5",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -2182,7 +2182,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.008,
+            "elapsed_seconds": 0.01,
             "response_sha256": "f48250481d5c9bc06b174b98fcedf3f93af0c799ef4b51f5911546f3bda9253d",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -2555,14 +2555,14 @@
       "preparation": [
         {
           "status": 200,
-          "elapsed_seconds": 0.898,
-          "response_sha256": "4085520bb8b3c619b2c3a83bbf12e31c7ea8dc4c7cb5922f06eef2e6f481979e",
+          "elapsed_seconds": 0.182,
+          "response_sha256": "cbc17d9383f58e399a82f3e54b80ed989b4d7e82d2cc067b0e088dd416096879",
           "numeric_count": 561
         },
         {
           "status": 200,
-          "elapsed_seconds": 0.002,
-          "response_sha256": "4085520bb8b3c619b2c3a83bbf12e31c7ea8dc4c7cb5922f06eef2e6f481979e",
+          "elapsed_seconds": 0.003,
+          "response_sha256": "cbc17d9383f58e399a82f3e54b80ed989b4d7e82d2cc067b0e088dd416096879",
           "numeric_count": 561
         }
       ],
@@ -2587,7 +2587,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.028,
+            "elapsed_seconds": 0.031,
             "response_sha256": "add6b4d1612cdffe716a56f5e18a6bf85fd579cc801a7bfffca3ff9e713f91b5",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -2874,7 +2874,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.015,
+            "elapsed_seconds": 0.014,
             "response_sha256": "930967cd9b43e8fec3fc454c380b6d148a7d012cfb81df072d50fe8c7567a332",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -3378,7 +3378,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.026,
+            "elapsed_seconds": 0.022,
             "response_sha256": "e13fce123d9addb83e64c71c5a1e8246ee369d609e76a611e9a69c1f5e5ee252",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -3396,7 +3396,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "44299fc43ff86fe026a90078d9977692edd4daf354e3fd127440dd378421cf15",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -3798,14 +3798,14 @@
       "preparation": [
         {
           "status": 200,
-          "elapsed_seconds": 0.544,
-          "response_sha256": "a7cb34bfa0a2a641a085f29c23330cd027e496a2c0859bdbb84458990666b3cc",
+          "elapsed_seconds": 0.204,
+          "response_sha256": "776fe83ec788a373fa4dc7c4eeeb37c89a80835d6eed02ccd2e10fc499eac921",
           "numeric_count": 661
         },
         {
           "status": 200,
-          "elapsed_seconds": 0.002,
-          "response_sha256": "a7cb34bfa0a2a641a085f29c23330cd027e496a2c0859bdbb84458990666b3cc",
+          "elapsed_seconds": 0.003,
+          "response_sha256": "776fe83ec788a373fa4dc7c4eeeb37c89a80835d6eed02ccd2e10fc499eac921",
           "numeric_count": 661
         }
       ],
@@ -3830,7 +3830,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.039,
+            "elapsed_seconds": 0.038,
             "response_sha256": "59ab315487917d0d722edfd2a492e9a404d30c05ca528404cfad81f69f0c54ad",
             "numeric_count": 293,
             "numeric_leaves": {
@@ -4131,7 +4131,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.021,
+            "elapsed_seconds": 0.02,
             "response_sha256": "2640d430d5bbc0cd2764a8307d166cc9342d62bcb1edd0aa1fa03f654f591a69",
             "numeric_count": 497,
             "numeric_leaves": {
@@ -4649,7 +4649,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.031,
+            "elapsed_seconds": 0.03,
             "response_sha256": "bbb51b0477765f28f40f851b57c2fa9f3418922bc450a7e39dd1a284db054b7c",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -4696,7 +4696,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.011,
+            "elapsed_seconds": 0.009,
             "response_sha256": "e580f45b52cea06a37b221d2b480d53ebe213d5c225e8044fdd1c42ba9e5e154",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -5069,14 +5069,14 @@
       "preparation": [
         {
           "status": 200,
-          "elapsed_seconds": 0.154,
-          "response_sha256": "da7aa9726f2aa098b665427693b438ccd3b5528e7ef4986ce8f9d7c00e720f2b",
+          "elapsed_seconds": 0.143,
+          "response_sha256": "155779db16d2fb9fe83f0f4a7232e9d1618ded95223bc297064b2e3ac53b27d6",
           "numeric_count": 573
         },
         {
           "status": 200,
           "elapsed_seconds": 0.003,
-          "response_sha256": "da7aa9726f2aa098b665427693b438ccd3b5528e7ef4986ce8f9d7c00e720f2b",
+          "response_sha256": "155779db16d2fb9fe83f0f4a7232e9d1618ded95223bc297064b2e3ac53b27d6",
           "numeric_count": 573
         }
       ],
@@ -5101,7 +5101,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.031,
+            "elapsed_seconds": 0.028,
             "response_sha256": "ebc2c3896dc8b6e01c0be23c56b6fe09e0c1ed57cda3077b57320de2e2725347",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -5388,7 +5388,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "4147643ac58f5e59379019165da04070e9a49273b7f5ed47612540823b27c43a",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -5892,7 +5892,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.025,
+            "elapsed_seconds": 0.024,
             "response_sha256": "b1c86428a61eed33f6f6aabaca2271a9ea6ba5f159522c60ef59e1ed47357548",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -5910,7 +5910,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "c541067975ed641997b19feeab63442e80ac4e98e43ae8bc464e60fa0a3fb368",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -6330,7 +6330,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.016,
             "response_sha256": "383cdbad34284d3f95e6d18f027cf4d2d5eb32707b6a6ad02bf0bbe78dafda26",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -6617,7 +6617,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.014,
             "response_sha256": "3561630128ea5cad9d109fdc811b18a824e7163e06b804ebd1852dcba70be034",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -7121,7 +7121,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.049,
+            "elapsed_seconds": 0.019,
             "response_sha256": "0cbe850befadf0bb907d7b52abbf399d923ed4dc72fa005f35bc90882ee8d992",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -7139,7 +7139,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.023,
+            "elapsed_seconds": 0.018,
             "response_sha256": "580719884116cfbebed99fc041b77975abf58c82cb3d863c019f4b361a548ca8",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -7168,7 +7168,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "5a0c61d9c18da978c7decd89e42d69580c539998f0dfab4abcd1eaff311c9c98",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -7350,7 +7350,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.008,
             "response_sha256": "5a0c61d9c18da978c7decd89e42d69580c539998f0dfab4abcd1eaff311c9c98",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -7559,7 +7559,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.015,
             "response_sha256": "d0e5937fdc2bd335fff6119c2b70efaa1b6554653a9db9d52ff4d9075e8726d2",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -7846,7 +7846,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "885e46135af2ff5bf8cadc6264a598848cb6531e089c89338e8ce52fffa37a18",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -8350,7 +8350,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "651b3692686c7d7cc0340373c92b12678cd5a68ed74d0767e3881234d4a6ea1c",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -8368,7 +8368,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "5e789ed0031837c996454eebc428f31a237f3bae4c82201b725a5b32a4ba4369",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -8579,7 +8579,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "6ee22f47f29ce2619ff934dff88eee92b70a8bbb8153c6c84a47332018e5ca4c",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -8788,7 +8788,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "27a98159a936a565a5113f27346d91f6a83dc949cc3c8fda020efec09ead73db",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -9075,7 +9075,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.014,
             "response_sha256": "6531ec75d1b957fe86c28321ad7455354a80069245fec377493eaad950d446c3",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -9579,7 +9579,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "f288b150e1dab88323533c0707a3bcc68599259df0af16704fda0693f17204a3",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -9626,7 +9626,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "028b5026689f8ee21184406cadc548b18a009aed900a204510163bae05ce9d58",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -9808,7 +9808,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "028b5026689f8ee21184406cadc548b18a009aed900a204510163bae05ce9d58",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -10017,7 +10017,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "d953b8b1cdae66facf6abd175ef33d64a71ec986b73538c4d7c6a0fa8c9f5818",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -10304,7 +10304,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "ec4e244c1eef88d06dc2e67975ab20c8558a61db440a4cad544fef98b4942e09",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -10808,7 +10808,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.019,
             "response_sha256": "61565e36b828c6a5fc7b80f627f595349eac13264745ff5ccaf9b239b934ca5d",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -10826,7 +10826,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "8d9a9f76ccac900a5610ba16fb78c62af3d5db406f73b83a33e91fcb88992e36",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -10855,7 +10855,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "d22bea2c71c8ce882e22312e4e7925a2a3acc4f0fff42ead3558e03fc44aa08c",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -11246,7 +11246,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.016,
             "response_sha256": "f7e853d11b31b80cf37c47c2f939ef4a7ef039c761f8b7ec2d4017ee22c2180c",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -11533,7 +11533,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.015,
             "response_sha256": "e1b4c12d3d7991e8504ffc8b4d1a6dbf58320eedf1f60bce4bc545c43f8e2963",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -12037,7 +12037,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.028,
+            "elapsed_seconds": 0.027,
             "response_sha256": "0c1aec5efa8ea03a47d41a87ac4ebaaeb7ab024366c3b09741f815ec68393f84",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -12055,7 +12055,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.075,
+            "elapsed_seconds": 0.025,
             "response_sha256": "1853825d5905741216c3c0911ea89cd304dc9bff4fb3c4ca875a9f75b83a26d3",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -12084,7 +12084,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.011,
+            "elapsed_seconds": 0.009,
             "response_sha256": "b6e926f76fbb1580cc4e03df8a38f22629c2755ea3a0dc24b05ff3b324595db5",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -12266,7 +12266,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "b6e926f76fbb1580cc4e03df8a38f22629c2755ea3a0dc24b05ff3b324595db5",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -12475,7 +12475,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.015,
             "response_sha256": "0f48856fff624d881c582e1a6d837ce6b33a81aaa5cde990d73b576c71644dd8",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -12762,7 +12762,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "c7731685b560665dba6b0fe92c72989f8c45dffda20da7ccd62441367f94b94f",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -13266,7 +13266,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.019,
             "response_sha256": "0879728bc8908e359d53031cafe8ce2040c01c465b4a6b432c63abb158576fb8",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -13284,7 +13284,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "23b20469c006f6ddfe847c242b095cc0f454098fbcec85b8ad8b0afb07472b23",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -13313,7 +13313,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "3ec7c9d62d81c972f3f5b1d92e3d877469b44fe9e1e0d6ebb4fd0d4797a257a0",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -13704,7 +13704,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "923718d2b1be42ca8aa4bd6a0e025b1c194719d3c7b762b3ce75b040905309d2",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -13991,7 +13991,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "abab276409f2ec6d7f8abd3e524ef6112e690d80289d0dda3d4089ad9a60505e",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -14495,7 +14495,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.017,
             "response_sha256": "4fc628d6815b4d132b6056156b7e234370487788725eba31b6539cea3807d772",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -14513,7 +14513,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.017,
             "response_sha256": "2b31832f64def472203c5a61b6c74cf1d7fe482fa2e692982d4c224618d8cd3f",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -14542,7 +14542,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "fe7eb98c99494acad6fdf6b801fe2f75bf3aa9cfa26db812f09a82bda10eb120",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -14933,7 +14933,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "588e015efc86f7d0e33dd4a9f45fedd0740865df677b1a695abc23ae3247b5c8",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -15220,7 +15220,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.015,
+            "elapsed_seconds": 0.014,
             "response_sha256": "1bb34d14b76a6a77b3014f1b24b011ce804665c5ed3bc1908f98686237aa5361",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -15724,7 +15724,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "6ce5fe41f6daf5542b75c00817db102264ab3a1abc5b589dca739de1d8ae9d28",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -15771,7 +15771,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "98932638ba78b0d655f9d77975951108bac99e1f92b5b5403fb5f383c0f7e4c4",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -16162,7 +16162,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "3165501f5db311a48527cf31fdd9af98f94fadca9a579775ec0357e1eb4ca45c",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -16953,7 +16953,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "1adc1cfb0816acd4b6fb33bf4623fe48fdf9c9b429271a3a618060e471d2d0f7",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -16971,7 +16971,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.017,
             "response_sha256": "d1a5663491d2201afdb7c20708cb0a74ee0d819251030f8dc4522a004ab1bf45",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -17391,7 +17391,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.015,
             "response_sha256": "e6e4729006acd5f18929d4e526956c9593eea0ceb15f15cda24502d1d4dec95f",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -17678,7 +17678,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "fa4c178409041034240e7d03ea9d9d067792a803005b72f1477ea63aa6879e31",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -18182,7 +18182,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "34d9edb07a8f7cb38896e4c70b66ca56dd56a5264a410b06d5126092071cf178",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -18229,7 +18229,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "e93986e5f8b75f52b6e0fd06f25bfd3833707ec4ae9a0bd7789312eef05b7030",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -18620,7 +18620,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "b982765929f70e8aaf9645032fdbcd038ad87d871fefa49d6875df1b83fde107",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -18907,7 +18907,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "6c570b12744a3de8f92f2c3613ac622f06cfa3b062c8d2cf0699f8d0c190d226",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -19411,7 +19411,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.021,
+            "elapsed_seconds": 0.018,
             "response_sha256": "84367ebc7107dce271e7e1375ecc6d571a7382e1aeb8ea4f23fcd7bf465d4325",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -19429,7 +19429,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "db3e09badb609d7efeaf795b3b60673661c75e8e06343536de52ac40cc700815",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -19849,7 +19849,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "9f8d585fea9b97ff20a85578c6ca8e35cd5ad5be8ab56966c4905ac2c435b6e7",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -20640,7 +20640,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "3663374449910b1c2ccf7db03e0f9d8e1115ec95cad1195052f4c53f77039449",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -20869,7 +20869,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "824830b1ba7140a7739b3d3caac232ec5dabce5a7f53747603d91c2996fab5b1",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -21078,7 +21078,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.027,
+            "elapsed_seconds": 0.02,
             "response_sha256": "8c0395710b6f631e230b8de73847063e2689ddb2ff0f8b89802542dcc4fb75a5",
             "numeric_count": 292,
             "numeric_leaves": {
@@ -21378,7 +21378,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.02,
             "response_sha256": "84cca498649e973f5079050c33cc23629ad83046e0e9a9f9afaa296f4a6c38d6",
             "numeric_count": 496,
             "numeric_leaves": {
@@ -21895,7 +21895,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.026,
+            "elapsed_seconds": 0.024,
             "response_sha256": "ebd1b0b6667b2275eab88f21590e02f95b9400d76bad7110992cbc9cc622169d",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -21913,7 +21913,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.024,
+            "elapsed_seconds": 0.023,
             "response_sha256": "bc43ee29313e8b8ae7679d95bc144d9e6ec5d19a2a9c7e22e3d35a06c6082d36",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -21942,7 +21942,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.01,
+            "elapsed_seconds": 0.009,
             "response_sha256": "24b1ae9d5fbdd05b4dd433f8a039977ad3b5f55aa466e8260d016f0946b2045f",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -22333,7 +22333,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.017,
+            "elapsed_seconds": 0.015,
             "response_sha256": "f9512f4b7ce2150fb7391e9a3d072e960a5688ab08571109bcabe9c85f325ed0",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -22620,7 +22620,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "c70d5ef143762c0023ea43c590d4cadadd7991002c43b5bee0fa5366daa23bd2",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -23124,7 +23124,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.02,
+            "elapsed_seconds": 0.018,
             "response_sha256": "4c6e01d7a1f1754afca4254c694195518f7d7c181e85c5b8ce5c127da7b2e204",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -23142,7 +23142,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "b44e29a54d6a4e744df8dd314459c9a5a30a32d52b46f9cbe240cf67dd3fb109",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -23353,7 +23353,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "4c06c17d806c7f4d1b5de612c2885a712aae98c5938327e42d9b08f8f489730d",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -23863,7 +23863,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.028,
+            "elapsed_seconds": 0.02,
             "response_sha256": "fab8b30dd83189a1cdcbc404b54b1debbfe49b404c00a552120f641344a8acb1",
             "numeric_count": 497,
             "numeric_leaves": {
@@ -24381,7 +24381,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.029,
+            "elapsed_seconds": 0.024,
             "response_sha256": "2115f411fe4ba63e1aebb826966c14f62a1c70fd3e7518e1809cca10e4c4a5e0",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -24399,7 +24399,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.025,
+            "elapsed_seconds": 0.023,
             "response_sha256": "9184aa0fd9b6355c2c2f6d3b0a547be912938e2f97eaad4f0c2a9230a47eec1f",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -24819,7 +24819,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.015,
             "response_sha256": "dc3832c4e7f360ccba4538767b15025a5ac563d077efab2303cd786afcfe663a",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -25106,7 +25106,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.015,
+            "elapsed_seconds": 0.014,
             "response_sha256": "79bc93274ae7599f2eda56bd56a040b05aacac9f343e61ecad9d782118852acd",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -25657,7 +25657,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "f2a81759d75a6457226612cc4ca2467d45be3e1a5ccd7d7fd735087533c0f3fc",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -26335,7 +26335,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "843d8fb5ff6a22b179d9bfcf5c9e7cf44c2088a520ac2826c5fc3963b0d16f59",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -26857,7 +26857,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.017,
             "response_sha256": "89a93e51190ef1057958d2e6ed1853b992dfd205f510ce9245770d35d668e385",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -27564,7 +27564,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "90b933ef0720c742421b243b7179ef5db8002ab5384210fa5b6b3deaf04265e9",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -28068,7 +28068,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "bfa5b9d9bf64549fa80cc1e5895fcec28bb0e183a7476a122065d1483bb7c6c1",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -28086,7 +28086,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "8028547b17f502095ffc49eaa97e61e79e7d5c85e984149d9340303bf4fc2da9",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -28297,7 +28297,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "dc48e7c14eb2aa97189bbf4621e69b9a6b3e9aba02463a39d97805450290e190",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -28506,7 +28506,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.015,
             "response_sha256": "81f9054acacfc4deca9534d4b22aa137c082b781dad9a177500cfda5140ae479",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -28793,7 +28793,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.014,
             "response_sha256": "527fdfbcd4fdc4d9cbdf64fbd17bf691721da3aeeeb6f42eb14070ded95c4db0",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -29297,7 +29297,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.018,
             "response_sha256": "34153adb504faeaf66c937478daf30f0727015e02e0f1152c976ceaf2b74a13f",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -29315,7 +29315,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.019,
+            "elapsed_seconds": 0.017,
             "response_sha256": "0d9ac96c36c9462a4e7d0ee89a7319b17a08009b03165416898967f1e460a4f0",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -29344,7 +29344,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "67cf4125b5c57c2f09611a3301a84a0455b27c1c4125c0134ff7dc6689eaf32f",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -29526,7 +29526,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.009,
+            "elapsed_seconds": 0.008,
             "response_sha256": "67cf4125b5c57c2f09611a3301a84a0455b27c1c4125c0134ff7dc6689eaf32f",
             "numeric_count": 174,
             "numeric_leaves": {
@@ -29735,7 +29735,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.016,
+            "elapsed_seconds": 0.015,
             "response_sha256": "3f8ce7f654067ab09cca869c3a8a9c9a19dd2d44edd5f7c8cc79b2bece64e3df",
             "numeric_count": 279,
             "numeric_leaves": {
@@ -30022,7 +30022,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.015,
+            "elapsed_seconds": 0.014,
             "response_sha256": "0fe8e2a020710998784821642ddac544906eceff68314bd8562964d15287c4c6",
             "numeric_count": 483,
             "numeric_leaves": {
@@ -30526,7 +30526,7 @@
           },
           "old": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.019,
             "response_sha256": "fe3d3fb316b86ef83af1fc284d9f2c6b7a97394c6252a9f83e7e1dd7967872d7",
             "numeric_count": 10,
             "numeric_leaves": {
@@ -30544,7 +30544,7 @@
           },
           "new": {
             "status": 200,
-            "elapsed_seconds": 0.018,
+            "elapsed_seconds": 0.017,
             "response_sha256": "920fcef749de3ceb9e1a63bee83db7335740bd9283ba1e038c86a23fbb72b241",
             "numeric_count": 11,
             "numeric_leaves": {
@@ -30958,5 +30958,5 @@
   "successful_endpoint_checks": 75,
   "failed_endpoint_checks": 0,
   "missing_endpoint_checks": 0,
-  "finished_at": "2026-10-04T12:21:11.766325+00:00"
+  "finished_at": "2026-10-04T12:27:52.718346+00:00"
 }
