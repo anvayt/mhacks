@@ -1,6 +1,7 @@
 // The iMessage interview (PLAN.md §4 steps 3–5): link/address → estimate → questions one at a time → answers →
 // narrower range, until the API says the grade is locked. One state per chat (Spectrum space), in memory.
 import type { Api, ApiResult, Estimate, EstimateRequest, Question } from "./api.ts";
+import { refInText } from "./handoff.ts";
 import {
   ADDRESS,
   LINK,
@@ -45,6 +46,8 @@ export class Conversations {
   }
 
   private async handle(s: ChatState, text: string): Promise<string> {
+    const ref = refInText(text);
+    if (ref) return this.resume(s, ref);
     const link = text.match(LINK)?.[0];
     if (link) return this.estimate(s, { url: link });
     if (ADDRESS.test(text)) return this.estimate(s, { address: text });
@@ -68,6 +71,25 @@ export class Conversations {
       return `${body}\n\n${UNIT_SIZE_QUESTION}`;
     }
     return this.withNextQuestion(s, body);
+  }
+
+  /** First text from the website handoff: "… (ref <session id>)". Continue that API session. */
+  private async resume(s: ChatState, sessionId: string): Promise<string> {
+    const r = await this.api.session(sessionId);
+    if (!r.ok) {
+      return r.code === "unreachable"
+        ? r.message
+        : "I couldn't find your report from the website. Send the listing link or address and I'll start fresh.";
+    }
+    const address = r.data.building.address;
+    Object.assign(s, {
+      request: address ? { address } : null,
+      sessionId: r.data.session_id ?? sessionId,
+      last: r.data,
+      answered: new Set(),
+      pending: null,
+    });
+    return this.withNextQuestion(s, `Picking up your report from the website.\n${estimateText(r.data)}`);
   }
 
   private async unitSize(s: ChatState, text: string): Promise<string> {

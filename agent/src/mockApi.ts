@@ -61,6 +61,12 @@ export function mockApi(): Api {
       sessions.set(id, s);
       return { ok: true, data: build(id, s.sqft, s.sqftEstimated, s.answered, s.address) };
     },
+    async session(id: string): Promise<ApiResult> {
+      // Stands in for a session the website created: unknown ids are made up on the spot.
+      let s = sessions.get(id);
+      if (!s) sessions.set(id, (s = { sqft: 850, sqftEstimated: false, address: "Demo listing from the website, Ann Arbor, MI", answered: new Set() }));
+      return { ok: true, data: build(id, s.sqft, s.sqftEstimated, s.answered, s.address) };
+    },
     async answer({ session_id, question_id }): Promise<ApiResult> {
       const s = sessions.get(session_id);
       if (!s) return { ok: false, code: "not_found", message: "That session expired. Send the listing again." };
