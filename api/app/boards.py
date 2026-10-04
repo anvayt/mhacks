@@ -21,7 +21,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app import accounts, bills, calibrate, city, commitments, db, sessions
+from app import accounts, bills, calibrate, city, commitments, db, score, sessions
 
 router = APIRouter()
 BOARDS = ("verified_cut", "co2_avoided", "streak", "follow_through", "neighborhood")
@@ -209,9 +209,10 @@ def _placement(cost: float, peers: list[float]) -> dict:
     n = len(peers)
     lo, hi = bisect_left(peers, cost), bisect_right(peers, cost)
     percentile = 1 - (lo + hi) / (2 * n)
-    score = int(round(100 * percentile))
-    return {"score": score, "grade": city.grade(score), "percentile_city": round(percentile, 3),
-            "rank": min(n, lo + 1), "of": n}
+    pts = int(round(100 * percentile))
+    # score and rank: same type, as /estimate's score; percentile_city: every city home, as /estimate's (app/score.py)
+    city_pct = round(float(1 - score._cheaper(score.peer_costs(None), cost)), 3)
+    return {"score": pts, "grade": city.grade(pts), "percentile_city": city_pct, "rank": min(n, lo + 1), "of": n}
 
 
 @router.get("/leaderboard/position/{property_id}")
@@ -242,9 +243,11 @@ def position(property_id: str, request: Request) -> dict:
     if projection and projection.get("property_id") == property_id and not projection.get("pending_model"):
         p50 = _number((projection.get("projected") or {}).get("bill_annual", {}).get("p50"))
         if p50 is not None and p50 >= 0:
-            marker = _placement(p50 / sqft, peers)
-            projected = {"rank": marker["rank"], "percentile": marker["percentile_city"],
-                         "score": marker["score"], "label": "projected_if_completed"}
+            marker, mine = _placement(p50 / sqft, peers), projection.get("projected") or {}
+            # the ghost marker is /projection's own projected.score / percentile_city; rank is placed here
+            projected = {"rank": marker["rank"], "score": mine.get("score", marker["score"]),
+                         "percentile_city": mine.get("percentile_city", marker["percentile_city"]),
+                         "label": "projected_if_completed"}
     center = min(len(peers) - 1, bisect_left(peers, annual / sqft))
     nearby = range(max(0, center - 2), min(len(peers), center + 3))
     neighbors = [{"rank": _placement(peers[i], peers)["rank"], "score": _placement(peers[i], peers)["score"],
