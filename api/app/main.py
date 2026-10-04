@@ -2,6 +2,8 @@
 
 import os
 
+import httpx
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -19,15 +21,20 @@ from app.gcal import router as gcal_router
 from app.geo.features import get_features
 from app.map_widget import router as map_router
 from app.reminders import router as reminders_router
+from app.public_guard import PublicGuard
 
 app = FastAPI(title="Hidden Rent API")
 app.include_router(estimate_router)  # POST /answer, GET /session/{id} (P2-04)
 app.include_router(map_router)
 app.include_router(gcal_router)
 app.include_router(reminders_router)
-# /web calls /estimate from the browser (Next.js dev server on :3000)
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("WEB_ORIGINS", "http://localhost:3000").split(","),
-                   allow_methods=["*"], allow_headers=["*"])
+# CORS wraps guard errors too. Bearer auth needs no cross-origin cookies;
+# wildcard origins are deliberately discarded, including misconfigured env files.
+app.add_middleware(PublicGuard)
+app.add_middleware(CORSMiddleware,
+                   allow_origins=[origin.strip() for origin in os.environ.get("WEB_ORIGINS", "http://localhost:3000").split(",")
+                                  if origin.strip() and origin.strip() != "*"],
+                   allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 app.include_router(fixes_router)
 app.include_router(forecast_router)
 app.include_router(compare_router)
@@ -46,7 +53,13 @@ class EstimateRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    try:
+        response = httpx.get(f"{os.environ.get("MODEL_BASE_URL", "http://localhost:8001").rstrip("/")}/hc/answers", timeout=2)
+        model_ok = response.status_code == 200
+    except httpx.HTTPError:
+        model_ok = False
+    # HTTP 200 is API liveness; status/model distinguish dependency readiness.
+    return {"status": "ok" if model_ok else "degraded", "model": {"available": model_ok}}
 
 
 @app.post("/estimate")
