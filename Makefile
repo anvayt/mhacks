@@ -4,7 +4,7 @@
 #   deps  -> .venv, api/.venv, web/ and agent/ node_modules
 #   data  -> unzips model-data.zip from the repo root, if present, so gis/model skip downloads and training
 #   gis   -> data/a2_footprints.geojson, data/a2_mailing_addresses.geojson
-#   model -> model/artifacts/resstock_hc.pkl (first build downloads ~1 h of data)
+#   model -> model/artifacts/resstock_hc.pkl (~8 min: downloads data and trains)
 MODEL_PKL  := model/artifacts/resstock_hc.pkl
 MODEL_TABLE := model/data/processed/buildings_hc.parquet
 
@@ -17,7 +17,7 @@ data:
 	@if [ -f model-data.zip ]; then bash scripts/model-data.sh unpack; \
 	else echo '==> data: no model-data.zip in repo root; missing inputs will be downloaded'; fi
 
-# Zip this checkout's downloaded data and trained model into model-data.zip to share with teammates.
+# Zip this checkout's downloaded data and trained models (model/artifacts/*.pkl, one build) into model-data.zip to share with teammates.
 data-bundle:
 	@bash scripts/model-data.sh pack
 
@@ -33,7 +33,7 @@ model: deps data
 	@if [ -f $(MODEL_PKL) ] && [ -f $(MODEL_TABLE) ]; then \
 		echo '==> model: already built ($(MODEL_PKL))'; \
 	else \
-		echo '==> model: building (first run downloads ~1 h of data)'; \
+		echo '==> model: building (~8 min)'; \
 		$(MAKE) -C model build; \
 	fi
 

@@ -5,6 +5,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { adoptSession, errorText, loginStatus, startLogin, type WebLogin } from "./flow-api";
 import { ApiError, load, save } from "./lib/api";
+import { ReminderOptIn } from "./reminder-settings";
+
+/** Shown on the phone and code steps; the opt-in step after verification has its own heading. */
+function SignUpHeader() {
+  return (
+    <>
+      <p className="eyebrow">Sign in or sign up</p>
+      <h1 className="board-title">Save your home and progress</h1>
+      <ul className="board-note" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+        <li>Keep your grade and answers when you come back</li>
+        <li>Save commitments and track your habit streak</li>
+        <li>Optional monthly check-ins by text: you choose on the next step</li>
+      </ul>
+    </>
+  );
+}
 
 /** Only same-site paths, so ?next= can't send anyone elsewhere. */
 const safeNext = (next: string | null, fallback: string) => (next && /^\/(?!\/)/.test(next) ? next : fallback);
@@ -26,18 +42,19 @@ export function PhoneSignIn() {
   const [login, setLogin] = useState<WebLogin | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askReminders, setAskReminders] = useState(false); // verified: one explicit opt-in question, then continue
 
   // Just verified: this session becomes the new account's home. A failed save never blocks the grade.
   async function finish() {
     setMessage("Signed in. Saving this home to your account…");
     try {
       await adoptSession();
+      setMessage(null);
     } catch (err) {
-      setMessage(`Signed in. This home wasn't saved to your account: ${errorText(err)} Your grade still works.`);
-      window.setTimeout(() => router.push(next), 3000);
-      return;
+      setMessage(`This home wasn't saved to your account: ${errorText(err)} Your grade still works.`);
     }
-    router.push(next);
+    setLogin(null);
+    setAskReminders(true);
   }
 
   // Already signed in: go on without touching the saved home (the grade screen offers "Save this as my home").
@@ -88,6 +105,15 @@ export function PhoneSignIn() {
     }
   }
 
+  if (askReminders) {
+    return (
+      <>
+        {message && <p className="fine-print" role="status">{message}</p>}
+        <ReminderOptIn onDone={() => router.push(next)} />
+      </>
+    );
+  }
+
   const skip = (
     <Link className="back-action" href={next}>
       Skip for now
@@ -97,6 +123,7 @@ export function PhoneSignIn() {
   if (login) {
     return (
       <>
+        <SignUpHeader />
         <p className="eyebrow">Text this to Hidden Rent</p>
         <p className="board-title" style={{ textTransform: "none" }}>{login.text_body}</p>
         <p className="board-note">
@@ -119,9 +146,11 @@ export function PhoneSignIn() {
   }
 
   return (
+    <>
+    <SignUpHeader />
     <form className="field" onSubmit={onSubmit}>
       <label className="eyebrow" htmlFor="phone">
-        Your phone number is your login
+        Your phone number is your account
       </label>
       <div className="control">
         <input
@@ -144,8 +173,10 @@ export function PhoneSignIn() {
         </button>
       </div>
       <p className="fine-print" aria-live="polite">
-        {message ?? "No password. You text a code to Hidden Rent from this number. Skip and your grade still works."}
+        {message ??
+          "No password. New here? Texting the code creates your account; returning works the same way. We only text you if you say yes on the next step. Skip and your grade still works."}
       </p>
     </form>
+    </>
   );
 }
