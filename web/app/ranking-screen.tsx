@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { billCovers, currentEstimate, gradeStatus, usd, usdRange, type Estimate } from "./flow-api";
-import { ApiError } from "./lib/api";
+import {
+  adoptSession,
+  billCovers,
+  currentEstimate,
+  errorText,
+  gradeStatus,
+  gradeText,
+  sessionIsHome,
+  usd,
+  usdRange,
+  type Estimate,
+} from "./flow-api";
+import { ApiError, save } from "./lib/api";
 import styles from "./ranking-screen.module.css";
 
 const pct = (x: number) => Math.round(x * 100);
 
-/** "Top 6%" / "Bottom 3%" of every scored Ann Arbor home (percentile_city = share this home beats). */
+/** P3's bands on percentile_city (the share of scored Ann Arbor homes this one beats). */
 function cityRank(p: number): { head: string; sub: string } {
-  return p >= 0.5
-    ? { head: `Top ${Math.max(1, 100 - pct(p))}%`, sub: "Most efficient in Ann Arbor." }
-    : { head: `Bottom ${Math.max(1, pct(p))}%`, sub: "Least efficient in Ann Arbor." };
+  if (p >= 0.75) return { head: `Top ${Math.max(1, 100 - pct(p))}%`, sub: "Most efficient in Ann Arbor." };
+  if (p < 0.25) return { head: `Bottom ${Math.max(1, pct(p))}%`, sub: "Least efficient in Ann Arbor." };
+  return { head: "Middle 50%", sub: "Right in the middle of the spectrum." };
 }
 
 /** "built 1970 (Ann Arbor benchmarking)", or "built around 1964 (neighborhood median)" for a census median. */
@@ -27,14 +38,39 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
   const [nextReady, setNextReady] = useState(false);
   const [e, setE] = useState<Estimate | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Signed in and this isn't the saved home yet: offer to save it (it replaces the old home, so only on a click).
+  const [home, setHome] = useState<"hidden" | "offer" | "saving" | "saved">("hidden");
+  const [homeNote, setHomeNote] = useState<string | null>(null);
 
   useEffect(() => {
     currentEstimate()
-      .then(setE)
-      .catch((err: ApiError) => setError(err.message));
+      .then((est) => {
+        setE(est);
+        sessionIsHome()
+          .then((is) => setHome(is === false ? "offer" : "hidden"))
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 401) {
+              save("token", null); // expired login: the grade works without it
+              save("user", null);
+            }
+          });
+      })
+      .catch((err) => setError(errorText(err)));
     const enable = window.setTimeout(() => setNextReady(true), 5400);
     return () => window.clearTimeout(enable);
   }, []);
+
+  async function saveHome() {
+    setHome("saving");
+    setHomeNote(null);
+    try {
+      await adoptSession();
+      setHome("saved");
+    } catch (err) {
+      setHome("offer");
+      setHomeNote(`This home wasn't saved: ${errorText(err)}`);
+    }
+  }
 
   const b = e?.building;
   const rank = e?.percentile_city != null ? cityRank(e.percentile_city) : null;
@@ -63,9 +99,19 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
                 Share preview
                 <img src="/hero/arrow-up-right-ink.svg" alt="" width={16} height={16} />
               </Link>
+              {home !== "hidden" ? (
+                <button className="ghost-action" type="button" disabled={home !== "offer"} onClick={saveHome}>
+                  {home === "saved" ? "Saved as your home ✓" : home === "saving" ? "Saving…" : "Save this as my home"}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </header>
+        {homeNote ? (
+          <p className="ranking-notice" role="status">
+            {homeNote}
+          </p>
+        ) : null}
         <p className="ranking-notice" aria-live="polite">
           {error ? (
             <>
@@ -125,7 +171,7 @@ export function RankingScreen({ onNext }: { onNext: () => void }) {
               <p className="eyebrow">Predicted score</p>
               <div className="ranking-score">
                 <p className="ranking-number">{e.score ?? "—"}</p>
-                <p className="ranking-grade">{e.grade ?? "—"}</p>
+                <p className="ranking-grade">{gradeText(e)}</p>
               </div>
               <div className="ranking-score-labels">
                 <p>Out of 100</p>

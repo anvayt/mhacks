@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { adoptSession, loginStatus, startLogin, type WebLogin } from "./flow-api";
+import { adoptSession, errorText, loginStatus, startLogin, type WebLogin } from "./flow-api";
 import { ApiError, load, save } from "./lib/api";
 
 /** Only same-site paths, so ?next= can't send anyone elsewhere. */
@@ -27,28 +27,23 @@ export function PhoneSignIn() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Signed in: save this session as the home, then go on. Adoption failing never blocks the grade.
+  // Just verified: this session becomes the new account's home. A failed save never blocks the grade.
   async function finish() {
     setMessage("Signed in. Saving this home to your account…");
     try {
       await adoptSession();
     } catch (err) {
-      if ((err as ApiError).status === 401) {
-        save("token", null);
-        save("user", null);
-        setLogin(null);
-        setMessage((err as ApiError).message);
-        return;
-      }
-      // ponytail: the grade and board work on the session alone (team decision 2), so a failed save just moves on.
-      console.warn("POST /properties failed:", (err as ApiError).code);
+      setMessage(`Signed in. This home wasn't saved to your account: ${errorText(err)} Your grade still works.`);
+      window.setTimeout(() => router.push(next), 3000);
+      return;
     }
     router.push(next);
   }
 
+  // Already signed in: go on without touching the saved home (the grade screen offers "Save this as my home").
   useEffect(() => {
-    if (load("token") && load("user")) void finish();
-  }, []);
+    if (load("token") && load("user")) router.replace(next);
+  }, [router, next]);
 
   useEffect(() => {
     if (!login) return;
@@ -74,7 +69,7 @@ export function PhoneSignIn() {
           window.clearInterval(poll);
           setLogin(null);
         }
-        setMessage((err as ApiError).message);
+        setMessage(errorText(err));
       }
     }, 2000);
     return () => window.clearInterval(poll);
@@ -87,7 +82,7 @@ export function PhoneSignIn() {
     try {
       setLogin(await startLogin(phone));
     } catch (err) {
-      setMessage((err as ApiError).message);
+      setMessage(errorText(err));
     } finally {
       setBusy(false);
     }
