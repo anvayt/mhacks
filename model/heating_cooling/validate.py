@@ -57,6 +57,8 @@ def weather_check() -> dict:
 
 PATHS = ("metered", "meter_model", "resstock", "blend", "null")
 FOLD_LOG: dict = {}   # per-fold calibration / blend weight / null, for the report
+MONTHLY_SUMMARY: dict = {}
+MONTH_ROWS: list = []  # held-out building-month rows (same predictions as the seasonal rows, not aggregated)
 SERVE: dict = {}      # blend weights + calibration the service uses
 FUEL = {
     # fuel: (meter column, ok flag, outlier flag, CP heating?, CP cooling?, driver column, building-model target,
@@ -150,6 +152,12 @@ def heldout_rows(fuel: str) -> pd.DataFrame:
             pm["metered"] = f.predict(gy)["total"].to_numpy() if (f is not None and f.r2 >= thr) else np.nan
             pm["price"] = pm.month.map(price)
             pm["season"] = pm.month.map(climate.MONTH_TO_SEASON)
+            for _, mr in pm.iterrows():   # monthly rows: the same held-out predictions, before any aggregation
+                mrow = {"fuel": fuel, "building_id": bid, "name": gb.name.iloc[0], "year": int(yr), "month": int(mr.month),
+                        "actual": float(mr[col])}
+                for p_ in PATHS:
+                    mrow[p_] = float(mr[p_]) if pd.notna(mr[p_]) else np.nan
+                MONTH_ROWS.append(mrow)
             for season, gs in pm.groupby("season"):
                 if len(gs) < 3:
                     continue
@@ -177,16 +185,42 @@ def summarize(d: pd.DataFrame) -> dict:
     return out
 
 
+def summarize_monthly(d: pd.DataFrame) -> dict:
+    """Per calendar month and path: median / p90 absolute % error, median signed error (bias), n."""
+    out = {}
+    for path in PATHS:
+        e = d[path] / d.actual - 1
+        ok = e.notna() & np.isfinite(e)
+        per = {}
+        for m in range(1, 13):
+            k = ok & (d.month == m)
+            if k.sum() < 10:
+                continue
+            per[m] = {"median_abs_pct_error": round(float(e[k].abs().median()), 3),
+                      "p90_abs_pct_error": round(float(e[k].abs().quantile(.9)), 3),
+                      "median_signed_error": round(float(e[k].median()), 3), "n": int(k.sum())}
+        out[path] = {"all_months": round(float(e[ok].abs().median()), 3), "by_month": per}
+    return out
+
+
 def seasonal_check() -> tuple[dict, dict]:
+    MONTH_ROWS.clear()
     gas, elec = heldout_rows("gas"), heldout_rows("elec")
     pd.concat([gas, elec], ignore_index=True).to_parquet(RESULTS / "heldout_seasonal.parquet", index=False)
+    mon = pd.DataFrame(MONTH_ROWS)
+    mon = mon[mon.actual > 0]
+    mon.to_parquet(RESULTS / "heldout_monthly.parquet", index=False)
+    MONTHLY_SUMMARY["gas"] = summarize_monthly(mon[mon.fuel == "gas"])
+    MONTHLY_SUMMARY["elec"] = summarize_monthly(mon[mon.fuel == "elec"])
     return summarize(gas), summarize(elec)
 
 
 def main():
     gas, elec = seasonal_check()
     out = {"weather_vs_noaa_normals": weather_check(), "seasonal_gas_vs_real_meters": gas,
-           "seasonal_elec_vs_real_meters": elec, "in_fold_parameters": FOLD_LOG, "serving_blend": SERVE,
+           "seasonal_elec_vs_real_meters": elec,
+           "monthly_gas_vs_real_meters": MONTHLY_SUMMARY["gas"], "monthly_elec_vs_real_meters": MONTHLY_SUMMARY["elec"],
+           "in_fold_parameters": FOLD_LOG, "serving_blend": SERVE,
            "scheme": "Unmetered paths: 5-fold split over buildings; ResStock calibration, null intensity, base load and "
                      "blend weight are estimated on the training buildings of each fold; meter-model predictions are the "
                      "nested-CV out-of-fold predictions. Metered path: the building's own change-point fit on its other years."}
